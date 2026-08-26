@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Área CS — Endogin (conectada)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --eg-bg-0:#0b1420; --eg-bg-1:#101d2e; --eg-bg-2:#152436; --eg-bg-3:#1b2a3d;
+    --eg-gold-100:#f2dfae; --eg-gold-300:#e3bd76; --eg-gold-500:#c9974b; --eg-gold-700:#a3762f;
+    --eg-text-primary:#f3f0e8; --eg-text-secondary:#aab4c9; --eg-text-muted:#6d7994; --eg-navy-line:rgba(255,255,255,0.06);
+    --eg-border:rgba(255,255,255,0.09); --eg-border-strong:rgba(201,151,75,0.35);
+    --eg-red:#d98a8a; --eg-red-bg:rgba(217,138,138,0.14);
+    --eg-green:#8fc79f; --eg-green-bg:rgba(143,199,159,0.12);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;font-family:'Montserrat',sans-serif;color:var(--eg-text-primary);min-height:100vh;
+    background:radial-gradient(1200px 700px at 15% -10%, #16273c 0%, #0b1420 55%), #0b1420;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:0 24px 60px;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0 20px;border-bottom:1px solid var(--eg-navy-line);margin-bottom:26px;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{width:40px;height:48px;border:1.5px solid var(--eg-gold-500);display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif;font-weight:600;font-size:16px;color:var(--eg-gold-100);}
+  .brand-word .cs{display:block;font-size:9px;letter-spacing:3px;color:var(--eg-text-muted);font-weight:600;}
+  .brand-word .name{display:block;font-family:'Sora',sans-serif;font-weight:600;font-size:19px;background:linear-gradient(180deg,var(--eg-gold-100),var(--eg-gold-500));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .topbar-right{display:flex;align-items:center;gap:14px;}
+  .user-chip{display:flex;align-items:center;gap:10px;font-size:12.5px;}
+  .user-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#241705;background-size:cover;background-position:center;}
+  .logout-btn{font-size:11.5px;font-weight:700;background:var(--eg-bg-2);border:1px solid var(--eg-border);color:var(--eg-gold-100);padding:8px 13px;border-radius:8px;cursor:pointer;}
+
+  .tabs{display:flex;gap:6px;margin-bottom:22px;border-bottom:1px solid var(--eg-navy-line);}
+  .tab-btn{
+    font-family:inherit;background:none;border:none;color:var(--eg-text-muted);font-size:13px;font-weight:700;
+    padding:10px 16px;cursor:pointer;position:relative;
+  }
+  .tab-btn.active{color:var(--eg-gold-100);}
+  .tab-btn.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--eg-gold-500);}
+  .tab-panel{display:none;} .tab-panel.active{display:block;}
+
+  .card{background:var(--eg-bg-1);border:1px solid var(--eg-navy-line);border-radius:14px;padding:20px 22px;margin-bottom:18px;}
+  .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .card-head h3{margin:0;font-size:15px;font-weight:700;}
+  .card-head .icn{color:var(--eg-gold-300);margin-right:9px;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{text-align:left;font-size:11px;letter-spacing:0.4px;color:var(--eg-text-muted);font-weight:700;padding:0 10px 12px;border-bottom:1px solid var(--eg-navy-line);}
+  td{padding:12px 10px;border-bottom:1px solid var(--eg-navy-line);vertical-align:middle;}
+  .status-pill{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:99px;display:inline-block;}
+  .status-pill.ativo{background:var(--eg-green-bg);color:var(--eg-green);}
+  .status-pill.onboarding{background:rgba(201,151,75,0.16);color:var(--eg-gold-100);}
+  .status-pill.inativo, .status-pill.trancado, .status-pill.cancelado{background:rgba(255,255,255,0.05);color:var(--eg-text-muted);border:1px solid var(--eg-navy-line);}
+  .branch-tag{font-size:9.5px;font-weight:700;background:rgba(201,151,75,0.14);color:var(--eg-gold-100);padding:3px 7px;border-radius:99px;margin:1px 3px 1px 0;display:inline-block;}
+  .branch-tag.inactive{background:rgba(255,255,255,0.05);color:var(--eg-text-muted);text-decoration:line-through;}
+  .disc-badge{font-size:9.5px;font-weight:700;background:rgba(255,255,255,0.06);color:var(--eg-text-secondary);border:1px solid var(--eg-navy-line);padding:3px 8px;border-radius:99px;margin-left:6px;display:inline-block;}
+  .row-edit-btn{font-size:11px;font-weight:700;background:var(--eg-bg-2);border:1px solid var(--eg-border);color:var(--eg-gold-100);padding:6px 11px;border-radius:7px;cursor:pointer;white-space:nowrap;}
+  select, input[type=text], input[type=email], input[type=password]{
+    background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:8px;color:var(--eg-text-primary);
+    padding:8px 10px;font-family:inherit;font-size:12.5px;
+  }
+  label{display:block;font-size:10.5px;color:var(--eg-text-muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;}
+  .btn-primary{
+    font-family:inherit;font-size:12.5px;font-weight:700;padding:10px 18px;border-radius:8px;border:none;
+    background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));color:#221708;cursor:pointer;
+  }
+  .btn-primary:disabled{opacity:0.55;cursor:default;}
+  .btn-secondary{font-size:11.5px;font-weight:700;background:var(--eg-bg-2);border:1px solid var(--eg-border);color:var(--eg-gold-100);padding:8px 13px;border-radius:8px;cursor:pointer;}
+  .err-msg{color:var(--eg-red);font-size:12px;margin-top:10px;min-height:16px;}
+  .hint{font-size:11.5px;color:var(--eg-text-muted);}
+
+  /* login */
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;}
+  .login-card{background:var(--eg-bg-1);border:1px solid var(--eg-navy-line);border-radius:16px;padding:36px 34px;width:100%;max-width:360px;}
+  .login-card .brand{justify-content:center;margin-bottom:26px;}
+  .login-field{margin-bottom:14px;}
+  .login-field input{width:100%;}
+
+  /* equipe */
+  .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+  .team-card{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:12px;padding:18px 14px;text-align:center;position:relative;}
+  .team-card.inactive{opacity:0.5;}
+  .team-inactive-tag{position:absolute;top:10px;right:10px;font-size:9px;font-weight:700;background:rgba(255,255,255,0.06);color:var(--eg-text-muted);padding:3px 8px;border-radius:99px;}
+  .team-av{width:60px;height:60px;border-radius:50%;margin:0 auto 12px;background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#241705;background-size:cover;background-position:center;}
+  .team-name{font-size:13px;font-weight:700;margin-bottom:2px;}
+  .team-role{font-size:10px;color:var(--eg-text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;}
+  .team-branch-tags{margin-bottom:8px;}
+  .team-meta{font-size:11px;color:var(--eg-text-secondary);margin-bottom:2px;}
+  .team-edit-btn{width:100%;margin-top:10px;font-size:11.5px;font-weight:700;background:var(--eg-bg-1);border:1px solid var(--eg-border);color:var(--eg-gold-100);padding:8px 10px;border-radius:8px;cursor:pointer;}
+  .team-add-card{border:1.5px dashed var(--eg-border-strong);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--eg-text-secondary);font-size:12px;font-weight:700;cursor:pointer;min-height:184px;}
+  .team-add-card i{font-size:22px;color:var(--eg-gold-300);}
+
+  /* modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(4,8,16,0.72);display:none;align-items:center;justify-content:center;z-index:50;padding:24px;}
+  .modal-overlay.open{display:flex;}
+  .modal-card{background:var(--eg-bg-1);border:1px solid var(--eg-border-strong);border-radius:16px;max-width:440px;width:100%;max-height:86vh;overflow-y:auto;}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--eg-navy-line);}
+  .modal-head b{font-size:15px;}
+  .modal-close{width:30px;height:30px;border-radius:50%;border:1px solid var(--eg-navy-line);background:none;color:var(--eg-text-secondary);cursor:pointer;}
+  .modal-body{padding:20px 22px;}
+  .modal-foot{padding:14px 22px;border-top:1px solid var(--eg-navy-line);display:flex;justify-content:space-between;gap:10px;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;}
+  .form-grid > div{margin-bottom:2px;}
+  .form-grid input, .form-grid select{width:100%;}
+  .team-photo-drop{width:84px;height:84px;border-radius:50%;margin:0 auto 16px;border:1.5px dashed var(--eg-border-strong);position:relative;display:flex;align-items:center;justify-content:center;color:var(--eg-text-secondary);font-size:11px;cursor:pointer;overflow:hidden;background-size:cover;background-position:center;}
+  .team-photo-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+  .team-photo-drop i{font-size:18px;color:var(--eg-gold-300);}
+  .branch-chip{font-size:11px;font-weight:600;padding:7px 11px;border-radius:8px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-secondary);cursor:pointer;user-select:none;display:inline-block;margin:0 6px 6px 0;}
+  .branch-chip.selected{background:rgba(201,151,75,0.16);border-color:var(--eg-gold-500);color:var(--eg-gold-100);}
+
+  /* distribuição */
+  .dist-row{display:flex;align-items:center;gap:12px;padding:9px 0;}
+  .switch-track{width:42px;height:24px;border-radius:99px;background:rgba(255,255,255,0.12);position:relative;cursor:pointer;flex-shrink:0;}
+  .switch-track .knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s;}
+  .switch-track.on{background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));}
+  .switch-track.on .knob{left:20px;}
+
+  #appScreen{display:none;}
+  .loading-note{color:var(--eg-text-muted);font-size:12.5px;padding:14px 0;}
+  .empty-note{color:var(--eg-text-muted);font-size:12.5px;padding:10px 0;font-style:italic;}
+
+  .list-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--eg-navy-line);flex-wrap:wrap;}
+  .list-row:last-child{border-bottom:none;}
+  .list-main b{display:block;font-size:12.5px;}
+  .list-main span{display:block;font-size:11px;color:var(--eg-text-muted);margin-top:2px;}
+  .list-side{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+
+  .star-rating{color:var(--eg-gold-300);font-size:13px;letter-spacing:2px;}
+  .nps-score-badge{width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12.5px;flex-shrink:0;}
+  .nps-score-badge.promoter{background:var(--eg-green-bg);color:var(--eg-green);}
+  .nps-score-badge.passive{background:rgba(201,151,75,0.16);color:var(--eg-gold-100);}
+  .nps-score-badge.detractor{background:var(--eg-red-bg);color:var(--eg-red);}
+
+  .trilha-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--eg-navy-line);}
+  .trilha-item:last-child{border-bottom:none;}
+  .trilha-check{width:24px;height:24px;border-radius:7px;border:1px solid var(--eg-navy-line);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;cursor:pointer;color:var(--eg-text-muted);margin-top:1px;}
+  .trilha-check.done{background:var(--eg-gold-500);border-color:var(--eg-gold-500);color:#221708;}
+  .trilha-body b{display:block;font-size:12.5px;}
+  .trilha-body.done b{color:var(--eg-text-secondary);text-decoration:line-through;text-decoration-color:var(--eg-navy-line);}
+  .trilha-body p{margin:3px 0 0;font-size:11.5px;color:var(--eg-text-secondary);line-height:1.5;}
+  .metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+  .metric-card{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:12px;padding:14px 16px;}
+  .metric-card .lbl{font-size:10.5px;color:var(--eg-text-muted);margin-bottom:6px;}
+  .metric-card .val{font-size:20px;font-weight:700;font-family:'Sora',sans-serif;color:var(--eg-gold-100);}
+  @media (max-width:720px){ .metric-row{grid-template-columns:repeat(2,1fr);} }
+
+  @media (max-width:720px){ .form-grid{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand-mark">EG</div>
+      <div class="brand-word"><span class="cs">ÁREA DA CS</span><span class="name">ENDOGIN</span></div>
+    </div>
+    <div class="login-field"><label>E-mail</label><input type="email" id="loginEmail" placeholder="seuemail@exemplo.com"></div>
+    <div class="login-field"><label>Senha</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
+    <button class="btn-primary" id="loginBtn" style="width:100%;">Entrar</button>
+    <div class="err-msg" id="loginErr"></div>
+    <p class="hint" style="margin-top:16px;">Login gerado pela Thais — se ainda não tem um, peça pra ela.</p>
+  </div>
+</div>
+
+<div id="appScreen">
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark">EG</div>
+        <div class="brand-word"><span class="cs">ÁREA DA CS</span><span class="name">ENDOGIN</span></div>
+      </div>
+      <div class="topbar-right">
+        <div class="user-chip">
+          <div class="user-av" id="userAv"></div>
+          <span id="userName"></span>
+        </div>
+        <button class="logout-btn" id="logoutBtn">Sair</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="alunos">Alunos</button>
+      <button class="tab-btn" data-tab="crm">CRM</button>
+      <button class="tab-btn" data-tab="sessoes">Sessões 1x1</button>
+      <button class="tab-btn" data-tab="trilha">Trilha CS</button>
+      <button class="tab-btn" data-tab="aniversarios">Aniversários</button>
+      <button class="tab-btn" data-tab="recados">Recados</button>
+      <button class="tab-btn" data-tab="feedbacks">Feedbacks</button>
+      <button class="tab-btn" data-tab="nps">NPS</button>
+      <button class="tab-btn" data-tab="relatorios">Relatórios</button>
+      <button class="tab-btn" data-tab="equipe">Equipe CS</button>
+    </div>
+
+    <!-- ================= ALUNOS ================= -->
+    <div class="tab-panel active" id="tab-alunos">
+      <div class="card" id="masterDistCard" style="display:none;">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-scale-balanced icn"></i>Distribuição automática de alunos</h3>
+          <div class="dist-row">
+            <span id="distLabel" class="hint"></span>
+            <div class="switch-track" id="distSwitch"><div class="knob"></div></div>
+          </div>
+        </div>
+        <p class="hint">Quando ligada, todo aluno novo (webhook da Cademi) entra pra CS com menos alunos no momento. Desligada, ele entra sem CS e você atribui à mão aqui embaixo.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-users icn"></i><span id="alunosTitle">Meus alunos</span></h3>
+          <div id="csFilterWrap" style="display:none;">
+            <select id="csFilterSelect"><option value="">Todas as CS</option></select>
+          </div>
+        </div>
+        <div id="alunosLoading" class="loading-note">Carregando alunos...</div>
+        <table id="alunosTable" style="display:none;">
+          <thead><tr><th>Aluno</th><th>Contato</th><th>Mentorias</th><th>Status</th><th>CS</th><th></th></tr></thead>
+          <tbody id="alunosBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ================= CRM ================= -->
+    <div class="tab-panel" id="tab-crm">
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-chart-line icn"></i>CRM de indicações</h3>
+          <button class="btn-secondary" id="newReferralBtn"><i class="fa-solid fa-plus"></i> Nova indicação</button>
+        </div>
+        <div id="referralsLoading" class="loading-note">Carregando...</div>
+        <div id="referralsList"></div>
+      </div>
+    </div>
+
+    <!-- ================= SESSÕES 1x1 ================= -->
+    <div class="tab-panel" id="tab-sessoes">
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-calendar-check icn"></i>Sessões 1x1 com os mentores</h3>
+          <button class="btn-secondary" id="newSessionBtn"><i class="fa-solid fa-plus"></i> Agendar sessão</button>
+        </div>
+        <p class="hint" style="margin:-8px 0 14px;">É daqui que sai a informação que a Thais repassa pro Dr. Caio e pro Dr. Vinícius.</p>
+        <div id="sessionsLoading" class="loading-note">Carregando...</div>
+        <div id="sessionsList"></div>
+      </div>
+    </div>
+
+    <!-- ================= TRILHA CS ================= -->
+    <div class="tab-panel" id="tab-trilha">
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-graduation-cap icn"></i>Minha trilha de treinamento</h3><span class="hint" id="trilhaPct"></span></div>
+        <div id="trilhaLoading" class="loading-note">Carregando...</div>
+        <div id="trilhaList"></div>
+      </div>
+    </div>
+
+    <!-- ================= ANIVERSÁRIOS ================= -->
+    <div class="tab-panel" id="tab-aniversarios">
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-cake-candles icn"></i>Aniversários</h3></div>
+        <p class="hint" style="margin:-8px 0 14px;">Só aparece aqui quem já tem data de nascimento preenchida (edite pelo "Editar" na aba Alunos).</p>
+        <div id="aniversariosList"></div>
+      </div>
+    </div>
+
+    <!-- ================= RECADOS ================= -->
+    <div class="tab-panel" id="tab-recados">
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-bullhorn icn"></i>Recados pras mentorias</h3>
+          <button class="btn-secondary" id="newRecadoBtn"><i class="fa-solid fa-plus"></i> Novo recado</button>
+        </div>
+        <p class="hint" style="margin:-8px 0 14px;">Mensagem, link ou documento — escolha pra quais mentorias vai. Os alunos dessas mentorias veem isso na área deles.</p>
+        <div id="recadosLoading" class="loading-note">Carregando...</div>
+        <div id="recadosList"></div>
+      </div>
+    </div>
+
+    <!-- ================= FEEDBACKS ================= -->
+    <div class="tab-panel" id="tab-feedbacks">
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-comment-dots icn"></i>Feedbacks dos alunos</h3>
+          <button class="btn-secondary" id="newFeedbackBtn"><i class="fa-solid fa-plus"></i> Registrar feedback</button>
+        </div>
+        <div id="feedbacksLoading" class="loading-note">Carregando...</div>
+        <div id="feedbacksList"></div>
+      </div>
+    </div>
+
+    <!-- ================= NPS ================= -->
+    <div class="tab-panel" id="tab-nps">
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-gauge-high icn"></i>NPS</h3>
+          <button class="btn-secondary" id="newNpsBtn"><i class="fa-solid fa-plus"></i> Registrar NPS</button>
+        </div>
+        <div id="npsMetricRow" class="metric-row" style="display:none;"></div>
+        <div id="npsLoading" class="loading-note">Carregando...</div>
+        <div id="npsList"></div>
+      </div>
+    </div>
+
+    <!-- ================= RELATÓRIOS ================= -->
+    <div class="tab-panel" id="tab-relatorios">
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-file-export icn"></i>Exportar dados</h3></div>
+        <p class="hint" style="margin:-8px 0 14px;">Exporta exatamente o que você vê nas outras abas — se for a Thais, sai tudo; se for uma CS, sai só o que é dela.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-secondary" id="exportAlunosBtn"><i class="fa-solid fa-download"></i> Alunos (.csv)</button>
+          <button class="btn-secondary" id="exportSessionsBtn"><i class="fa-solid fa-download"></i> Sessões 1x1 (.csv)</button>
+          <button class="btn-secondary" id="exportReferralsBtn"><i class="fa-solid fa-download"></i> Indicações (.csv)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= EQUIPE ================= -->
+    <div class="tab-panel" id="tab-equipe">
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-user-group icn"></i>Equipe CS</h3>
+          <span class="hint">Cada uma edita o próprio perfil — a Thais edita qualquer uma</span>
+        </div>
+        <div id="equipeLoading" class="loading-note">Carregando equipe...</div>
+        <div class="team-grid" id="teamGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: PERFIL DA CS ================= -->
+<div class="modal-overlay" id="teamModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <b id="teamModalTitle">Editar perfil</b>
+      <button class="modal-close" id="teamModalClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <label class="team-photo-drop" id="teamPhotoDrop">
+        <span id="teamPhotoPlaceholder"><i class="fa-solid fa-camera"></i></span>
+        <input type="file" accept="image/*" id="teamPhotoInput">
+      </label>
+      <div class="form-grid">
+        <div style="grid-column:1/-1;"><label>Nome completo</label><input type="text" id="teamFieldName"></div>
+        <div style="grid-column:1/-1;"><label>E-mail</label><input type="email" id="teamFieldEmail"></div>
+        <div><label>Telefone</label><input type="text" id="teamFieldPhone"></div>
+        <div id="teamActiveWrap"><label>Status</label><select id="teamFieldActive"><option value="true">Ativa</option><option value="false">Inativa</option></select></div>
+        <div id="teamRoleWrap" style="display:none;"><label>Papel</label>
+          <select id="teamFieldRole">
+            <option value="cs">CS</option>
+            <option value="mentor">Mentor(a)</option>
+            <option value="secretaria">Secretária</option>
+            <option value="financeiro">Financeiro</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;" id="teamBranchesWrap">
+          <label>Mentorias responsável</label>
+          <div id="teamBranchChecks"></div>
+        </div>
+        <div style="grid-column:1/-1;" id="teamPasswordWrap">
+          <label>Nova senha (deixe em branco pra não mudar)</label>
+          <input type="password" id="teamFieldPassword" placeholder="mín. 6 caracteres">
+        </div>
+      </div>
+      <div class="err-msg" id="teamModalErr"></div>
+    </div>
+    <div class="modal-foot">
+      <span></span>
+      <button class="btn-primary" id="teamSaveBtn">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: ALUNO ================= -->
+<div class="modal-overlay" id="alunoModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div><b id="alunoModalTitle">Editar aluno</b><br><span class="hint" id="alunoModalEmail"></span><br><span class="hint" id="alunoModalDisc" style="display:block;margin-top:3px;"></span></div>
+      <button class="modal-close" id="alunoModalClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div><label>Status</label>
+          <select id="alunoFieldStatus">
+            <option value="onboarding">Onboarding</option>
+            <option value="ativo">Ativo</option>
+            <option value="inativo">Inativo</option>
+            <option value="em_reonboarding">Em reonboarding</option>
+            <option value="trancado">Trancado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+        <div id="alunoCsWrap"><label>CS responsável</label><select id="alunoFieldCs"></select></div>
+        <div><label>Data de nascimento</label><input type="date" id="alunoFieldBirth"></div>
+        <div><label>CPF</label><input type="text" id="alunoFieldCpf" placeholder="000.000.000-00"></div>
+        <div style="grid-column:1/-1;">
+          <label>Mentorias (clique pra marcar/desmarcar)</label>
+          <div id="alunoBranchChecks"></div>
+        </div>
+      </div>
+      <div class="err-msg" id="alunoModalErr"></div>
+
+      <div id="alunoCredWrap" style="display:none;margin-top:22px;padding-top:18px;border-top:1px solid var(--eg-navy-line);">
+        <label style="margin-bottom:10px;">Credenciais de acesso</label>
+        <div class="form-grid">
+          <div style="grid-column:1/-1;"><label>Novo e-mail de login (deixe em branco pra não trocar)</label><input type="email" id="alunoFieldLoginEmail"></div>
+          <div style="grid-column:1/-1;"><label>Nova senha (deixe em branco pra não trocar)</label><input type="password" id="alunoFieldLoginPassword" placeholder="mín. 6 caracteres"></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-secondary" id="alunoSaveCredBtn" style="width:auto;flex:1;">Salvar credenciais</button>
+          <button class="btn-secondary" id="alunoViewAsBtn" style="width:auto;flex:1;"><i class="fa-solid fa-eye"></i> Ver como esse aluno</button>
+        </div>
+        <div class="err-msg" id="alunoCredErr"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span></span>
+      <button class="btn-primary" id="alunoSaveBtn">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: NOVA INDICAÇÃO ================= -->
+<div class="modal-overlay" id="referralModal">
+  <div class="modal-card">
+    <div class="modal-head"><b>Nova indicação</b><button class="modal-close" id="referralModalClose"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div style="grid-column:1/-1;"><label>Aluno que indicou</label><select id="referralFieldStudent"></select></div>
+        <div style="grid-column:1/-1;"><label>Nome de quem foi indicado</label><input type="text" id="referralFieldName"></div>
+        <div><label>Contato</label><input type="text" id="referralFieldContact" placeholder="telefone/whatsapp"></div>
+        <div><label>E-mail</label><input type="email" id="referralFieldEmail"></div>
+      </div>
+      <div class="err-msg" id="referralModalErr"></div>
+    </div>
+    <div class="modal-foot"><span></span><button class="btn-primary" id="referralSaveBtn">Salvar</button></div>
+  </div>
+</div>
+
+<!-- ================= MODAL: AGENDAR SESSÃO 1x1 ================= -->
+<div class="modal-overlay" id="sessionModal">
+  <div class="modal-card">
+    <div class="modal-head"><b>Agendar sessão 1x1</b><button class="modal-close" id="sessionModalClose"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div style="grid-column:1/-1;"><label>Aluno</label><select id="sessionFieldStudent"></select></div>
+        <div><label>Data e hora</label><input type="datetime-local" id="sessionFieldDate"></div>
+        <div><label>Status</label>
+          <select id="sessionFieldStatus">
+            <option value="a_agendar">A agendar</option>
+            <option value="agendada">Agendada</option>
+            <option value="confirmada">Confirmada</option>
+            <option value="realizada">Realizada</option>
+            <option value="remarcada">Remarcada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;"><label>Observações (o que passar pro Dr. Caio / Dr. Vinícius)</label><input type="text" id="sessionFieldNotes"></div>
+      </div>
+      <div class="err-msg" id="sessionModalErr"></div>
+    </div>
+    <div class="modal-foot"><span></span><button class="btn-primary" id="sessionSaveBtn">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="recadoModal">
+  <div class="modal-card">
+    <div class="modal-head"><b>Novo recado</b><button class="modal-close" id="recadoModalClose"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div style="grid-column:1/-1;"><label>Título (opcional)</label><input type="text" id="recadoFieldTitle" placeholder="Ex: Novo material da semana"></div>
+        <div style="grid-column:1/-1;"><label>Mensagem</label><textarea id="recadoFieldMessage" rows="4" placeholder="Escreva o recado..."></textarea></div>
+        <div style="grid-column:1/-1;"><label>Link (opcional)</label><input type="text" id="recadoFieldLink" placeholder="https://..."></div>
+        <div style="grid-column:1/-1;"><label>Anexo — PDF, imagem, etc. (opcional)</label><input type="file" id="recadoFieldFile"></div>
+        <div style="grid-column:1/-1;">
+          <label>Pra quais mentorias?</label>
+          <div id="recadoBranchChecks" class="branch-checks"></div>
+        </div>
+      </div>
+      <div class="err-msg" id="recadoModalErr"></div>
+    </div>
+    <div class="modal-foot"><span></span><button class="btn-primary" id="recadoSaveBtn">Publicar recado</button></div>
+  </div>
+</div>
+
+<!-- ================= MODAL: REGISTRAR FEEDBACK ================= -->
+<div class="modal-overlay" id="feedbackModal">
+  <div class="modal-card">
+    <div class="modal-head"><b>Registrar feedback</b><button class="modal-close" id="feedbackModalClose"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div style="grid-column:1/-1;"><label>Aluno</label><select id="feedbackFieldStudent"></select></div>
+        <div><label>Categoria</label><input type="text" id="feedbackFieldCategory" placeholder="ex: Conteúdo das aulas"></div>
+        <div><label>Nota (1 a 5)</label><input type="number" id="feedbackFieldRating" min="1" max="5" value="5"></div>
+        <div style="grid-column:1/-1;"><label>Comentário</label><input type="text" id="feedbackFieldComment"></div>
+      </div>
+      <div class="err-msg" id="feedbackModalErr"></div>
+    </div>
+    <div class="modal-foot"><span></span><button class="btn-primary" id="feedbackSaveBtn">Salvar</button></div>
+  </div>
+</div>
+
+<!-- ================= MODAL: REGISTRAR NPS ================= -->
+<div class="modal-overlay" id="npsModal">
+  <div class="modal-card">
+    <div class="modal-head"><b>Registrar NPS</b><button class="modal-close" id="npsModalClose"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div style="grid-column:1/-1;"><label>Aluno</label><select id="npsFieldStudent"></select></div>
+        <div><label>Nota (0 a 10)</label><input type="number" id="npsFieldScore" min="0" max="10" value="10"></div>
+        <div style="grid-column:1/-1;"><label>Comentário</label><input type="text" id="npsFieldComment"></div>
+      </div>
+      <div class="err-msg" id="npsModalErr"></div>
+    </div>
+    <div class="modal-foot"><span></span><button class="btn-primary" id="npsSaveBtn">Salvar</button></div>
+  </div>
+</div>
+
+<script>
+  // ---- CONFIGURAÇÃO ----
+  // Chave pública (publishable) do projeto — NUNCA a secret key aqui, esse
+  // arquivo roda no navegador e qualquer um que abrir vê o código-fonte.
+  var SUPABASE_URL = "https://pguyeowngwrolrrqbopw.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_6dfrX0H6V43eI6WjnKR4Yg_VcgsyXBc";
+
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  var currentStaff = null;
+  var allStaff = [];
+  var allBranches = [];
+  var allStudents = [];
+  var staffBranchMap = {}; // staff_id -> [branch name,...]
+  var teamEditingId = null;
+  var teamPhotoData = null;
+  var teamSelectedBranches = [];
+  var alunoEditingId = null;
+  var alunoSelectedBranches = [];
+  var allRecados = [];
+  var recadoSelectedBranches = [];
+  var recadoAllBranches = false;
+  var recadoFile = null;
+
+  function $(id){ return document.getElementById(id); }
+
+  // ---------------- login ----------------
+  $("loginBtn").addEventListener("click", doLogin);
+  $("loginPassword").addEventListener("keydown", function(e){ if(e.key === "Enter") doLogin(); });
+
+  function doLogin(){
+    var email = $("loginEmail").value.trim();
+    var password = $("loginPassword").value;
+    $("loginErr").textContent = "";
+    if(!email || !password){ $("loginErr").textContent = "Preencha e-mail e senha."; return; }
+    $("loginBtn").disabled = true;
+    sb.auth.signInWithPassword({ email: email, password: password }).then(function(res){
+      $("loginBtn").disabled = false;
+      if(res.error){
+        $("loginErr").textContent = "Login inválido. Confira e-mail/senha ou peça um novo pra Thais.";
+        return;
+      }
+      boot();
+    });
+  }
+
+  $("logoutBtn").addEventListener("click", function(){
+    sb.auth.signOut().then(function(){ location.reload(); });
+  });
+
+  // ---------------- boot ----------------
+  sb.auth.getSession().then(function(res){
+    if(res.data && res.data.session){ boot(); }
+  });
+
+  function boot(){
+    sb.auth.getSession().then(function(res){
+      var session = res.data.session;
+      if(!session){ return; }
+      sb.from("staff").select("*").eq("auth_user_id", session.user.id).single().then(function(r){
+        if(r.error || !r.data){
+          $("loginErr").textContent = "Login ok, mas não achei seu cadastro em staff. Fale com a Thais.";
+          sb.auth.signOut();
+          return;
+        }
+        currentStaff = r.data;
+        // is_master (Thais) e is_super_admin (TI) enxergam a mesma amplitude
+        // de tela — a diferença entre os dois fica só na aba Equipe.
+        currentStaff.isMasterLike = Boolean(currentStaff.isMasterLike || currentStaff.is_super_admin);
+        $("loginScreen").style.display = "none";
+        $("appScreen").style.display = "block";
+        $("userName").textContent = currentStaff.full_name;
+        $("userAv").textContent = teamInitials(currentStaff.full_name).toUpperCase();
+        if(currentStaff.photo_url){ $("userAv").style.backgroundImage = "url(" + currentStaff.photo_url + ")"; $("userAv").textContent = ""; }
+        if(currentStaff.isMasterLike){
+          $("masterDistCard").style.display = "block";
+          $("csFilterWrap").style.display = "block";
+          $("alunosTitle").textContent = "Todos os alunos";
+          loadDistSetting();
+        }
+        loadStaffAndBranches();
+        loadReferrals();
+        loadSessions();
+        loadTrilha();
+        loadFeedbacks();
+        loadNps();
+        loadRecados();
+      });
+    });
+  }
+
+  function teamInitials(name){
+    var parts = (name || "").trim().split(/\s+/);
+    return ((parts[0]||"")[0]||"") + ((parts[1]||"")[0]||"");
+  }
+
+  // ---------------- tabs ----------------
+  document.querySelectorAll(".tab-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
+      document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.remove("active"); });
+      btn.classList.add("active");
+      $("tab-" + btn.getAttribute("data-tab")).classList.add("active");
+    });
+  });
+
+  // ---------------- distribuição automática (master) ----------------
+  function loadDistSetting(){
+    sb.from("app_settings").select("auto_distribution_enabled").eq("id", true).maybeSingle().then(function(r){
+      var on = r.data ? r.data.auto_distribution_enabled : true;
+      renderDistSwitch(on);
+    });
+  }
+  function renderDistSwitch(on){
+    $("distSwitch").classList.toggle("on", on);
+    $("distLabel").textContent = on ? "Ligada" : "Desligada";
+  }
+  $("distSwitch").addEventListener("click", function(){
+    var willBeOn = !$("distSwitch").classList.contains("on");
+    sb.from("app_settings").update({ auto_distribution_enabled: willBeOn }).eq("id", true).then(function(r){
+      if(!r.error){ renderDistSwitch(willBeOn); }
+    });
+  });
+
+  // ---------------- alunos ----------------
+  var csFilterValue = "";
+  $("csFilterSelect").addEventListener("change", function(){
+    csFilterValue = this.value;
+    loadAlunos();
+  });
+
+  function loadAlunos(){
+    $("alunosLoading").style.display = "block";
+    $("alunosTable").style.display = "none";
+    var query = sb.from("students")
+      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,deliveries(id,label,status,branch_id),staff:cs_id(full_name),disc_results(primary_profile)")
+      .order("full_name");
+    if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
+    query.then(function(r){
+      $("alunosLoading").style.display = "none";
+      if(r.error){ $("alunosLoading").textContent = "Erro ao carregar: " + r.error.message; $("alunosLoading").style.display = "block"; return; }
+      allStudents = r.data || [];
+      renderAlunos(allStudents);
+      renderAniversarios(allStudents);
+      populateStudentSelects();
+    });
+  }
+
+  function populateStudentSelects(){
+    var sorted = allStudents.slice().sort(function(a,b){ return a.full_name.localeCompare(b.full_name); });
+    ["referralFieldStudent","sessionFieldStudent","feedbackFieldStudent","npsFieldStudent"].forEach(function(id){
+      var sel = $(id);
+      if(!sel) return;
+      var prevValue = sel.value;
+      sel.innerHTML = "";
+      sorted.forEach(function(s){
+        var opt = document.createElement("option");
+        opt.value = s.id; opt.textContent = s.full_name;
+        sel.appendChild(opt);
+      });
+      if(prevValue) sel.value = prevValue;
+    });
+  }
+
+  var DISC_PROFILE_LABEL = { D:"Dominante", I:"Influente", S:"Estável", C:"Cauteloso" };
+
+  function discBadge(student){
+    var profile = student.disc_results && student.disc_results[0] && student.disc_results[0].primary_profile;
+    if(!profile) return "";
+    return ' <span class="disc-badge" title="Perfil comportamental (DISC) — visível só pra equipe">DISC: ' + (DISC_PROFILE_LABEL[profile] || profile) + '</span>';
+  }
+
+  function renderAlunos(list){
+    var body = $("alunosBody");
+    body.innerHTML = "";
+    list.forEach(function(s){
+      var deliveries = s.deliveries || [];
+      var tags = deliveries.length
+        ? deliveries.map(function(d){ return '<span class="branch-tag' + (d.status !== "ativo" ? " inactive" : "") + '">' + d.label + '</span>'; }).join("")
+        : '<span class="hint">—</span>';
+      var csName = (s.staff && s.staff.full_name) || (s.legacy_cs_label ? s.legacy_cs_label + " (não vinculada)" : "Sem CS");
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td><b>' + s.full_name + '</b>' + discBadge(s) + '<br><span class="hint">' + s.email + '</span></td>' +
+        '<td>' + (s.phone || "—") + '</td>' +
+        '<td>' + tags + '</td>' +
+        '<td><span class="status-pill ' + s.status + '">' + s.status + '</span></td>' +
+        '<td>' + csName + '</td>' +
+        '<td><button class="row-edit-btn" data-aluno-id="' + s.id + '"><i class="fa-solid fa-pen"></i> Editar</button></td>';
+      body.appendChild(tr);
+    });
+    $("alunosTable").style.display = "table";
+    body.querySelectorAll("[data-aluno-id]").forEach(function(btn){
+      btn.addEventListener("click", function(){ openAlunoModal(btn.getAttribute("data-aluno-id")); });
+    });
+  }
+
+  // ---------------- editar aluno (status, mentorias, CS) ----------------
+  function renderAlunoBranchChecks(){
+    var wrap = $("alunoBranchChecks");
+    wrap.innerHTML = "";
+    allBranches.forEach(function(b){
+      var chip = document.createElement("span");
+      chip.className = "branch-chip" + (alunoSelectedBranches.indexOf(b.name) > -1 ? " selected" : "");
+      chip.textContent = b.name;
+      chip.addEventListener("click", function(){
+        var idx = alunoSelectedBranches.indexOf(b.name);
+        if(idx > -1) alunoSelectedBranches.splice(idx, 1); else alunoSelectedBranches.push(b.name);
+        renderAlunoBranchChecks();
+      });
+      wrap.appendChild(chip);
+    });
+  }
+
+  function openAlunoModal(id){
+    var student = allStudents.find(function(s){ return s.id === id; });
+    if(!student) return;
+    alunoEditingId = id;
+    var activeDeliveries = (student.deliveries || []).filter(function(d){ return d.status === "ativo"; });
+    alunoSelectedBranches = activeDeliveries.map(function(d){ return d.label; });
+    renderAlunoBranchChecks();
+    $("alunoModalErr").textContent = "";
+    $("alunoModalTitle").textContent = student.full_name;
+    $("alunoModalEmail").textContent = student.email;
+    var discEl = $("alunoModalDisc");
+    if(discEl){
+      var profile = student.disc_results && student.disc_results[0] && student.disc_results[0].primary_profile;
+      discEl.innerHTML = profile
+        ? 'Perfil comportamental (DISC): <b>' + (DISC_PROFILE_LABEL[profile] || profile) + '</b>'
+        : 'Perfil comportamental (DISC): <span class="hint">ainda não fez o teste</span>';
+    }
+    $("alunoFieldStatus").value = student.status;
+    $("alunoFieldBirth").value = student.birth_date || "";
+    $("alunoFieldCpf").value = student.cpf || "";
+
+    $("alunoCsWrap").style.display = currentStaff.isMasterLike ? "block" : "none";
+    if(currentStaff.isMasterLike){
+      var sel = $("alunoFieldCs");
+      sel.innerHTML = '<option value="">Sem CS</option>';
+      allStaff.filter(function(s){ return s.is_active; }).forEach(function(s){
+        var opt = document.createElement("option");
+        opt.value = s.id; opt.textContent = s.full_name;
+        if(s.id === student.cs_id) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+
+    $("alunoCredWrap").style.display = currentStaff.isMasterLike ? "block" : "none";
+    $("alunoFieldLoginEmail").value = "";
+    $("alunoFieldLoginPassword").value = "";
+    $("alunoCredErr").textContent = "";
+    $("alunoViewAsBtn").disabled = !student.auth_user_id;
+    $("alunoViewAsBtn").title = student.auth_user_id ? "" : "Esse aluno ainda não tem login criado";
+
+    $("alunoModal").classList.add("open");
+  }
+
+  $("alunoModalClose").addEventListener("click", function(){ $("alunoModal").classList.remove("open"); });
+
+  $("alunoSaveBtn").addEventListener("click", function(){
+    var student = allStudents.find(function(s){ return s.id === alunoEditingId; });
+    if(!student) return;
+    var newStatus = $("alunoFieldStatus").value;
+    $("alunoModalErr").textContent = "";
+
+    var updates = { status: newStatus, birth_date: $("alunoFieldBirth").value || null, cpf: $("alunoFieldCpf").value.trim() || null };
+    if(currentStaff.isMasterLike){
+      var csVal = $("alunoFieldCs").value;
+      updates.cs_id = csVal || null;
+    }
+
+    sb.from("students").update(updates).eq("id", student.id).then(function(r){
+      if(r.error){ $("alunoModalErr").textContent = "Erro ao salvar: " + r.error.message; return; }
+      syncStudentBranches(student, function(err){
+        if(err){ $("alunoModalErr").textContent = "Status salvo, mas erro nas mentorias: " + err; return; }
+        $("alunoModal").classList.remove("open");
+        loadAlunos();
+      });
+    });
+  });
+
+  function syncStudentBranches(student, done){
+    var existing = student.deliveries || [];
+    var tasks = [];
+
+    existing.forEach(function(d){
+      var stillSelected = alunoSelectedBranches.indexOf(d.label) > -1;
+      if(stillSelected && d.status !== "ativo"){
+        tasks.push(sb.from("deliveries").update({ status: "ativo" }).eq("id", d.id));
+      } else if(!stillSelected && d.status === "ativo"){
+        tasks.push(sb.from("deliveries").update({ status: "inativo" }).eq("id", d.id));
+      }
+    });
+
+    var existingLabels = existing.map(function(d){ return d.label; });
+    var newOnes = alunoSelectedBranches.filter(function(name){ return existingLabels.indexOf(name) === -1; });
+    newOnes.forEach(function(name){
+      var branch = allBranches.find(function(b){ return b.name === name; });
+      tasks.push(sb.from("deliveries").insert({
+        student_id: student.id, branch_id: branch ? branch.id : null, label: name,
+        status: "ativo", source: "manual"
+      }));
+    });
+
+    if(!tasks.length){ done(null); return; }
+    Promise.all(tasks).then(function(results){
+      var withError = results.find(function(r){ return r.error; });
+      done(withError ? withError.error.message : null);
+    });
+  }
+
+  // ---------------- credenciais de acesso do aluno (só master) ----------------
+  $("alunoSaveCredBtn").addEventListener("click", function(){
+    var newEmail = $("alunoFieldLoginEmail").value.trim();
+    var newPassword = $("alunoFieldLoginPassword").value;
+    $("alunoCredErr").textContent = "";
+    if(!newEmail && !newPassword){ $("alunoCredErr").textContent = "Preencha o e-mail novo e/ou a senha nova."; return; }
+    if(newPassword && newPassword.length < 6){ $("alunoCredErr").textContent = "A senha precisa ter 6+ caracteres."; return; }
+    $("alunoSaveCredBtn").disabled = true;
+    sb.functions.invoke("admin-tools", {
+      body: { action: "update_login", student_id: alunoEditingId, new_email: newEmail || undefined, new_password: newPassword || undefined }
+    }).then(function(r){
+      $("alunoSaveCredBtn").disabled = false;
+      if(r.error || (r.data && r.data.ok === false)){
+        $("alunoCredErr").textContent = "Erro: " + (r.error ? r.error.message : r.data.error);
+        return;
+      }
+      $("alunoFieldLoginEmail").value = "";
+      $("alunoFieldLoginPassword").value = "";
+      $("alunoCredErr").style.color = "var(--eg-green)";
+      $("alunoCredErr").textContent = "Credenciais atualizadas!";
+      loadAlunos();
+    });
+  });
+
+  $("alunoViewAsBtn").addEventListener("click", function(){
+    $("alunoCredErr").textContent = "";
+    $("alunoViewAsBtn").disabled = true;
+    sb.functions.invoke("admin-tools", { body: { action: "get_login_link", student_id: alunoEditingId } }).then(function(r){
+      $("alunoViewAsBtn").disabled = false;
+      if(r.error || (r.data && r.data.ok === false) || !r.data || !r.data.action_link){
+        $("alunoCredErr").textContent = "Erro: " + (r.error ? r.error.message : (r.data && r.data.error) || "sem link");
+        return;
+      }
+      window.open(r.data.action_link, "_blank");
+    });
+  });
+
+  // ---------------- equipe CS ----------------
+  // Admin geral (TI) vê todo mundo (CS, mentor, secretária, outro admin);
+  // a Thais (master, não super admin) continua vendo só a equipe de CS.
+  function loadStaffAndBranches(){
+    var staffQuery = sb.from("staff").select("*").order("full_name");
+    if(!currentStaff.is_super_admin){ staffQuery = staffQuery.eq("role", "cs"); }
+    Promise.all([
+      staffQuery,
+      sb.from("branches").select("id,name").order("name"),
+      sb.from("staff_branches").select("staff_id,branch_id")
+    ]).then(function(results){
+      var staffRes = results[0], branchRes = results[1], sbRes = results[2];
+      $("equipeLoading").style.display = "none";
+      if(staffRes.error){ $("equipeLoading").textContent = "Erro: " + staffRes.error.message; $("equipeLoading").style.display = "block"; return; }
+      allStaff = staffRes.data || [];
+      allBranches = branchRes.data || [];
+      staffBranchMap = {};
+      (sbRes.data || []).forEach(function(row){
+        var branch = allBranches.find(function(b){ return b.id === row.branch_id; });
+        if(!branch) return;
+        staffBranchMap[row.staff_id] = staffBranchMap[row.staff_id] || [];
+        staffBranchMap[row.staff_id].push(branch.name);
+      });
+
+      // popula filtro de CS (master)
+      if(currentStaff.isMasterLike){
+        var sel = $("csFilterSelect");
+        sel.innerHTML = '<option value="">Todas as CS</option>';
+        allStaff.filter(function(s){ return s.is_active; }).forEach(function(s){
+          var opt = document.createElement("option");
+          opt.value = s.id; opt.textContent = s.full_name;
+          sel.appendChild(opt);
+        });
+      }
+
+      renderTeamGrid();
+      loadAlunos();
+      if(allRecados.length) renderRecados();
+    });
+  }
+
+  var ROLE_LABELS = { cs: "CS", mentor: "Mentor(a)", secretaria: "Secretária", admin: "Admin", financeiro: "Financeiro" };
+
+  function roleLabel(person){
+    if(person.is_super_admin) return "Admin geral";
+    if(person.is_master) return "CS master";
+    return ROLE_LABELS[person.role] || person.role;
+  }
+
+  function renderTeamGrid(){
+    var grid = $("teamGrid");
+    grid.innerHTML = "";
+    allStaff.forEach(function(person){
+      var card = document.createElement("div");
+      card.className = "team-card" + (person.is_active ? "" : " inactive");
+      var avStyle = person.photo_url ? ' style="background-image:url(' + person.photo_url + ')"' : "";
+      var showBranches = person.role === "cs";
+      var branches = staffBranchMap[person.id] || [];
+      var tagsHtml = showBranches ? '<div class="team-branch-tags">' + (branches.length
+        ? branches.map(function(b){ return '<span class="branch-tag">' + b + '</span>'; }).join("")
+        : '<span class="hint">sem mentoria definida</span>') + '</div>' : '';
+      var canEdit = currentStaff.isMasterLike || person.id === currentStaff.id;
+      var badge = (person.is_super_admin || person.is_master) ? ' <i class="fa-solid fa-shield-halved" title="' + roleLabel(person) + '" style="color:var(--eg-gold-300);font-size:11px;"></i>' : '';
+      card.innerHTML =
+        (!person.is_active ? '<span class="team-inactive-tag">Inativa</span>' : '') +
+        '<div class="team-av"' + avStyle + '>' + (person.photo_url ? "" : teamInitials(person.full_name).toUpperCase()) + '</div>' +
+        '<div class="team-name">' + person.full_name + badge + '</div>' +
+        '<div class="team-role">' + roleLabel(person) + '</div>' +
+        tagsHtml +
+        '<div class="team-meta">' + person.email + '</div>' +
+        '<div class="team-meta">' + (person.phone || "sem telefone") + '</div>' +
+        (canEdit ? '<button class="team-edit-btn" data-edit-id="' + person.id + '"><i class="fa-solid fa-pen"></i> Editar perfil</button>' : '');
+      grid.appendChild(card);
+    });
+    if(currentStaff.isMasterLike){
+      var addCard = document.createElement("div");
+      addCard.className = "team-add-card";
+      addCard.innerHTML = '<i class="fa-solid fa-user-plus"></i><span>' + (currentStaff.is_super_admin ? "+ Nova pessoa" : "+ Nova CS") + '</span>';
+      addCard.addEventListener("click", function(){ openTeamModal(null); });
+      grid.appendChild(addCard);
+    }
+    grid.querySelectorAll("[data-edit-id]").forEach(function(btn){
+      btn.addEventListener("click", function(){ openTeamModal(btn.getAttribute("data-edit-id")); });
+    });
+  }
+
+  function renderBranchChecks(){
+    var wrap = $("teamBranchChecks");
+    wrap.innerHTML = "";
+    allBranches.forEach(function(b){
+      var chip = document.createElement("span");
+      chip.className = "branch-chip" + (teamSelectedBranches.indexOf(b.name) > -1 ? " selected" : "");
+      chip.textContent = b.name;
+      chip.addEventListener("click", function(){
+        var idx = teamSelectedBranches.indexOf(b.name);
+        if(idx > -1) teamSelectedBranches.splice(idx, 1); else teamSelectedBranches.push(b.name);
+        renderBranchChecks();
+      });
+      wrap.appendChild(chip);
+    });
+  }
+
+  function openTeamModal(id){
+    teamEditingId = id;
+    teamPhotoData = null;
+    var person = allStaff.find(function(p){ return p.id === id; });
+    var isSelf = person && person.id === currentStaff.id;
+    teamSelectedBranches = person ? (staffBranchMap[person.id] || []).slice() : [];
+    renderBranchChecks();
+    $("teamModalErr").textContent = "";
+    $("teamModalTitle").textContent = person ? "Editar perfil" : "Nova CS";
+    $("teamFieldName").value = person ? person.full_name : "";
+    $("teamFieldEmail").value = person ? person.email : "";
+    $("teamFieldEmail").readOnly = !!person;
+    $("teamFieldPhone").value = person ? (person.phone || "") : "";
+    $("teamFieldActive").value = person ? String(person.is_active) : "true";
+    $("teamFieldPassword").value = "";
+    $("teamFieldRole").value = person ? person.role : "cs";
+    $("teamActiveWrap").style.display = (currentStaff.isMasterLike) ? "block" : "none";
+    $("teamRoleWrap").style.display = currentStaff.is_super_admin ? "block" : "none";
+    var roleForBranches = person ? person.role : "cs";
+    $("teamBranchesWrap").style.display = (currentStaff.isMasterLike && roleForBranches === "cs") ? "block" : "none";
+    $("teamPasswordWrap").style.display = (person && isSelf) ? "block" : "none";
+    var photoDrop = $("teamPhotoDrop"), placeholder = $("teamPhotoPlaceholder");
+    if(person && person.photo_url){ photoDrop.style.backgroundImage = "url(" + person.photo_url + ")"; placeholder.style.display = "none"; }
+    else { photoDrop.style.backgroundImage = "none"; placeholder.style.display = "flex"; }
+    $("teamModal").classList.add("open");
+  }
+
+  $("teamModalClose").addEventListener("click", function(){ $("teamModal").classList.remove("open"); });
+
+  $("teamPhotoInput").addEventListener("change", function(e){
+    var file = e.target.files && e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      teamPhotoData = ev.target.result;
+      $("teamPhotoDrop").style.backgroundImage = "url(" + teamPhotoData + ")";
+      $("teamPhotoPlaceholder").style.display = "none";
+    };
+    reader.readAsDataURL(file);
+  });
+
+  $("teamSaveBtn").addEventListener("click", function(){
+    var name = $("teamFieldName").value.trim();
+    var email = $("teamFieldEmail").value.trim().toLowerCase();
+    var phone = $("teamFieldPhone").value.trim();
+    var active = $("teamFieldActive").value === "true";
+    var newPassword = $("teamFieldPassword").value;
+    $("teamModalErr").textContent = "";
+    if(!name || !email){ $("teamModalErr").textContent = "Preencha nome e e-mail."; return; }
+
+    var person = allStaff.find(function(p){ return p.id === teamEditingId; });
+
+    function afterSave(){
+      var doPassword = newPassword && person && person.id === currentStaff.id;
+      if(doPassword){
+        if(newPassword.length < 6){ $("teamModalErr").textContent = "Perfil salvo, mas a senha precisa ter 6+ caracteres — tente trocar de novo."; }
+        else {
+          sb.auth.updateUser({ password: newPassword }).then(function(){
+            $("teamModal").classList.remove("open");
+            loadStaffAndBranches();
+          });
+          return;
+        }
+      }
+      $("teamModal").classList.remove("open");
+      loadStaffAndBranches();
+    }
+
+    var chosenRole = currentStaff.is_super_admin ? $("teamFieldRole").value : "cs";
+
+    if(person){
+      var updates = { full_name: name, phone: phone || null };
+      if(currentStaff.isMasterLike){ updates.is_active = active; }
+      if(currentStaff.is_super_admin){ updates.role = chosenRole; }
+      if(teamPhotoData){ updates.photo_url = teamPhotoData; }
+      sb.from("staff").update(updates).eq("id", person.id).then(function(r){
+        if(r.error){ $("teamModalErr").textContent = "Erro ao salvar: " + r.error.message; return; }
+        var effectiveRole = currentStaff.is_super_admin ? chosenRole : person.role;
+        if(currentStaff.isMasterLike && effectiveRole === "cs"){
+          syncBranches(person.id, function(){ afterSave(); });
+        } else { afterSave(); }
+      });
+    } else {
+      sb.from("staff").insert({
+        full_name: name, email: email, phone: phone || null, role: chosenRole,
+        is_active: active, photo_url: teamPhotoData
+      }).select().single().then(function(r){
+        if(r.error){ $("teamModalErr").textContent = "Erro ao criar: " + r.error.message; return; }
+        $("teamModalErr").innerHTML = "";
+        function done(){
+          alert("Pessoa cadastrada! Agora rode o script criar_logins_cs.py no terminal pra gerar o login dela.");
+          $("teamModal").classList.remove("open");
+          loadStaffAndBranches();
+        }
+        if(chosenRole === "cs"){ syncBranches(r.data.id, done); } else { done(); }
+      });
+    }
+  });
+
+  function syncBranches(staffId, done){
+    sb.from("staff_branches").delete().eq("staff_id", staffId).then(function(){
+      var branchIds = teamSelectedBranches.map(function(name){
+        var b = allBranches.find(function(x){ return x.name === name; });
+        return b ? b.id : null;
+      }).filter(Boolean);
+      if(!branchIds.length){ done(); return; }
+      var rows = branchIds.map(function(bid){ return { staff_id: staffId, branch_id: bid }; });
+      sb.from("staff_branches").insert(rows).then(function(){ done(); });
+    });
+  }
+
+  function studentName(id){
+    var s = allStudents.find(function(x){ return x.id === id; });
+    return s ? s.full_name : "(aluno)";
+  }
+  function fmtDate(iso){
+    if(!iso) return "—";
+    var d = new Date(iso);
+    return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
+  }
+  function csvEscape(v){
+    v = (v === null || v === undefined) ? "" : String(v);
+    if(/[",\n]/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+    return v;
+  }
+  function downloadCsv(filename, rows){
+    var csv = rows.map(function(r){ return r.map(csvEscape).join(","); }).join("\r\n");
+    var blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    var link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+  }
+
+  // ---------------- CRM (indicações) ----------------
+  function loadReferrals(){
+    $("referralsLoading").style.display = "block";
+    sb.from("referrals").select("*").order("created_at", { ascending: false }).then(function(r){
+      $("referralsLoading").style.display = "none";
+      if(r.error){ $("referralsLoading").textContent = "Erro: " + r.error.message; $("referralsLoading").style.display = "block"; return; }
+      renderReferrals(r.data || []);
+    });
+  }
+  function renderReferrals(list){
+    var wrap = $("referralsList");
+    if(!list.length){ wrap.innerHTML = '<div class="empty-note">Nenhuma indicação registrada ainda.</div>'; return; }
+    wrap.innerHTML = "";
+    list.forEach(function(ref){
+      var row = document.createElement("div");
+      row.className = "list-row";
+      row.innerHTML =
+        '<div class="list-main"><b>' + ref.referred_name + '</b><span>indicado por ' + studentName(ref.referrer_student_id) + ' — ' + fmtDate(ref.created_at) + '</span></div>' +
+        '<div class="list-side"><select data-referral-id="' + ref.id + '">' +
+          ["novo","em_negociacao","vendido","perdido"].map(function(st){
+            return '<option value="' + st + '"' + (st === ref.status ? " selected" : "") + '>' + st.replace("_"," ") + '</option>';
+          }).join("") +
+        '</select></div>';
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll("[data-referral-id]").forEach(function(sel){
+      sel.addEventListener("change", function(){
+        sb.from("referrals").update({ status: sel.value }).eq("id", sel.getAttribute("data-referral-id")).then(function(){});
+      });
+    });
+  }
+  $("newReferralBtn").addEventListener("click", function(){
+    $("referralModalErr").textContent = "";
+    $("referralFieldName").value = ""; $("referralFieldContact").value = ""; $("referralFieldEmail").value = "";
+    $("referralModal").classList.add("open");
+  });
+  $("referralModalClose").addEventListener("click", function(){ $("referralModal").classList.remove("open"); });
+  $("referralSaveBtn").addEventListener("click", function(){
+    var studentId = $("referralFieldStudent").value;
+    var name = $("referralFieldName").value.trim();
+    if(!studentId || !name){ $("referralModalErr").textContent = "Escolha o aluno e o nome de quem foi indicado."; return; }
+    sb.from("referrals").insert({
+      referrer_student_id: studentId, referred_name: name,
+      referred_contact: $("referralFieldContact").value.trim() || null,
+      referred_email: $("referralFieldEmail").value.trim() || null,
+      status: "novo"
+    }).then(function(r){
+      if(r.error){ $("referralModalErr").textContent = "Erro: " + r.error.message; return; }
+      $("referralModal").classList.remove("open");
+      loadReferrals();
+    });
+  });
+
+  // ---------------- Sessões 1x1 ----------------
+  function loadSessions(){
+    $("sessionsLoading").style.display = "block";
+    sb.from("mentoring_sessions").select("*").order("scheduled_at", { ascending: true }).then(function(r){
+      $("sessionsLoading").style.display = "none";
+      if(r.error){ $("sessionsLoading").textContent = "Erro: " + r.error.message; $("sessionsLoading").style.display = "block"; return; }
+      renderSessions(r.data || []);
+    });
+  }
+  function renderSessions(list){
+    var wrap = $("sessionsList");
+    if(!list.length){ wrap.innerHTML = '<div class="empty-note">Nenhuma sessão agendada ainda.</div>'; return; }
+    wrap.innerHTML = "";
+    list.forEach(function(s){
+      var row = document.createElement("div");
+      row.className = "list-row";
+      row.innerHTML =
+        '<div class="list-main"><b>' + studentName(s.student_id) + '</b><span>' + fmtDate(s.scheduled_at) + (s.feedback_notes ? " — " + s.feedback_notes : "") + '</span></div>' +
+        '<div class="list-side"><select data-session-id="' + s.id + '">' +
+          ["a_agendar","agendada","confirmada","realizada","remarcada","cancelada"].map(function(st){
+            return '<option value="' + st + '"' + (st === s.status ? " selected" : "") + '>' + st.replace("_"," ") + '</option>';
+          }).join("") +
+        '</select></div>';
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll("[data-session-id]").forEach(function(sel){
+      sel.addEventListener("change", function(){
+        sb.from("mentoring_sessions").update({ status: sel.value }).eq("id", sel.getAttribute("data-session-id")).then(function(){});
+      });
+    });
+  }
+  $("newSessionBtn").addEventListener("click", function(){
+    $("sessionModalErr").textContent = "";
+    $("sessionFieldDate").value = ""; $("sessionFieldStatus").value = "a_agendar"; $("sessionFieldNotes").value = "";
+    $("sessionModal").classList.add("open");
+  });
+  $("sessionModalClose").addEventListener("click", function(){ $("sessionModal").classList.remove("open"); });
+  $("sessionSaveBtn").addEventListener("click", function(){
+    var studentId = $("sessionFieldStudent").value;
+    var dateVal = $("sessionFieldDate").value;
+    if(!studentId){ $("sessionModalErr").textContent = "Escolha o aluno."; return; }
+    sb.from("mentoring_sessions").insert({
+      student_id: studentId,
+      scheduled_at: dateVal ? new Date(dateVal).toISOString() : null,
+      status: $("sessionFieldStatus").value,
+      feedback_notes: $("sessionFieldNotes").value.trim() || null
+    }).then(function(r){
+      if(r.error){ $("sessionModalErr").textContent = "Erro: " + r.error.message; return; }
+      $("sessionModal").classList.remove("open");
+      loadSessions();
+    });
+  });
+
+  // ---------------- Trilha da CS ----------------
+  var TRILHA_STEPS = [
+    {key:"conhecer_bracos", title:"Conhecer os braços da Endogin", desc:"Ativação, Mãe, Masters, Scale, Start, Surgical — o que cada um oferece e quem é o público."},
+    {key:"script_boas_vindas", title:"Aprender o script de boas-vindas", desc:"Mensagem padrão enviada assim que o acesso é liberado, no horário comercial."},
+    {key:"ordem_grupos", title:"Saber a ordem de inclusão nos grupos de WhatsApp", desc:"Onboarding 8 semanas → grupo geral → grupo de informes, sempre com apresentação do aluno antes de entrar."},
+    {key:"card_apresentacao", title:"Montar o card de apresentação do aluno", desc:"Reunir dados com o closer e redes sociais, gerar o texto de até 4 linhas e publicar no grupo."},
+    {key:"agendar_1x1", title:"Agendar a sessão 1x1 e enviar o briefing", desc:"Confirmar disponibilidade dos mentores, enviar formulário de briefing e confirmar presença na véspera."},
+    {key:"aluno_risco", title:"Reconhecer aluno em risco e agir", desc:"Sem aula assistida por mais de 5 dias = lembrete automático. Sem resposta em 48h = escalar pro CS sênior."},
+    {key:"checkpoint_financeiro", title:"Entender o checkpoint financeiro", desc:"Nenhum onboarding começa sem o financeiro confirmar a entrada do aluno."},
+    {key:"acompanhamento_senior", title:"Acompanhamento com uma CS sênior", desc:"Uma semana observando atendimentos reais antes de assumir alunos sozinha."}
+  ];
+  var trilhaProgress = {};
+  function loadTrilha(){
+    $("trilhaLoading").style.display = "block";
+    sb.from("cs_training_progress").select("*").eq("staff_id", currentStaff.id).then(function(r){
+      $("trilhaLoading").style.display = "none";
+      trilhaProgress = {};
+      (r.data || []).forEach(function(row){ trilhaProgress[row.step_key] = row.done; });
+      renderTrilha();
+    });
+  }
+  function renderTrilha(){
+    var wrap = $("trilhaList");
+    wrap.innerHTML = "";
+    var doneCount = 0;
+    TRILHA_STEPS.forEach(function(step){
+      var done = !!trilhaProgress[step.key];
+      if(done) doneCount++;
+      var row = document.createElement("div");
+      row.className = "trilha-item";
+      row.innerHTML =
+        '<div class="trilha-check' + (done ? " done" : "") + '" data-step="' + step.key + '">' + (done ? '<i class="fa-solid fa-check"></i>' : '') + '</div>' +
+        '<div class="trilha-body' + (done ? " done" : "") + '"><b>' + step.title + '</b><p>' + step.desc + '</p></div>';
+      wrap.appendChild(row);
+    });
+    $("trilhaPct").textContent = doneCount + " de " + TRILHA_STEPS.length + " concluídas";
+    wrap.querySelectorAll("[data-step]").forEach(function(chk){
+      chk.addEventListener("click", function(){
+        var key = chk.getAttribute("data-step");
+        var newDone = !trilhaProgress[key];
+        trilhaProgress[key] = newDone;
+        renderTrilha();
+        sb.from("cs_training_progress").upsert({
+          staff_id: currentStaff.id, step_key: key, done: newDone,
+          done_at: newDone ? new Date().toISOString() : null
+        }, { onConflict: "staff_id,step_key" }).then(function(){});
+      });
+    });
+  }
+
+  // ---------------- Aniversários ----------------
+  function renderAniversarios(list){
+    var wrap = $("aniversariosList");
+    var withBirth = list.filter(function(s){ return s.birth_date; });
+    if(!withBirth.length){ wrap.innerHTML = '<div class="empty-note">Ninguém com data de nascimento preenchida ainda.</div>'; return; }
+    var today = new Date();
+    var todayMD = today.getMonth() * 31 + today.getDate();
+    withBirth.forEach(function(s){
+      var d = new Date(s.birth_date + "T00:00:00");
+      var md = d.getMonth() * 31 + d.getDate();
+      var diff = md - todayMD;
+      if(diff < 0) diff += 372;
+      s._diff = diff;
+      s._display = ("0"+d.getDate()).slice(-2) + "/" + ("0"+(d.getMonth()+1)).slice(-2);
+    });
+    withBirth.sort(function(a,b){ return a._diff - b._diff; });
+    wrap.innerHTML = "";
+    withBirth.forEach(function(s){
+      var badge = s._diff === 0 ? "Hoje!" : (s._diff <= 7 ? "em " + s._diff + " dias" : s._display);
+      var row = document.createElement("div");
+      row.className = "list-row";
+      row.innerHTML = '<div class="list-main"><b>' + s.full_name + '</b><span>' + s._display + '</span></div><div class="list-side"><span class="branch-tag">' + badge + '</span></div>';
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---------------- Feedbacks ----------------
+  function loadFeedbacks(){
+    $("feedbacksLoading").style.display = "block";
+    sb.from("feedback_entries").select("*").order("created_at", { ascending: false }).then(function(r){
+      $("feedbacksLoading").style.display = "none";
+      if(r.error){ $("feedbacksLoading").textContent = "Erro: " + r.error.message; $("feedbacksLoading").style.display = "block"; return; }
+      renderFeedbacks(r.data || []);
+    });
+  }
+  function renderFeedbacks(list){
+    var wrap = $("feedbacksList");
+    if(!list.length){ wrap.innerHTML = '<div class="empty-note">Nenhum feedback registrado ainda.</div>'; return; }
+    wrap.innerHTML = "";
+    list.forEach(function(f){
+      var stars = "★★★★★☆☆☆☆☆".slice(5 - f.rating, 10 - f.rating);
+      var row = document.createElement("div");
+      row.className = "list-row";
+      row.innerHTML =
+        '<div class="list-main"><b>' + studentName(f.student_id) + '</b><span>' + f.category + ' — ' + fmtDate(f.created_at) + (f.comment ? " — " + f.comment : "") + '</span></div>' +
+        '<div class="list-side"><span class="star-rating">' + stars + '</span></div>';
+      wrap.appendChild(row);
+    });
+  }
+  $("newFeedbackBtn").addEventListener("click", function(){
+    $("feedbackModalErr").textContent = "";
+    $("feedbackFieldCategory").value = ""; $("feedbackFieldRating").value = "5"; $("feedbackFieldComment").value = "";
+    $("feedbackModal").classList.add("open");
+  });
+  $("feedbackModalClose").addEventListener("click", function(){ $("feedbackModal").classList.remove("open"); });
+  $("feedbackSaveBtn").addEventListener("click", function(){
+    var studentId = $("feedbackFieldStudent").value;
+    var category = $("feedbackFieldCategory").value.trim();
+    if(!studentId || !category){ $("feedbackModalErr").textContent = "Escolha o aluno e a categoria."; return; }
+    sb.from("feedback_entries").insert({
+      student_id: studentId, category: category,
+      rating: parseInt($("feedbackFieldRating").value, 10) || 5,
+      comment: $("feedbackFieldComment").value.trim() || null
+    }).then(function(r){
+      if(r.error){ $("feedbackModalErr").textContent = "Erro: " + r.error.message; return; }
+      $("feedbackModal").classList.remove("open");
+      loadFeedbacks();
+    });
+  });
+
+  // ---------------- NPS ----------------
+  function loadNps(){
+    $("npsLoading").style.display = "block";
+    sb.from("nps_responses").select("*").order("created_at", { ascending: false }).then(function(r){
+      $("npsLoading").style.display = "none";
+      if(r.error){ $("npsLoading").textContent = "Erro: " + r.error.message; $("npsLoading").style.display = "block"; return; }
+      renderNps(r.data || []);
+    });
+  }
+  function npsClass(score){
+    if(score >= 9) return {cls:"promoter", label:"Promotor"};
+    if(score >= 7) return {cls:"passive", label:"Neutro"};
+    return {cls:"detractor", label:"Detrator"};
+  }
+  function renderNps(list){
+    var wrap = $("npsList");
+    var metricRow = $("npsMetricRow");
+    if(!list.length){
+      wrap.innerHTML = '<div class="empty-note">Nenhum NPS registrado ainda.</div>';
+      metricRow.style.display = "none";
+      return;
+    }
+    var total = list.length;
+    var promoters = list.filter(function(n){ return n.score >= 9; }).length;
+    var passives = list.filter(function(n){ return n.score >= 7 && n.score < 9; }).length;
+    var detractors = list.filter(function(n){ return n.score < 7; }).length;
+    var nps = Math.round(((promoters - detractors) / total) * 100);
+    metricRow.style.display = "grid";
+    metricRow.innerHTML =
+      '<div class="metric-card"><div class="lbl">Nota NPS</div><div class="val">' + nps + '</div></div>' +
+      '<div class="metric-card"><div class="lbl">Promotores</div><div class="val">' + Math.round((promoters/total)*100) + '%</div></div>' +
+      '<div class="metric-card"><div class="lbl">Neutros</div><div class="val">' + Math.round((passives/total)*100) + '%</div></div>' +
+      '<div class="metric-card"><div class="lbl">Detratores</div><div class="val">' + Math.round((detractors/total)*100) + '%</div></div>';
+    wrap.innerHTML = "";
+    list.forEach(function(n){
+      var c = npsClass(n.score);
+      var row = document.createElement("div");
+      row.className = "list-row";
+      row.innerHTML =
+        '<div class="list-main"><b>' + studentName(n.student_id) + '</b><span>' + fmtDate(n.created_at) + (n.comment ? " — " + n.comment : "") + '</span></div>' +
+        '<div class="list-side"><span class="nps-score-badge ' + c.cls + '">' + n.score + '</span></div>';
+      wrap.appendChild(row);
+    });
+  }
+  $("newNpsBtn").addEventListener("click", function(){
+    $("npsModalErr").textContent = "";
+    $("npsFieldScore").value = "10"; $("npsFieldComment").value = "";
+    $("npsModal").classList.add("open");
+  });
+  $("npsModalClose").addEventListener("click", function(){ $("npsModal").classList.remove("open"); });
+  $("npsSaveBtn").addEventListener("click", function(){
+    var studentId = $("npsFieldStudent").value;
+    if(!studentId){ $("npsModalErr").textContent = "Escolha o aluno."; return; }
+    sb.from("nps_responses").insert({
+      student_id: studentId,
+      score: parseInt($("npsFieldScore").value, 10),
+      comment: $("npsFieldComment").value.trim() || null,
+      source: "periodico"
+    }).then(function(r){
+      if(r.error){ $("npsModalErr").textContent = "Erro: " + r.error.message; return; }
+      $("npsModal").classList.remove("open");
+      loadNps();
+    });
+  });
+
+  // ---------------- Recados (mensagem/link/documento por mentoria) ----------------
+  function branchesForRecadoPicker(){
+    if(currentStaff.isMasterLike) return allBranches;
+    var mine = staffBranchMap[currentStaff.id] || [];
+    return allBranches.filter(function(b){ return mine.indexOf(b.name) > -1; });
+  }
+
+  function renderRecadoBranchChecks(){
+    var wrap = $("recadoBranchChecks");
+    wrap.innerHTML = "";
+    if(currentStaff.isMasterLike){
+      var allChip = document.createElement("span");
+      allChip.className = "branch-chip" + (recadoAllBranches ? " selected" : "");
+      allChip.textContent = "Todas as mentorias";
+      allChip.addEventListener("click", function(){
+        recadoAllBranches = !recadoAllBranches;
+        renderRecadoBranchChecks();
+      });
+      wrap.appendChild(allChip);
+    }
+    branchesForRecadoPicker().forEach(function(b){
+      var chip = document.createElement("span");
+      chip.className = "branch-chip" + (recadoSelectedBranches.indexOf(b.name) > -1 ? " selected" : "");
+      if(recadoAllBranches) chip.style.opacity = "0.4";
+      chip.textContent = b.name;
+      chip.addEventListener("click", function(){
+        if(recadoAllBranches) return;
+        var idx = recadoSelectedBranches.indexOf(b.name);
+        if(idx > -1) recadoSelectedBranches.splice(idx, 1); else recadoSelectedBranches.push(b.name);
+        renderRecadoBranchChecks();
+      });
+      wrap.appendChild(chip);
+    });
+  }
+
+  $("newRecadoBtn").addEventListener("click", function(){
+    $("recadoModalErr").textContent = "";
+    $("recadoFieldTitle").value = "";
+    $("recadoFieldMessage").value = "";
+    $("recadoFieldLink").value = "";
+    $("recadoFieldFile").value = "";
+    recadoFile = null;
+    recadoSelectedBranches = [];
+    recadoAllBranches = false;
+    renderRecadoBranchChecks();
+    $("recadoModal").classList.add("open");
+  });
+  $("recadoModalClose").addEventListener("click", function(){ $("recadoModal").classList.remove("open"); });
+
+  $("recadoFieldFile").addEventListener("change", function(e){
+    recadoFile = (e.target.files && e.target.files[0]) || null;
+  });
+
+  $("recadoSaveBtn").addEventListener("click", function(){
+    var message = $("recadoFieldMessage").value.trim();
+    $("recadoModalErr").textContent = "";
+    if(!message){ $("recadoModalErr").textContent = "Escreva a mensagem do recado."; return; }
+    if(!recadoAllBranches && !recadoSelectedBranches.length){ $("recadoModalErr").textContent = "Escolha pelo menos uma mentoria (ou marque \"Todas as mentorias\")."; return; }
+
+    $("recadoSaveBtn").disabled = true;
+
+    function afterUpload(attachmentUrl, attachmentName){
+      sb.from("announcements").insert({
+        created_by: currentStaff.id,
+        title: $("recadoFieldTitle").value.trim() || null,
+        message: message,
+        link_url: $("recadoFieldLink").value.trim() || null,
+        attachment_url: attachmentUrl,
+        attachment_name: attachmentName,
+        all_branches: recadoAllBranches
+      }).select().single().then(function(r){
+        if(r.error){ $("recadoSaveBtn").disabled = false; $("recadoModalErr").textContent = "Erro: " + r.error.message; return; }
+        var announcementId = r.data.id;
+        if(recadoAllBranches || !recadoSelectedBranches.length){
+          $("recadoSaveBtn").disabled = false;
+          $("recadoModal").classList.remove("open");
+          loadRecados();
+          return;
+        }
+        var rows = recadoSelectedBranches.map(function(name){
+          var b = allBranches.find(function(x){ return x.name === name; });
+          return b ? { announcement_id: announcementId, branch_id: b.id } : null;
+        }).filter(Boolean);
+        sb.from("announcement_branches").insert(rows).then(function(r2){
+          $("recadoSaveBtn").disabled = false;
+          if(r2.error){ $("recadoModalErr").textContent = "Recado criado, mas erro ao vincular mentorias: " + r2.error.message; return; }
+          $("recadoModal").classList.remove("open");
+          loadRecados();
+        });
+      });
+    }
+
+    if(recadoFile){
+      var path = Date.now() + "-" + recadoFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      sb.storage.from("recados").upload(path, recadoFile).then(function(up){
+        if(up.error){ $("recadoSaveBtn").disabled = false; $("recadoModalErr").textContent = "Erro ao subir arquivo: " + up.error.message; return; }
+        var pub = sb.storage.from("recados").getPublicUrl(path);
+        afterUpload(pub.data.publicUrl, recadoFile.name);
+      });
+    } else {
+      afterUpload(null, null);
+    }
+  });
+
+  function loadRecados(){
+    $("recadosLoading").style.display = "block";
+    $("recadosList").innerHTML = "";
+    sb.from("announcements")
+      .select("id,title,message,link_url,attachment_url,attachment_name,all_branches,is_active,created_at,created_by,staff:created_by(full_name),announcement_branches(branch_id)")
+      .order("created_at", { ascending: false })
+      .then(function(r){
+        $("recadosLoading").style.display = "none";
+        if(r.error){ $("recadosLoading").textContent = "Erro: " + r.error.message; $("recadosLoading").style.display = "block"; return; }
+        allRecados = r.data || [];
+        renderRecados();
+      });
+  }
+
+  function renderRecados(){
+    var wrap = $("recadosList");
+    if(!allRecados.length){ wrap.innerHTML = '<p class="hint">Nenhum recado publicado ainda.</p>'; return; }
+    wrap.innerHTML = allRecados.map(function(a){
+      var branchNames = a.all_branches
+        ? ['<span class="branch-tag">Todas as mentorias</span>']
+        : (a.announcement_branches || []).map(function(row){
+            var b = allBranches.find(function(x){ return x.id === row.branch_id; });
+            return b ? '<span class="branch-tag">' + b.name + '</span>' : "";
+          });
+      var canManage = currentStaff.isMasterLike || a.created_by === currentStaff.id;
+      return '<div class="card" style="margin-bottom:12px;">' +
+        '<div class="card-head"><h3 style="font-size:14px;">' + (a.title || "Recado") + '</h3>' +
+        (canManage ? '<button class="btn-secondary recado-del-btn" data-id="' + a.id + '"><i class="fa-solid fa-trash"></i></button>' : '') +
+        '</div>' +
+        '<p style="margin:0 0 10px;font-size:13px;color:var(--eg-text-secondary);white-space:pre-wrap;">' + a.message + '</p>' +
+        (a.link_url ? '<p style="margin:0 0 8px;"><a href="' + a.link_url + '" target="_blank" rel="noopener" style="color:var(--eg-gold-300);font-size:12.5px;"><i class="fa-solid fa-link"></i> ' + a.link_url + '</a></p>' : '') +
+        (a.attachment_url ? '<p style="margin:0 0 8px;"><a href="' + a.attachment_url + '" target="_blank" rel="noopener" style="color:var(--eg-gold-300);font-size:12.5px;"><i class="fa-solid fa-paperclip"></i> ' + (a.attachment_name || "anexo") + '</a></p>' : '') +
+        '<div style="margin-bottom:6px;">' + branchNames.join("") + '</div>' +
+        '<span class="hint">' + ((a.staff && a.staff.full_name) || "—") + ' · ' + fmtDate(a.created_at) + '</span>' +
+        '</div>';
+    }).join("");
+    wrap.querySelectorAll(".recado-del-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        if(!confirm("Apagar esse recado?")) return;
+        sb.from("announcements").delete().eq("id", btn.getAttribute("data-id")).then(function(r){
+          if(r.error){ alert("Erro ao apagar: " + r.error.message); return; }
+          loadRecados();
+        });
+      });
+    });
+  }
+
+  // ---------------- Relatórios (exportação real) ----------------
+  $("exportAlunosBtn").addEventListener("click", function(){
+    var rows = [["Nome","E-mail","Telefone","Status","Mentorias ativas","CS","Data de nascimento"]];
+    allStudents.forEach(function(s){
+      var mentorias = (s.deliveries || []).filter(function(d){ return d.status === "ativo"; }).map(function(d){ return d.label; }).join("; ");
+      var csName = (s.staff && s.staff.full_name) || s.legacy_cs_label || "";
+      rows.push([s.full_name, s.email, s.phone || "", s.status, mentorias, csName, s.birth_date || ""]);
+    });
+    downloadCsv("endogin-alunos.csv", rows);
+  });
+  $("exportSessionsBtn").addEventListener("click", function(){
+    sb.from("mentoring_sessions").select("*").then(function(r){
+      var rows = [["Aluno","Data/hora","Status","Observações"]];
+      (r.data || []).forEach(function(s){
+        rows.push([studentName(s.student_id), fmtDate(s.scheduled_at), s.status, s.feedback_notes || ""]);
+      });
+      downloadCsv("endogin-sessoes-1x1.csv", rows);
+    });
+  });
+  $("exportReferralsBtn").addEventListener("click", function(){
+    sb.from("referrals").select("*").then(function(r){
+      var rows = [["Indicado por","Nome indicado","Contato","E-mail","Status","Data"]];
+      (r.data || []).forEach(function(ref){
+        rows.push([studentName(ref.referrer_student_id), ref.referred_name, ref.referred_contact || "", ref.referred_email || "", ref.status, fmtDate(ref.created_at)]);
+      });
+      downloadCsv("endogin-indicacoes.csv", rows);
+    });
+  });
+</script>
+</body>
+</html>

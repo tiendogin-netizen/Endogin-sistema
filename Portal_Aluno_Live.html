@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Portal do Aluno — Endogin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --eg-bg-0:#080d17; --eg-bg-1:#101d2e; --eg-bg-2:#152436; --eg-bg-3:#1c2f54;
+    --eg-gold-100:#f2dfae; --eg-gold-300:#e3bd76; --eg-gold-500:#c9974b; --eg-gold-700:#a3762f;
+    --eg-text-primary:#f3f0e8; --eg-text-secondary:#aab4c9; --eg-text-muted:#6d7994; --eg-navy-line:rgba(255,255,255,0.06);
+    --eg-border:rgba(201,151,75,0.22); --eg-border-strong:rgba(201,151,75,0.35);
+    --eg-red:#d98a8a; --eg-green:#8fc79f;
+  }
+  *{box-sizing:border-box;}
+  a{color:inherit;text-decoration:none;}
+  body{
+    margin:0;font-family:'Montserrat',sans-serif;color:var(--eg-text-primary);min-height:100vh;
+    background:radial-gradient(1200px 700px at 15% -10%, #16273c 0%, #0b1420 55%), #0b1420;
+  }
+  label{display:block;font-size:10.5px;color:var(--eg-text-muted);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;}
+  input[type=text],input[type=email],input[type=password],input[type=date],select,textarea{
+    width:100%;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:8px;color:var(--eg-text-primary);
+    padding:11px 12px;font-family:inherit;font-size:13px;margin-bottom:16px;outline:none;
+  }
+  textarea{resize:vertical;line-height:1.5;}
+  .btn-primary{
+    font-family:inherit;font-size:13px;font-weight:700;padding:12px 18px;border-radius:9px;border:none;
+    background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));color:#221708;cursor:pointer;
+  }
+  .btn-primary:disabled{opacity:0.55;cursor:default;}
+  .btn-secondary{font-family:inherit;font-size:12.5px;font-weight:700;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);color:var(--eg-gold-100);padding:11px 16px;border-radius:9px;cursor:pointer;}
+  .err-msg{color:var(--eg-red);font-size:12px;margin:10px 0 0;min-height:14px;line-height:1.5;}
+  .hint{font-size:11.5px;color:var(--eg-text-muted);text-align:center;}
+
+  /* ===================== AUTH (login / onboarding) ===================== */
+  .auth-wrap{display:flex;align-items:center;justify-content:center;padding:24px;min-height:100vh;}
+  .card{background:var(--eg-bg-1);border:1px solid var(--eg-navy-line);border-radius:18px;padding:38px 34px;width:100%;max-width:420px;}
+  .brand{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:28px;}
+  .brand-mark{width:40px;height:48px;border:1.5px solid var(--eg-gold-500);display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif;font-weight:600;font-size:16px;color:var(--eg-gold-100);flex-shrink:0;}
+  .brand-word .cs{display:block;font-size:9px;letter-spacing:3px;color:var(--eg-text-muted);font-weight:600;text-align:center;}
+  .brand-word .name{display:block;font-family:'Sora',sans-serif;font-weight:600;font-size:19px;background:linear-gradient(180deg,var(--eg-gold-100),var(--eg-gold-500));-webkit-background-clip:text;background-clip:text;color:transparent;text-align:center;}
+
+  .step-title{font-size:16px;font-weight:700;margin-bottom:6px;text-align:center;}
+  .step-sub{font-size:12.5px;color:var(--eg-text-secondary);text-align:center;margin-bottom:22px;line-height:1.6;}
+  .nps-scale{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:18px;}
+  .nps-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-secondary);font-weight:700;font-size:13px;cursor:pointer;}
+  .nps-btn.selected{background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));color:#221708;border-color:var(--eg-gold-500);}
+  .nps-labels{display:flex;justify-content:space-between;font-size:10.5px;color:var(--eg-text-muted);margin-bottom:22px;}
+
+  .photo-drop{width:110px;height:110px;border-radius:50%;margin:0 auto 20px;border:1.5px dashed var(--eg-border-strong);position:relative;display:flex;align-items:center;justify-content:center;color:var(--eg-text-secondary);font-size:12px;cursor:pointer;overflow:hidden;background-size:cover;background-position:center;}
+  .photo-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+  .photo-drop i{font-size:22px;color:var(--eg-gold-300);}
+
+  .logout-link{display:block;text-align:center;font-size:11.5px;color:var(--eg-text-muted);margin-top:16px;cursor:pointer;text-decoration:underline;}
+
+  /* ---------- teste comportamental (DISC), etapa do primeiro acesso ---------- */
+  .disc-prog-row{display:flex;justify-content:space-between;font-size:11px;color:var(--eg-text-muted);margin-bottom:6px;}
+  .disc-bar-track{height:6px;border-radius:99px;background:rgba(255,255,255,0.08);overflow:hidden;margin-bottom:18px;}
+  .disc-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-300));width:0%;transition:width .2s ease;}
+  .disc-word-row{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:10px;padding:11px 13px;margin-bottom:9px;}
+  .disc-word-row .word{display:block;font-size:13.5px;font-weight:600;margin-bottom:9px;}
+  .disc-pick-row{display:flex;gap:8px;}
+  .disc-pick-btn{
+    flex:1;height:32px;border-radius:7px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-1);
+    color:var(--eg-text-muted);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.2px;
+  }
+  .disc-pick-btn.mais.active{background:rgba(201,151,75,0.22);border-color:var(--eg-gold-500);color:var(--eg-gold-100);}
+  .disc-pick-btn.menos.active{background:rgba(255,255,255,0.1);border-color:var(--eg-text-muted);color:var(--eg-text-primary);}
+  .disc-nav-row{display:flex;justify-content:space-between;gap:10px;margin-top:6px;}
+  .disc-nav-row .btn-primary{flex:1;}
+  .disc-nav-row .btn-secondary{flex:0 0 auto;}
+
+  [data-screen]{display:none;}
+  [data-screen].active{display:block;}
+
+  /* ===================== APP SHELL (dashboard real) ===================== */
+  .page{display:flex;align-items:flex-start;max-width:1400px;margin:0 auto;}
+  .wrap{max-width:980px;margin:0 auto;padding:0 26px 70px;}
+  .main-content{flex:1;min-width:0;}
+  .page-view{display:none;}
+  .page-view.active{display:block;}
+
+  .side-nav{
+    width:216px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;
+    display:flex;flex-direction:column;padding:24px 15px 18px;border-right:1px solid var(--eg-navy-line);
+  }
+  .side-brand{display:flex;align-items:center;gap:11px;padding:0 5px 20px;margin-bottom:14px;border-bottom:1px solid var(--eg-navy-line);}
+  .side-links{display:flex;flex-direction:column;gap:3px;}
+  .side-link{
+    display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:9px;
+    font-size:12.5px;font-weight:600;color:var(--eg-text-secondary);border:1px solid transparent;
+    background:none;width:100%;text-align:left;font-family:inherit;cursor:pointer;
+  }
+  .side-link i{width:15px;text-align:center;color:var(--eg-text-muted);font-size:13px;flex-shrink:0;}
+  .side-link:hover{background:var(--eg-bg-2);color:var(--eg-text-primary);}
+  .side-link.active{background:rgba(201,151,75,0.12);color:var(--eg-gold-100);border-color:var(--eg-border);}
+  .side-link.active i{color:var(--eg-gold-300);}
+  .side-cta{margin-top:auto;padding-top:16px;border-top:1px solid var(--eg-navy-line);}
+  .side-cta-card{background:var(--eg-bg-1);border:1px solid var(--eg-border);border-radius:12px;padding:13px;}
+  .side-cta-card b{display:block;font-size:12.5px;margin-bottom:2px;}
+  .side-cta-card span{display:block;font-size:10.5px;color:var(--eg-text-muted);margin-bottom:10px;}
+  .cs-btn{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:7px;
+    padding:10px;border-radius:8px;background:var(--eg-bg-2);border:1px solid var(--eg-border);
+    font-size:12px;font-weight:700;color:var(--eg-text-primary);cursor:pointer;font-family:inherit;
+  }
+  .cs-btn:hover{background:var(--eg-gold-500);color:#221708;border-color:transparent;}
+
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+    padding:20px 0 18px;border-bottom:1px solid var(--eg-navy-line);margin-bottom:24px;
+  }
+  .topbar-eyebrow{font-size:10.5px;letter-spacing:2.5px;color:var(--eg-text-muted);font-weight:700;}
+  .topbar-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .topbar-right{display:flex;align-items:center;gap:14px;}
+  .badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;letter-spacing:0.3px;}
+  .badge.gold{background:rgba(201,151,75,0.16);color:var(--eg-gold-100);border:1px solid var(--eg-border-strong);}
+  .badge.muted{background:rgba(255,255,255,0.05);color:var(--eg-text-muted);border:1px solid var(--eg-navy-line);}
+  .cs-pill{display:flex;align-items:center;gap:8px;background:var(--eg-bg-1);border:1px solid var(--eg-border);padding:5px 13px 5px 5px;border-radius:999px;font-size:12px;color:var(--eg-text-secondary);}
+  .cs-pill .av{width:24px;height:24px;border-radius:50%;background:var(--eg-bg-3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--eg-gold-100);}
+  .student-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#241705;background-size:cover;background-position:center;}
+
+  .hero{
+    background:linear-gradient(120deg, var(--eg-bg-1), var(--eg-bg-2) 60%, var(--eg-bg-1));
+    border:1px solid var(--eg-border);border-radius:16px;padding:28px 30px;margin-bottom:20px;
+  }
+  .hero-eyebrow{font-size:11px;letter-spacing:2.5px;color:var(--eg-gold-300);font-weight:700;margin-bottom:8px;}
+  .hero h1{font-family:'Sora',sans-serif;font-weight:600;font-size:24px;margin:0 0 8px;color:var(--eg-text-primary);}
+  .hero p{margin:0;color:var(--eg-text-secondary);font-size:13.5px;max-width:560px;line-height:1.6;}
+
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:26px;}
+  .stat-card{background:var(--eg-bg-1);border:1px solid var(--eg-border);border-radius:12px;padding:13px 14px;display:flex;align-items:center;gap:11px;}
+  .stat-icn{width:34px;height:34px;border-radius:10px;background:rgba(201,151,75,0.14);display:flex;align-items:center;justify-content:center;color:var(--eg-gold-300);font-size:13px;flex-shrink:0;}
+  .stat-card b{display:block;font-size:13.5px;font-weight:700;font-family:'Sora',sans-serif;line-height:1.3;}
+  .stat-card span{font-size:10px;color:var(--eg-text-muted);}
+
+  .section-title{font-size:11px;letter-spacing:2.5px;color:var(--eg-gold-300);font-weight:700;margin:0 0 14px;display:flex;align-items:center;gap:9px;}
+  .section-title::after{content:"";flex:1;height:1px;background:var(--eg-navy-line);margin-left:4px;}
+
+  .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+  .card2{background:var(--eg-bg-1);border:1px solid var(--eg-border);border-radius:14px;padding:20px 22px;margin-bottom:20px;}
+  .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
+  .card-head h3{margin:0;font-size:14.5px;font-weight:700;color:var(--eg-text-primary);}
+  .card-head .icn{color:var(--eg-gold-300);font-size:14px;margin-right:8px;}
+
+  .mentors{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+  .mentor{display:flex;align-items:center;gap:9px;flex:1;min-width:150px;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:10px;padding:9px 11px;}
+  .mentor .av{width:32px;height:32px;border-radius:50%;background:var(--eg-bg-3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--eg-gold-100);flex-shrink:0;}
+  .mentor .info b{display:block;font-size:12px;}
+  .mentor .info span{font-size:10.5px;color:var(--eg-text-muted);}
+  .session-meta{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--eg-text-secondary);margin-bottom:6px;}
+  .session-meta i{color:var(--eg-gold-300);}
+
+  .lesson-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--eg-navy-line);}
+  .lesson-row:last-child{border-bottom:none;padding-bottom:0;}
+  .lesson-check{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+  .lesson-check.done{background:var(--eg-gold-500);color:#221708;}
+  .lesson-check.pending{border:1px solid var(--eg-navy-line);color:var(--eg-text-muted);}
+  .lesson-info{flex:1;min-width:0;}
+  .lesson-info b{display:block;font-size:13px;font-weight:600;}
+  .lesson-info span{font-size:11px;color:var(--eg-text-muted);}
+
+  .cs-card{display:flex;align-items:center;gap:13px;}
+  .cs-card .av{width:48px;height:48px;border-radius:50%;background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#241705;flex-shrink:0;background-size:cover;background-position:center;}
+  .cs-card b{display:block;font-size:14px;}
+  .cs-card span{font-size:11.5px;color:var(--eg-text-muted);}
+
+  .cal-item{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--eg-navy-line);align-items:center;}
+  .cal-item:last-child{border-bottom:none;padding-bottom:0;}
+  .cal-icn{width:40px;height:40px;border-radius:10px;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);display:flex;align-items:center;justify-content:center;color:var(--eg-gold-300);font-size:14px;flex-shrink:0;}
+  .cal-info{flex:1;min-width:0;}
+  .cal-info b{display:block;font-size:13px;font-weight:600;margin-top:1px;}
+  .cal-info span{font-size:11px;color:var(--eg-text-muted);}
+  .cat-badge{font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;display:inline-block;letter-spacing:0.2px;margin-bottom:4px;background:rgba(201,151,75,0.16);color:var(--eg-gold-100);border:1px solid var(--eg-border-strong);}
+
+  .star-input{display:flex;gap:8px;font-size:22px;}
+  .star-input i{color:var(--eg-text-muted);cursor:pointer;transition:color .1s;}
+  .star-input i.active{color:var(--eg-gold-300);}
+  .fb-thanks{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;padding:26px 10px;color:var(--eg-text-secondary);}
+  .fb-thanks i{font-size:28px;color:var(--eg-gold-300);margin-bottom:2px;}
+  .fb-thanks b{font-size:14px;color:var(--eg-text-primary);}
+  .fb-thanks span{font-size:12px;}
+  .nps-question{margin:0 0 14px;font-size:13px;color:var(--eg-text-secondary);line-height:1.6;}
+  .nps-scale-grid{display:grid;grid-template-columns:repeat(11,1fr);gap:5px;margin-bottom:6px;}
+  .nps-scale-grid button{aspect-ratio:1;border-radius:7px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-secondary);font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;}
+  .nps-scale-grid button.active{background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));color:#221708;border-color:transparent;}
+
+  .empty-state{font-size:12.5px;color:var(--eg-text-muted);text-align:center;padding:18px 6px;line-height:1.6;}
+
+  @media (max-width:980px){
+    .page{flex-direction:column;}
+    .side-nav{position:relative;width:100%;height:auto;flex-direction:row;overflow-x:auto;padding:12px 16px;border-right:none;border-bottom:1px solid var(--eg-navy-line);}
+    .side-brand{display:none;}
+    .side-links{flex-direction:row;gap:6px;}
+    .side-link{white-space:nowrap;}
+    .side-cta{display:none;}
+  }
+  @media (max-width:760px){
+    .grid, .grid-2{grid-template-columns:1fr;}
+    .stats-row{grid-template-columns:1fr 1fr;}
+    .nps-scale-grid{grid-template-columns:repeat(6,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== AUTH (login + onboarding) ===================== -->
+<div class="auth-wrap" id="authWrap">
+  <div class="card">
+    <div class="brand">
+      <div class="brand-mark">EG</div>
+      <div class="brand-word"><span class="cs">PORTAL DO</span><span class="name">ALUNO ENDOGIN</span></div>
+    </div>
+
+    <!-- ============ LOGIN ============ -->
+    <div data-screen="login" class="active">
+      <div><label>E-mail</label><input type="email" id="loginEmail" placeholder="seuemail@exemplo.com"></div>
+      <div><label>Senha</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
+      <button class="btn-primary" id="loginBtn" style="width:100%;">Entrar</button>
+      <div class="err-msg" id="loginErr"></div>
+      <p class="hint" style="margin-top:14px;">Recebeu um convite por e-mail? Use o link dele pra criar sua senha antes de entrar aqui.</p>
+    </div>
+
+    <!-- ============ ONBOARDING: NPS ============ -->
+    <div data-screen="obNps">
+      <div class="step-title">Bem-vindo(a) à Mentoria Endogin!</div>
+      <div class="step-sub">Antes de continuar, de 0 a 10, o quanto você recomendaria a Endogin pra um colega?</div>
+      <div class="nps-scale" id="npsScale"></div>
+      <div class="nps-labels"><span>Pouco provável</span><span>Super provável</span></div>
+      <button class="btn-primary" id="obNpsNextBtn" style="width:100%;" disabled>Continuar</button>
+    </div>
+
+    <!-- ============ ONBOARDING: FOTO + ANIVERSÁRIO ============ -->
+    <div data-screen="obPhoto">
+      <div class="step-title">Só mais um pouco</div>
+      <div class="step-sub">Sua foto e data de aniversário — usamos pra deixar seu perfil completo e pra não esquecer de te parabenizar.</div>
+      <label class="photo-drop" id="obPhotoDrop">
+        <span id="obPhotoPlaceholder"><i class="fa-solid fa-camera"></i></span>
+        <input type="file" accept="image/*" id="obPhotoInput">
+      </label>
+      <div><label>Data de nascimento</label><input type="date" id="obBirthDate"></div>
+      <button class="btn-primary" id="obFinishBtn" style="width:100%;">Concluir cadastro</button>
+      <div class="err-msg" id="obErr"></div>
+      <span class="logout-link" id="obSkipBtn">Adicionar depois</span>
+    </div>
+
+    <!-- ============ ONBOARDING: TESTE COMPORTAMENTAL (DISC) ============ -->
+    <div data-screen="obDisc">
+      <div class="step-title">Só mais uma etapa</div>
+      <div class="step-sub">12 blocos rápidos pra sua CS te conhecer melhor. Não existe resposta certa ou errada — responda pelo instinto.</div>
+      <div class="disc-prog-row"><span id="discProgLabel">Bloco 1 de 12</span><span id="discProgPct">0%</span></div>
+      <div class="disc-bar-track"><div class="disc-bar-fill" id="discProgFill"></div></div>
+      <p class="hint" style="margin:0 0 14px;">Marque a palavra que <b>mais</b> combina com você e a que <b>menos</b> combina, em cada bloco.</p>
+      <div id="discWordBlock"></div>
+      <div class="err-msg" id="discErr"></div>
+      <div class="disc-nav-row">
+        <button class="btn-secondary" id="discBackBtn">Voltar</button>
+        <button class="btn-primary" id="discNextBtn">Próximo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== APP SHELL (dashboard real, conectado) ===================== -->
+<div class="page" id="appShell" style="display:none;">
+
+  <nav class="side-nav">
+    <div class="side-brand">
+      <div class="brand-mark">EG</div>
+      <div class="brand-word"><span class="cs">MENTORIA</span><span class="name">ENDOGIN</span></div>
+    </div>
+    <div class="side-links">
+      <button class="side-link active" data-page="jornada"><i class="fa-solid fa-route"></i>Jornada</button>
+      <button class="side-link" data-page="opiniao"><i class="fa-regular fa-comment-dots"></i>Feedback &amp; NPS</button>
+    </div>
+    <div class="side-cta">
+      <div class="side-cta-card">
+        <b>Precisa de ajuda?</b>
+        <span id="sideCsName">Fale com sua CS</span>
+        <a class="cs-btn" id="sideWhatsBtn" href="#" target="_blank" rel="noopener" style="display:none;"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <div class="wrap">
+
+      <div class="topbar">
+        <div class="topbar-left">
+          <span class="topbar-eyebrow">PAINEL DO ALUNO</span>
+          <span class="badge gold" id="topBadgeBranch" style="display:none;"></span>
+        </div>
+        <div class="topbar-right">
+          <div class="cs-pill" id="topCsPill" style="display:none;"><span class="av" id="topCsAv"></span><span id="topCsText"></span></div>
+          <div class="student-av" id="studentAvatar"></div>
+          <span class="logout-link" id="logoutBtn" style="margin:0;">Sair</span>
+        </div>
+      </div>
+
+      <!-- ================= PÁGINA: JORNADA ================= -->
+      <div class="page-view active" id="page-jornada">
+        <div class="hero">
+          <div class="hero-eyebrow" id="heroEyebrow">SUA JORNADA NA MENTORIA</div>
+          <h1 id="heroTitle">Olá!</h1>
+          <p id="heroSub"></p>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-icn"><i class="fa-solid fa-route"></i></div>
+            <div><b id="statBranches">—</b><span>Mentoria(s) ativa(s)</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icn"><i class="fa-solid fa-user-nurse"></i></div>
+            <div><b id="statCs">—</b><span>CS responsável</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icn"><i class="fa-regular fa-circle-check"></i></div>
+            <div><b id="statStatus">—</b><span>Status</span></div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="main-col">
+
+            <div id="journeyPending">
+              <div class="card2" id="sessionCard" style="display:none;">
+                <div class="card-head"><h3><i class="fa-solid fa-user-doctor icn"></i>Sessão 1x1</h3><span class="badge gold" id="sessionBadge"></span></div>
+
+                <div id="sessionConfirmedWrap" style="display:none;">
+                  <div class="mentors" id="sessionMentors"></div>
+                  <div class="session-meta" id="sessionMeta"></div>
+                </div>
+
+                <div id="sessionPendingConfirm" style="display:none;">
+                  <div class="session-meta"><i class="fa-regular fa-clock"></i> Horário solicitado: <span id="sessionPendingWhen"></span> — aguardando confirmação da sua CS.</div>
+                </div>
+
+                <div id="sessionRequestForm" style="display:none;">
+                  <p class="hint" style="margin:0 0 12px;text-align:left;">Escolha um horário pra sua sessão 1x1 com o Dr. Caio e o Dr. Vinícius. Sua CS confirma em seguida.</p>
+                  <input type="datetime-local" id="sessionRequestInput">
+                  <button class="btn-primary" id="sessionRequestBtn">Solicitar horário</button>
+                  <div class="err-msg" id="sessionRequestErr"></div>
+                </div>
+              </div>
+
+              <div class="card2" id="lessonsCard">
+                <div class="card-head"><h3><i class="fa-solid fa-graduation-cap icn"></i>Aulas obrigatórias</h3><span class="badge muted" id="lessonsBadge"></span></div>
+                <div id="lessonsList"><div class="empty-state">Sua CS ainda não cadastrou aulas de introdução pra sua mentoria.</div></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="side-col">
+            <div class="card2 cs-card" id="csCard" style="display:none;">
+              <span class="av" id="csCardAv"></span>
+              <div><b id="csCardName"></b><span id="csCardSub"></span></div>
+            </div>
+            <a class="cs-btn" id="csCardWhatsBtn" href="#" target="_blank" rel="noopener" style="display:none;margin-top:-8px;margin-bottom:20px;"><i class="fa-brands fa-whatsapp"></i> Falar com minha CS</a>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card2">
+            <div class="card-head"><h3><i class="fa-solid fa-bullhorn icn"></i>Recados</h3></div>
+            <div id="recadosList"><div class="empty-state">Nenhum recado por aqui ainda.</div></div>
+          </div>
+
+          <div class="card2">
+            <div class="card-head"><h3><i class="fa-regular fa-calendar-days icn"></i>Calendário</h3></div>
+            <div id="calendarList"><div class="empty-state">Sua CS ainda não cadastrou aulas ou encontros pra sua mentoria.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= PÁGINA: FEEDBACK & NPS ================= -->
+      <div class="page-view" id="page-opiniao">
+        <div class="section-title"><i class="fa-regular fa-comment-dots"></i>SUA OPINIÃO</div>
+        <div class="grid-2">
+          <div class="card2" id="feedbackCard">
+            <div class="card-head"><h3><i class="fa-regular fa-comment-dots icn"></i>Deixar feedback</h3></div>
+            <div id="feedbackFormWrap">
+              <label>O que você quer avaliar?</label>
+              <select id="fbCategory">
+                <option>Conteúdo das aulas</option>
+                <option>Onboarding</option>
+                <option>Suporte da CS</option>
+                <option>Sessão 1x1</option>
+                <option>Outro</option>
+              </select>
+              <label>Sua nota</label>
+              <div class="star-input" id="fbStars">
+                <i class="fa-regular fa-star" data-v="1"></i>
+                <i class="fa-regular fa-star" data-v="2"></i>
+                <i class="fa-regular fa-star" data-v="3"></i>
+                <i class="fa-regular fa-star" data-v="4"></i>
+                <i class="fa-regular fa-star" data-v="5"></i>
+              </div>
+              <label style="margin-top:14px;">Comentário (opcional)</label>
+              <textarea id="fbComment" rows="3" placeholder="Conte pra gente o que achou..."></textarea>
+              <button class="btn-primary" id="fbSubmit" disabled>Enviar feedback</button>
+              <div class="err-msg" id="fbErr"></div>
+            </div>
+            <div id="feedbackThanks" class="fb-thanks" style="display:none;">
+              <i class="fa-solid fa-circle-check"></i>
+              <b>Feedback enviado!</b>
+              <span>Sua CS já pode ver sua avaliação.</span>
+            </div>
+          </div>
+
+          <div class="card2" id="npsCard">
+            <div class="card-head"><h3><i class="fa-solid fa-gauge-high icn"></i>Pesquisa NPS</h3></div>
+            <div id="npsFormWrap">
+              <p class="nps-question">De 0 a 10, o quanto você recomendaria a Mentoria Endogin para um colega médico?</p>
+              <div class="nps-scale-grid" id="npsScaleGrid"></div>
+              <div class="nps-labels"><span>Pouco provável</span><span>Muito provável</span></div>
+              <textarea id="npsComment" rows="2" placeholder="Quer contar o motivo da nota? (opcional)" style="margin-top:14px;"></textarea>
+              <button class="btn-primary" id="npsSubmit" disabled>Enviar nota</button>
+              <div class="err-msg" id="npsErr"></div>
+            </div>
+            <div id="npsThanks" class="fb-thanks" style="display:none;">
+              <i class="fa-solid fa-circle-check"></i>
+              <b>Obrigado pela nota!</b>
+              <span>Isso ajuda a Endogin a melhorar sua jornada.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // Chave pública (publishable) — nunca a secret key aqui.
+  var SUPABASE_URL = "https://pguyeowngwrolrrqbopw.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_6dfrX0H6V43eI6WjnKR4Yg_VcgsyXBc";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function $(id){ return document.getElementById(id); }
+  var currentStudent = null;
+  var obNpsScore = null;
+  var obPhotoData = null;
+
+  function showScreen(name){
+    $("appShell").style.display = "none";
+    $("authWrap").style.display = "flex";
+    document.querySelectorAll("[data-screen]").forEach(function(el){ el.classList.remove("active"); });
+    document.querySelector('[data-screen="' + name + '"]').classList.add("active");
+  }
+
+  // ---------------- login ----------------
+  $("loginBtn").addEventListener("click", doLogin);
+  $("loginPassword").addEventListener("keydown", function(e){ if(e.key === "Enter") doLogin(); });
+
+  function doLogin(){
+    var email = $("loginEmail").value.trim();
+    var password = $("loginPassword").value;
+    $("loginErr").textContent = "";
+    if(!email || !password){ $("loginErr").textContent = "Preencha e-mail e senha."; return; }
+    $("loginBtn").disabled = true;
+    sb.auth.signInWithPassword({ email: email, password: password }).then(function(res){
+      $("loginBtn").disabled = false;
+      if(res.error){ $("loginErr").textContent = "Login inválido. Confira e-mail/senha."; return; }
+      boot();
+    });
+  }
+
+  sb.auth.getSession().then(function(res){ if(res.data && res.data.session){ boot(); } });
+
+  function boot(){
+    sb.auth.getSession().then(function(res){
+      var session = res.data.session;
+      if(!session) return;
+      sb.from("students")
+        .select("*, deliveries(id,label,status,branch_id), staff:cs_id(full_name,phone,photo_url)")
+        .eq("auth_user_id", session.user.id)
+        .single()
+        .then(function(r){
+          if(r.error || !r.data){
+            $("loginErr").textContent = "Login ok, mas não achei seu cadastro. Fale com a equipe Endogin.";
+            sb.auth.signOut();
+            return;
+          }
+          currentStudent = r.data;
+          if(!currentStudent.onboarding_completed_at){
+            startOnboarding();
+          } else if(!currentStudent.disc_completed_at){
+            startDiscOnly();
+          } else {
+            showDashboard();
+          }
+        });
+    });
+  }
+
+  function initials(name){
+    var parts = (name || "").trim().split(/\s+/);
+    return ((parts[0]||"")[0]||"") + ((parts[1]||"")[0]||"");
+  }
+
+  function waLink(phone){
+    if(!phone) return null;
+    var digits = phone.replace(/\D/g, "");
+    if(!digits) return null;
+    if(digits.length <= 11) digits = "55" + digits; // assume BR se não tiver DDI
+    return "https://wa.me/" + digits;
+  }
+
+  // ---------------- onboarding: NPS ----------------
+  function startOnboarding(){
+    var scale = $("npsScale");
+    scale.innerHTML = "";
+    for(var i = 0; i <= 10; i++){
+      (function(i){
+        var btn = document.createElement("button");
+        btn.className = "nps-btn"; btn.type = "button"; btn.textContent = i;
+        btn.addEventListener("click", function(){
+          obNpsScore = i;
+          scale.querySelectorAll(".nps-btn").forEach(function(b){ b.classList.remove("selected"); });
+          btn.classList.add("selected");
+          $("obNpsNextBtn").disabled = false;
+        });
+        scale.appendChild(btn);
+      })(i);
+    }
+    showScreen("obNps");
+  }
+
+  $("obNpsNextBtn").addEventListener("click", function(){
+    showScreen("obPhoto");
+  });
+
+  $("obPhotoInput").addEventListener("change", function(e){
+    var file = e.target.files && e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      obPhotoData = ev.target.result;
+      $("obPhotoDrop").style.backgroundImage = "url(" + obPhotoData + ")";
+      $("obPhotoPlaceholder").style.display = "none";
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function finishOnboarding(skipRest){
+    $("obErr").textContent = "";
+    var updates = { onboarding_completed_at: new Date().toISOString() };
+    if(!skipRest){
+      if(obPhotoData) updates.photo_url = obPhotoData;
+      var birth = $("obBirthDate").value;
+      if(birth) updates.birth_date = birth;
+    }
+    sb.from("students").update(updates).eq("id", currentStudent.id).then(function(r){
+      if(r.error){ $("obErr").textContent = "Erro ao salvar: " + r.error.message; return; }
+      var tasks = [];
+      if(obNpsScore !== null){
+        tasks.push(sb.from("nps_responses").insert({ student_id: currentStudent.id, score: obNpsScore, source: "primeiro_acesso" }));
+      }
+      Promise.all(tasks).then(function(){
+        currentStudent = Object.assign({}, currentStudent, updates);
+        startDiscOnly();
+      });
+    });
+  }
+  $("obFinishBtn").addEventListener("click", function(){ finishOnboarding(false); });
+  $("obSkipBtn").addEventListener("click", function(){ finishOnboarding(true); });
+
+  // ---------------- onboarding: teste comportamental (DISC) ----------------
+  var discBlocks = [
+    [{w:"Decidido",d:"D"},{w:"Comunicativo",d:"I"},{w:"Paciente",d:"S"},{w:"Analítico",d:"C"}],
+    [{w:"Direto",d:"D"},{w:"Entusiasmado",d:"I"},{w:"Leal",d:"S"},{w:"Preciso",d:"C"}],
+    [{w:"Competitivo",d:"D"},{w:"Persuasivo",d:"I"},{w:"Calmo",d:"S"},{w:"Cuidadoso",d:"C"}],
+    [{w:"Determinado",d:"D"},{w:"Sociável",d:"I"},{w:"Confiável",d:"S"},{w:"Sistemático",d:"C"}],
+    [{w:"Assertivo",d:"D"},{w:"Otimista",d:"I"},{w:"Constante",d:"S"},{w:"Criterioso",d:"C"}],
+    [{w:"Ousado",d:"D"},{w:"Expressivo",d:"I"},{w:"Cooperativo",d:"S"},{w:"Meticuloso",d:"C"}],
+    [{w:"Enérgico",d:"D"},{w:"Carismático",d:"I"},{w:"Prestativo",d:"S"},{w:"Organizado",d:"C"}],
+    [{w:"Exigente",d:"D"},{w:"Espontâneo",d:"I"},{w:"Ponderado",d:"S"},{w:"Rigoroso",d:"C"}],
+    [{w:"Independente",d:"D"},{w:"Inspirador",d:"I"},{w:"Estável",d:"S"},{w:"Objetivo",d:"C"}],
+    [{w:"Pioneiro",d:"D"},{w:"Envolvente",d:"I"},{w:"Gentil",d:"S"},{w:"Cauteloso",d:"C"}],
+    [{w:"Corajoso",d:"D"},{w:"Extrovertido",d:"I"},{w:"Consistente",d:"S"},{w:"Detalhista",d:"C"}],
+    [{w:"Firme",d:"D"},{w:"Caloroso",d:"I"},{w:"Sereno",d:"S"},{w:"Metódico",d:"C"}]
+  ];
+  var discCurrent = 0;
+  var discAnswers = [];
+
+  function startDiscOnly(){
+    discCurrent = 0;
+    discAnswers = new Array(discBlocks.length).fill(null);
+    showScreen("obDisc");
+    renderDiscBlock();
+  }
+
+  function renderDiscBlock(){
+    $("discErr").textContent = "";
+    var block = discBlocks[discCurrent];
+    var saved = discAnswers[discCurrent] || { mais: null, menos: null };
+    var wrap = $("discWordBlock");
+    wrap.innerHTML = "";
+    block.forEach(function(item, idx){
+      var row = document.createElement("div");
+      row.className = "disc-word-row";
+      var maisActive = saved.mais === idx ? "active" : "";
+      var menosActive = saved.menos === idx ? "active" : "";
+      row.innerHTML =
+        '<span class="word">' + item.w + '</span>' +
+        '<div class="disc-pick-row">' +
+          '<button type="button" class="disc-pick-btn mais ' + maisActive + '" data-idx="' + idx + '" data-type="mais">MAIS EU</button>' +
+          '<button type="button" class="disc-pick-btn menos ' + menosActive + '" data-idx="' + idx + '" data-type="menos">MENOS EU</button>' +
+        '</div>';
+      wrap.appendChild(row);
+    });
+
+    wrap.querySelectorAll(".disc-pick-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var idx = parseInt(btn.getAttribute("data-idx"), 10);
+        var type = btn.getAttribute("data-type");
+        var a = discAnswers[discCurrent] || { mais: null, menos: null };
+        if(type === "mais"){
+          if(a.menos === idx) a.menos = null;
+          a.mais = (a.mais === idx) ? null : idx;
+        } else {
+          if(a.mais === idx) a.mais = null;
+          a.menos = (a.menos === idx) ? null : idx;
+        }
+        discAnswers[discCurrent] = a;
+        renderDiscBlock();
+      });
+    });
+
+    $("discProgLabel").textContent = "Bloco " + (discCurrent + 1) + " de " + discBlocks.length;
+    var pct = Math.round((discCurrent / discBlocks.length) * 100);
+    $("discProgPct").textContent = pct + "%";
+    $("discProgFill").style.width = pct + "%";
+    $("discBackBtn").style.visibility = discCurrent === 0 ? "hidden" : "visible";
+    $("discNextBtn").textContent = discCurrent === discBlocks.length - 1 ? "Concluir" : "Próximo";
+  }
+
+  $("discBackBtn").addEventListener("click", function(){
+    if(discCurrent > 0){ discCurrent -= 1; renderDiscBlock(); }
+  });
+
+  $("discNextBtn").addEventListener("click", function(){
+    var a = discAnswers[discCurrent];
+    if(!a || a.mais === null || a.menos === null){
+      $("discErr").textContent = "Marque uma opção como \"mais eu\" e outra como \"menos eu\" antes de continuar.";
+      return;
+    }
+    if(discCurrent < discBlocks.length - 1){
+      discCurrent += 1;
+      renderDiscBlock();
+    } else {
+      finishDisc();
+    }
+  });
+
+  function finishDisc(){
+    $("discErr").textContent = "";
+    $("discNextBtn").disabled = true;
+
+    var scores = { D:0, I:0, S:0, C:0 };
+    discBlocks.forEach(function(block, i){
+      var a = discAnswers[i];
+      scores[block[a.mais].d] += 1;
+      scores[block[a.menos].d] -= 1;
+    });
+    var primary = "D";
+    Object.keys(scores).forEach(function(k){ if(scores[k] > scores[primary]) primary = k; });
+
+    sb.from("disc_results").insert({
+      student_id: currentStudent.id,
+      d_score: scores.D, i_score: scores.I, s_score: scores.S, c_score: scores.C,
+      primary_profile: primary,
+      raw_answers: discAnswers
+    }).then(function(r){
+      if(r.error){
+        $("discNextBtn").disabled = false;
+        $("discErr").textContent = "Erro ao salvar: " + r.error.message;
+        return;
+      }
+      sb.from("students").update({ disc_completed_at: new Date().toISOString() }).eq("id", currentStudent.id).then(function(){
+        currentStudent.disc_completed_at = new Date().toISOString();
+        $("discNextBtn").disabled = false;
+        showDashboard();
+      });
+    });
+  }
+
+  // ---------------- dashboard (shell real) ----------------
+  function showDashboard(){
+    $("authWrap").style.display = "none";
+    $("appShell").style.display = "flex";
+
+    var av = $("studentAvatar");
+    if(currentStudent.photo_url){ av.style.backgroundImage = "url(" + currentStudent.photo_url + ")"; av.textContent = ""; }
+    else { av.textContent = initials(currentStudent.full_name).toUpperCase(); }
+
+    var mentorias = (currentStudent.deliveries || []).filter(function(d){ return d.status === "ativo"; });
+    var mentoriaLabels = mentorias.map(function(d){ return d.label; });
+    var branchIds = mentorias.map(function(d){ return d.branch_id; }).filter(Boolean);
+
+    var firstName = (currentStudent.full_name || "").trim().split(/\s+/)[0] || "";
+    $("heroTitle").textContent = "Olá, " + (currentStudent.full_name || firstName) + "!";
+
+    if(mentoriaLabels.length){
+      $("topBadgeBranch").style.display = "inline-block";
+      $("topBadgeBranch").textContent = mentoriaLabels[0];
+    }
+
+    $("statBranches").textContent = mentoriaLabels.length ? mentoriaLabels.join(", ") : "—";
+    $("statStatus").textContent = currentStudent.status || "—";
+
+    var cs = currentStudent.staff;
+    if(cs){
+      $("statCs").textContent = cs.full_name;
+
+      $("topCsPill").style.display = "flex";
+      $("topCsAv").textContent = initials(cs.full_name).toUpperCase();
+      $("topCsText").textContent = "Sua CS: " + cs.full_name;
+
+      $("sideCsName").textContent = "Fale com " + cs.full_name + ", sua CS";
+
+      $("csCard").style.display = "flex";
+      $("csCardName").textContent = cs.full_name;
+      $("csCardSub").textContent = mentoriaLabels.length ? "Sua CS na " + mentoriaLabels[0] : "Sua CS na Endogin";
+      if(cs.photo_url){ $("csCardAv").style.backgroundImage = "url(" + cs.photo_url + ")"; $("csCardAv").textContent = ""; }
+      else { $("csCardAv").textContent = initials(cs.full_name).toUpperCase(); }
+
+      var link = waLink(cs.phone);
+      if(link){
+        $("sideWhatsBtn").style.display = "flex"; $("sideWhatsBtn").href = link;
+        $("csCardWhatsBtn").style.display = "flex"; $("csCardWhatsBtn").href = link;
+      }
+    } else {
+      $("statCs").textContent = "A definir";
+    }
+
+    currentBranchIds = branchIds;
+    currentMentoriaLabels = mentoriaLabels;
+
+    var isMentoriaMae = mentoriaLabels.indexOf("Mentoria Mãe") > -1;
+    if(isMentoriaMae && currentStudent.is_new_member){
+      refreshJourney();
+    } else {
+      $("journeyPending").style.display = "none";
+      $("heroEyebrow").textContent = "MENTORIA ATIVA";
+      $("heroSub").textContent = mentoriaLabels.length
+        ? "Acompanhe o calendário de aulas e novidades da " + mentoriaLabels.join(" / ") + " por aqui."
+        : "Assim que sua CS vincular você a uma mentoria, seu conteúdo aparece aqui.";
+    }
+    loadCalendar(branchIds);
+    loadRecados();
+
+    showPage("jornada");
+  }
+
+  // ---------------- sessão 1x1 ----------------
+  var SESSION_STATUS_LABEL = {
+    a_agendar:"A agendar", agendada:"Agendada", confirmada:"Confirmada",
+    realizada:"Realizada", remarcada:"Remarcada", cancelada:"Cancelada"
+  };
+  var latestSession = null;
+  var currentBranchIds = [];
+  var currentMentoriaLabels = [];
+
+  function loadSession(){
+    return sb.from("mentoring_sessions")
+      .select("*")
+      .eq("student_id", currentStudent.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .then(function(r){
+        var s = (r.data && r.data[0]) || null;
+        latestSession = (s && s.status !== "cancelada") ? s : null;
+        renderSessionCard();
+        return latestSession && latestSession.status === "realizada";
+      });
+  }
+
+  function renderSessionCard(){
+    var s = latestSession;
+    $("sessionCard").style.display = "block";
+    if(s && s.status !== "a_agendar"){
+      $("sessionBadge").textContent = SESSION_STATUS_LABEL[s.status] || s.status;
+      $("sessionConfirmedWrap").style.display = "block";
+      $("sessionPendingConfirm").style.display = "none";
+      $("sessionRequestForm").style.display = "none";
+      $("sessionMentors").innerHTML = (s.mentor_names || []).map(function(m){
+        return '<div class="mentor"><span class="av">' + initials(m).toUpperCase() + '</span><div class="info"><b>' + m + '</b></div></div>';
+      }).join("");
+      var when = s.scheduled_at
+        ? new Date(s.scheduled_at).toLocaleString("pt-BR", { weekday:"long", day:"2-digit", month:"long", hour:"2-digit", minute:"2-digit" })
+        : "Ainda sem data marcada";
+      $("sessionMeta").innerHTML = '<i class="fa-regular fa-calendar"></i> ' + when;
+    } else if(s && s.status === "a_agendar" && s.scheduled_at){
+      $("sessionBadge").textContent = "Aguardando confirmação";
+      $("sessionConfirmedWrap").style.display = "none";
+      $("sessionRequestForm").style.display = "none";
+      $("sessionPendingConfirm").style.display = "block";
+      $("sessionPendingWhen").textContent = new Date(s.scheduled_at).toLocaleString("pt-BR", { weekday:"long", day:"2-digit", month:"long", hour:"2-digit", minute:"2-digit" });
+    } else {
+      $("sessionBadge").textContent = "A agendar";
+      $("sessionConfirmedWrap").style.display = "none";
+      $("sessionPendingConfirm").style.display = "none";
+      $("sessionRequestForm").style.display = "block";
+    }
+  }
+
+  $("sessionRequestBtn").addEventListener("click", function(){
+    var val = $("sessionRequestInput").value;
+    $("sessionRequestErr").textContent = "";
+    if(!val){ $("sessionRequestErr").textContent = "Escolha uma data e horário."; return; }
+    $("sessionRequestBtn").disabled = true;
+    var iso = new Date(val).toISOString();
+    var payload = { student_id: currentStudent.id, scheduled_at: iso, status: "a_agendar" };
+    var op = latestSession
+      ? sb.from("mentoring_sessions").update(payload).eq("id", latestSession.id)
+      : sb.from("mentoring_sessions").insert(payload);
+    op.then(function(r){
+      $("sessionRequestBtn").disabled = false;
+      if(r.error){ $("sessionRequestErr").textContent = "Erro: " + r.error.message; return; }
+      refreshJourney();
+    });
+  });
+
+  // ---------------- aulas obrigatórias (trilha) ----------------
+  function loadLessons(branchIds){
+    if(!branchIds.length){ $("lessonsCard").style.display = "none"; return Promise.resolve(true); }
+    return sb.from("lessons")
+      .select("id,title,duration_minutes,lesson_type,branch_id")
+      .eq("lesson_type", "trilha")
+      .in("branch_id", branchIds)
+      .then(function(r){
+        var lessons = r.data || [];
+        if(!lessons.length){ $("lessonsCard").style.display = "none"; return true; }
+        $("lessonsCard").style.display = "block";
+        return sb.from("lesson_progress")
+          .select("lesson_id,completed")
+          .eq("student_id", currentStudent.id)
+          .then(function(pr){
+            var doneMap = {};
+            (pr.data || []).forEach(function(p){ doneMap[p.lesson_id] = p.completed; });
+            var doneCount = lessons.filter(function(l){ return doneMap[l.id]; }).length;
+            $("lessonsBadge").textContent = doneCount + " de " + lessons.length;
+            $("lessonsList").innerHTML = lessons.map(function(l){
+              var done = !!doneMap[l.id];
+              return '<div class="lesson-row">' +
+                '<div class="lesson-check ' + (done ? "done" : "pending") + '"><i class="fa-solid ' + (done ? "fa-check" : "fa-circle-notch") + '"></i></div>' +
+                '<div class="lesson-info"><b>' + l.title + '</b>' + (l.duration_minutes ? '<span>' + l.duration_minutes + ' min</span>' : '') + '</div>' +
+                '</div>';
+            }).join("");
+            return doneCount === lessons.length;
+          });
+      });
+  }
+
+  // ---------------- jornada: mostra as pendências ou some quando tudo concluído ----------------
+  function refreshJourney(){
+    Promise.all([loadSession(), loadLessons(currentBranchIds)]).then(function(results){
+      var sessionDone = results[0];
+      var lessonsDone = results[1];
+      applyJourneyState(sessionDone && lessonsDone);
+    });
+  }
+
+  function applyJourneyState(complete){
+    $("journeyPending").style.display = complete ? "none" : "block";
+    if(complete){
+      $("heroEyebrow").textContent = "MENTORIA ATIVA";
+      $("heroSub").textContent = "Você já concluiu sua jornada inicial. Acompanhe o calendário de aulas e novidades por aqui.";
+    } else {
+      $("heroEyebrow").textContent = "SUA JORNADA NA MENTORIA";
+      $("heroSub").textContent = currentMentoriaLabels.length
+        ? "Complete as aulas obrigatórias e agende sua sessão 1x1 pra liberar sua jornada completa na " + currentMentoriaLabels.join(" / ") + "."
+        : "Assim que sua CS vincular você a uma mentoria, seu conteúdo aparece aqui.";
+    }
+  }
+
+  // ---------------- calendário (aulas semanais / eventos) ----------------
+  var WEEKDAY_LABEL = { segunda:"Segunda", terca:"Terça", quarta:"Quarta", quinta:"Quinta", sexta:"Sexta", sabado:"Sábado", domingo:"Domingo" };
+
+  function loadCalendar(branchIds){
+    if(!branchIds.length) return;
+    sb.from("lessons")
+      .select("id,title,weekday,scheduled_time,duration_minutes,lesson_type,branch_id")
+      .in("lesson_type", ["semanal","evento"])
+      .in("branch_id", branchIds)
+      .then(function(r){
+        if(r.error || !r.data || !r.data.length) return;
+        $("calendarList").innerHTML = r.data.map(function(l){
+          var when = [WEEKDAY_LABEL[l.weekday] || l.weekday, l.scheduled_time ? l.scheduled_time.slice(0,5).replace(":", "h") : null]
+            .filter(Boolean).join(" · ");
+          return '<div class="cal-item">' +
+            '<div class="cal-icn"><i class="fa-solid ' + (l.lesson_type === "evento" ? "fa-star" : "fa-play") + '"></i></div>' +
+            '<div class="cal-info">' +
+              '<span class="cat-badge">' + (l.lesson_type === "evento" ? "Encontro" : "Aula semanal") + '</span>' +
+              '<b>' + l.title + '</b>' +
+              (when ? '<span>' + when + (l.duration_minutes ? " · " + l.duration_minutes + " min" : "") + '</span>' : '') +
+            '</div>' +
+          '</div>';
+        }).join("");
+      });
+  }
+
+  // ---------------- recados (mensagem/link/documento da CS) ----------------
+  function recadoItemHtml(a){
+    return '<div class="cal-item" style="align-items:flex-start;">' +
+      '<div class="cal-icn"><i class="fa-solid fa-bullhorn"></i></div>' +
+      '<div class="cal-info">' +
+        '<b>' + (a.title || "Recado") + '</b>' +
+        '<span style="display:block;white-space:pre-wrap;margin:4px 0;color:var(--eg-text-secondary);">' + a.message + '</span>' +
+        (a.link_url ? '<a href="' + a.link_url + '" target="_blank" rel="noopener" style="display:block;color:var(--eg-gold-300);font-size:11.5px;margin-bottom:2px;"><i class="fa-solid fa-link"></i> ' + a.link_url + '</a>' : '') +
+        (a.attachment_url ? '<a href="' + a.attachment_url + '" target="_blank" rel="noopener" style="display:block;color:var(--eg-gold-300);font-size:11.5px;"><i class="fa-solid fa-paperclip"></i> ' + (a.attachment_name || "anexo") + '</a>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  function loadRecados(){
+    sb.from("announcements")
+      .select("id,title,message,link_url,attachment_url,attachment_name,created_at")
+      .order("created_at", { ascending: false })
+      .then(function(r){
+        if(r.error || !r.data || !r.data.length) return;
+        $("recadosList").innerHTML = r.data.map(recadoItemHtml).join("");
+      });
+  }
+
+  // ---------------- navegação entre páginas ----------------
+  var pageEls = {
+    jornada: $("page-jornada"),
+    opiniao: $("page-opiniao")
+  };
+  var sideLinkBtns = document.querySelectorAll(".side-link");
+
+  function showPage(key){
+    Object.keys(pageEls).forEach(function(k){ pageEls[k].classList.toggle("active", k === key); });
+    sideLinkBtns.forEach(function(l){ l.classList.toggle("active", l.getAttribute("data-page") === key); });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  sideLinkBtns.forEach(function(l){
+    l.addEventListener("click", function(){ showPage(l.getAttribute("data-page")); });
+  });
+
+  $("logoutBtn").addEventListener("click", function(){
+    sb.auth.signOut().then(function(){ location.reload(); });
+  });
+
+  // ---------------- feedback do aluno (real) ----------------
+  var fbRating = 0;
+  var fbStars = document.querySelectorAll("#fbStars i");
+  function paintStars(v){
+    fbStars.forEach(function(star){
+      var starVal = parseInt(star.getAttribute("data-v"), 10);
+      if(starVal <= v){ star.classList.remove("fa-regular"); star.classList.add("fa-solid", "active"); }
+      else { star.classList.remove("fa-solid", "active"); star.classList.add("fa-regular"); }
+    });
+  }
+  fbStars.forEach(function(star){
+    star.addEventListener("click", function(){
+      fbRating = parseInt(star.getAttribute("data-v"), 10);
+      paintStars(fbRating);
+      $("fbSubmit").disabled = false;
+    });
+    star.addEventListener("mouseenter", function(){ paintStars(parseInt(star.getAttribute("data-v"), 10)); });
+  });
+  $("fbStars").addEventListener("mouseleave", function(){ paintStars(fbRating); });
+
+  $("fbSubmit").addEventListener("click", function(){
+    if(fbRating === 0) return;
+    $("fbErr").textContent = "";
+    $("fbSubmit").disabled = true;
+    sb.from("feedback_entries").insert({
+      student_id: currentStudent.id,
+      category: $("fbCategory").value,
+      rating: fbRating,
+      comment: $("fbComment").value.trim() || null
+    }).then(function(r){
+      if(r.error){ $("fbErr").textContent = "Erro ao enviar: " + r.error.message; $("fbSubmit").disabled = false; return; }
+      $("feedbackFormWrap").style.display = "none";
+      $("feedbackThanks").style.display = "flex";
+    });
+  });
+
+  // ---------------- NPS periódico (real) ----------------
+  var npsScore = null;
+  var npsGrid = $("npsScaleGrid");
+  for(var n = 0; n <= 10; n++){
+    (function(n){
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = n;
+      b.addEventListener("click", function(){
+        npsScore = n;
+        npsGrid.querySelectorAll("button").forEach(function(x){ x.classList.remove("active"); });
+        b.classList.add("active");
+        $("npsSubmit").disabled = false;
+      });
+      npsGrid.appendChild(b);
+    })(n);
+  }
+
+  $("npsSubmit").addEventListener("click", function(){
+    if(npsScore === null) return;
+    $("npsErr").textContent = "";
+    $("npsSubmit").disabled = true;
+    sb.from("nps_responses").insert({
+      student_id: currentStudent.id,
+      score: npsScore,
+      source: "periodico",
+      comment: $("npsComment").value.trim() || null
+    }).then(function(r){
+      if(r.error){ $("npsErr").textContent = "Erro ao enviar: " + r.error.message; $("npsSubmit").disabled = false; return; }
+      $("npsFormWrap").style.display = "none";
+      $("npsThanks").style.display = "flex";
+    });
+  });
+</script>
+</body>
+</html>
