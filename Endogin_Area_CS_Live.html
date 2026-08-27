@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
   :root{
     --eg-bg-0:#0b1420; --eg-bg-1:#101d2e; --eg-bg-2:#152436; --eg-bg-3:#1b2a3d;
@@ -248,8 +249,11 @@
       <div class="card">
         <div class="card-head">
           <h3><i class="fa-solid fa-users icn"></i><span id="alunosTitle">Meus alunos</span></h3>
-          <div id="csFilterWrap" style="display:none;">
-            <select id="csFilterSelect"><option value="">Todas as CS</option></select>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <input type="text" class="search-input" id="alunosSearch" placeholder="Buscar por nome, e-mail ou CPF..." style="max-width:260px;">
+            <div id="csFilterWrap" style="display:none;">
+              <select id="csFilterSelect"><option value="">Todas as CS</option></select>
+            </div>
           </div>
         </div>
         <div id="alunosLoading" class="loading-note">Carregando alunos...</div>
@@ -404,12 +408,21 @@
     <!-- ================= RELATÓRIOS ================= -->
     <div class="tab-panel" id="tab-relatorios">
       <div class="card">
-        <div class="card-head"><h3><i class="fa-solid fa-file-export icn"></i>Exportar dados</h3></div>
-        <p class="hint" style="margin:-8px 0 14px;">Exporta exatamente o que você vê nas outras abas — se for a Thais, sai tudo; se for uma CS, sai só o que é dela.</p>
+        <div class="card-head"><h3><i class="fa-solid fa-file-export icn"></i>Exportar alunos</h3></div>
+        <p class="hint" style="margin:-8px 0 14px;">Sai em Excel (.xlsx) organizado e colorido, igual às planilhas que vocês já usam — se for a Thais, sai tudo; se for uma CS, sai só o que é dela. Escolha as colunas que quer no arquivo.</p>
+        <div id="exportCsWrap" style="display:none;margin-bottom:16px;max-width:280px;"><label>CS responsável</label><select id="exportCsSelect"><option value="">Todas as CS</option></select></div>
+        <div class="filter-block">
+          <span class="filter-block-label">Colunas do relatório</span>
+          <div style="margin-bottom:8px;"><button class="aniv-art-btn" id="exportColsAll" type="button">Marcar todas</button> <button class="aniv-art-btn" id="exportColsNone" type="button">Desmarcar todas</button></div>
+          <div id="exportColsList" style="display:flex;flex-wrap:wrap;gap:8px 18px;"></div>
+        </div>
+        <button class="btn-primary" id="exportAlunosBtn" style="margin-top:16px;"><i class="fa-solid fa-file-excel"></i> Gerar Excel dos alunos</button>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-file-export icn"></i>Outros relatórios</h3></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn-secondary" id="exportAlunosBtn"><i class="fa-solid fa-download"></i> Alunos (.csv)</button>
-          <button class="btn-secondary" id="exportSessionsBtn"><i class="fa-solid fa-download"></i> Sessões 1x1 (.csv)</button>
-          <button class="btn-secondary" id="exportReferralsBtn"><i class="fa-solid fa-download"></i> Indicações (.csv)</button>
+          <button class="btn-secondary" id="exportSessionsBtn"><i class="fa-solid fa-download"></i> Sessões 1x1 (.xlsx)</button>
+          <button class="btn-secondary" id="exportReferralsBtn"><i class="fa-solid fa-download"></i> Indicações (.xlsx)</button>
         </div>
       </div>
     </div>
@@ -788,6 +801,23 @@
     loadAlunos();
   });
 
+  var alunosSearchValue = "";
+  $("alunosSearch").addEventListener("input", function(){
+    alunosSearchValue = this.value;
+    applyAlunosFilter();
+  });
+
+  function applyAlunosFilter(){
+    var search = alunosSearchValue.trim().toLowerCase();
+    var filtered = !search ? allStudents : allStudents.filter(function(s){
+      return (s.full_name || "").toLowerCase().indexOf(search) > -1 ||
+        (s.email || "").toLowerCase().indexOf(search) > -1 ||
+        (s.cpf || "").toLowerCase().indexOf(search) > -1 ||
+        (s.phone || "").toLowerCase().indexOf(search) > -1;
+    });
+    renderAlunos(filtered);
+  }
+
   function loadAlunos(){
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
@@ -799,10 +829,11 @@
       $("alunosLoading").style.display = "none";
       if(r.error){ $("alunosLoading").textContent = "Erro ao carregar: " + r.error.message; $("alunosLoading").style.display = "block"; return; }
       allStudents = r.data || [];
-      renderAlunos(allStudents);
+      applyAlunosFilter();
       renderAniversarios(allStudents);
       populateStudentSelects();
       renderGruposTab();
+      renderExportColumns();
     });
   }
 
@@ -1287,8 +1318,17 @@
           opt.value = s.id; opt.textContent = s.full_name;
           sel.appendChild(opt);
         });
+        $("exportCsWrap").style.display = "block";
+        var exportSel = $("exportCsSelect");
+        exportSel.innerHTML = '<option value="">Todas as CS</option>';
+        allStaff.filter(function(s){ return s.is_active; }).forEach(function(s){
+          var opt = document.createElement("option");
+          opt.value = s.id; opt.textContent = s.full_name;
+          exportSel.appendChild(opt);
+        });
       }
 
+      renderExportColumns();
       renderTeamGrid();
       loadAlunos();
       if(allRecados.length) renderRecados();
@@ -2088,32 +2128,184 @@
     });
   }
 
-  // ---------------- Relatórios (exportação real) ----------------
+  // ---------------- Relatórios (exportação em Excel organizado) ----------------
+  var ALUNO_EXPORT_COLUMNS = [
+    { key:"full_name", label:"Nome completo", get:function(s){ return s.full_name || ""; } },
+    { key:"email", label:"E-mail", get:function(s){ return s.email || ""; } },
+    { key:"phone", label:"Telefone", get:function(s){ return s.phone || ""; } },
+    { key:"cpf", label:"CPF", get:function(s){ return s.cpf || ""; } },
+    { key:"mentoria", label:"Mentoria", get:function(s){ return (s.deliveries||[]).filter(function(d){ return d.status==="ativo"; }).map(function(d){ return d.label; }).join("; "); } },
+    { key:"cs", label:"CS responsável", get:function(s){ return (s.staff && s.staff.full_name) || s.legacy_cs_label || ""; } },
+    { key:"status", label:"Status", get:function(s){ return s.status || ""; } },
+    { key:"temperature", label:"Temperatura", get:function(s){ return s.temperature || ""; } },
+    { key:"renewal_status", label:"Status de renovação", get:function(s){ return s.renewal_status || ""; } },
+    { key:"entry_date", label:"Data de entrada", get:function(s){ return s.entry_date || ""; } },
+    { key:"renewal_date", label:"Data de vencimento", get:function(s){ return s.renewal_date || ""; } },
+    { key:"birth_date", label:"Data de nascimento", get:function(s){ return s.birth_date || ""; } },
+    { key:"instagram", label:"Instagram", get:function(s){ return s.instagram || ""; } },
+    { key:"medical_license", label:"CRM (médico)", get:function(s){ return s.medical_license || ""; } },
+    { key:"one_on_one_status", label:"Status do 1:1", get:function(s){ return s.one_on_one_status || ""; } },
+    { key:"dietary_restriction", label:"Restrição alimentar", get:function(s){ return s.dietary_restriction || ""; } },
+    { key:"referral_count", label:"Nº de indicações", get:function(s){ return s.referral_count || ""; } },
+    { key:"notes", label:"Anotações", get:function(s){ return s.notes || ""; } }
+  ];
+
+  function groupExportColumns(){
+    return allGroups.map(function(g){
+      return {
+        key: "group_" + g.id, label: g.name, isGroup: true,
+        get: function(s){ return activeGroupLabels(s).indexOf(g.name) > -1 ? "TRUE" : "FALSE"; }
+      };
+    });
+  }
+  function allExportColumns(){ return ALUNO_EXPORT_COLUMNS.concat(groupExportColumns()); }
+
+  function renderExportColumns(){
+    var wrap = $("exportColsList");
+    if(!wrap) return;
+    var prevChecked = {};
+    wrap.querySelectorAll("input[type=checkbox]").forEach(function(cb){ prevChecked[cb.id] = cb.checked; });
+    wrap.innerHTML = "";
+    allExportColumns().forEach(function(c){
+      var id = "exportcol_" + c.key;
+      var wasChecked = prevChecked.hasOwnProperty(id) ? prevChecked[id] : true;
+      var label = document.createElement("label");
+      label.style.cssText = "display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--eg-text-secondary);cursor:pointer;";
+      label.innerHTML = '<input type="checkbox" id="' + id + '"' + (wasChecked ? " checked" : "") + ' style="accent-color:var(--eg-gold-500);width:15px;height:15px;"> ' + c.label;
+      wrap.appendChild(label);
+    });
+  }
+  $("exportColsAll").addEventListener("click", function(){
+    allExportColumns().forEach(function(c){ var el = $("exportcol_" + c.key); if(el) el.checked = true; });
+  });
+  $("exportColsNone").addEventListener("click", function(){
+    allExportColumns().forEach(function(c){ var el = $("exportcol_" + c.key); if(el) el.checked = false; });
+  });
+
+  var EG_HEADER_GREEN = "FF1F7A4D";
+  var EG_HEADER_GREEN_DARK = "FF14532D";
+
+  function styleHeaderRow(sheet, colCount, colorFn){
+    var headerRow = sheet.getRow(1);
+    headerRow.height = 26;
+    headerRow.eachCell(function(cell, colNumber){
+      cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb: colorFn ? colorFn(colNumber) : EG_HEADER_GREEN } };
+      cell.font = { bold:true, color:{ argb:"FFFFFFFF" }, size:11 };
+      cell.alignment = { vertical:"middle", horizontal:"center", wrapText:true };
+    });
+    sheet.views = [{ state:"frozen", ySplit:1 }];
+    sheet.autoFilter = { from:{ row:1, column:1 }, to:{ row:1, column:colCount } };
+  }
+
+  function zebraStripe(sheet, rowCount){
+    for(var r=2; r<=rowCount+1; r++){
+      var xlRow = sheet.getRow(r);
+      var bg = (r % 2 === 0) ? "FFF7F7F5" : "FFFFFFFF";
+      xlRow.eachCell(function(cell){
+        if(!cell.fill || !cell.fill.fgColor){ cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb: bg } }; }
+        cell.border = { bottom:{ style:"thin", color:{ argb:"FFE0E0E0" } } };
+        cell.alignment = cell.alignment || { vertical:"middle" };
+      });
+    }
+  }
+
+  function downloadWorkbook(wb, filename){
+    wb.xlsx.writeBuffer().then(function(buf){
+      var blob = new Blob([buf], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      var link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+    });
+  }
+
   $("exportAlunosBtn").addEventListener("click", function(){
-    var rows = [["Nome","E-mail","Telefone","Status","Mentorias ativas","CS","Data de nascimento"]];
-    allStudents.forEach(function(s){
-      var mentorias = (s.deliveries || []).filter(function(d){ return d.status === "ativo"; }).map(function(d){ return d.label; }).join("; ");
-      var csName = (s.staff && s.staff.full_name) || s.legacy_cs_label || "";
-      rows.push([s.full_name, s.email, s.phone || "", s.status, mentorias, csName, s.birth_date || ""]);
+    if(typeof ExcelJS === "undefined"){ alert("A biblioteca de Excel ainda está carregando, tenta de novo em alguns segundos."); return; }
+    var cols = allExportColumns().filter(function(c){ var el = $("exportcol_" + c.key); return el && el.checked; });
+    if(!cols.length){ alert("Selecione pelo menos uma coluna pra exportar."); return; }
+    var csFilter = $("exportCsSelect") ? $("exportCsSelect").value : "";
+    var list = allStudents.filter(function(s){ return !csFilter || s.cs_id === csFilter; });
+
+    var wb = new ExcelJS.Workbook();
+    var sheet = wb.addWorksheet("Alunos");
+    sheet.columns = cols.map(function(c){ return { header: c.label, key: c.key, width: Math.max(14, Math.min(30, c.label.length + 6)) }; });
+    list.forEach(function(s){
+      var row = {};
+      cols.forEach(function(c){ row[c.key] = c.get(s); });
+      sheet.addRow(row);
     });
-    downloadCsv("endogin-alunos.csv", rows);
+
+    styleHeaderRow(sheet, cols.length, function(colNumber){ return cols[colNumber-1].isGroup ? EG_HEADER_GREEN_DARK : EG_HEADER_GREEN; });
+
+    for(var r=2; r<=list.length+1; r++){
+      var xlRow = sheet.getRow(r);
+      var student = list[r-2];
+      var bg = (r % 2 === 0) ? "FFF7F7F5" : "FFFFFFFF";
+      xlRow.eachCell(function(cell, colNumber){
+        var col = cols[colNumber-1];
+        cell.border = { bottom:{ style:"thin", color:{ argb:"FFE0E0E0" } } };
+        cell.alignment = { vertical:"middle", horizontal: col.isGroup ? "center" : "left" };
+        cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb: bg } };
+        if(col.key === "temperature"){
+          var t = (student.temperature || "").toLowerCase();
+          if(t.indexOf("quent") > -1) cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFFADBD8" } };
+          else if(t.indexOf("morn") > -1) cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFFDEBD0" } };
+          else if(t.indexOf("fri") > -1) cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFD6EAF8" } };
+        }
+        if(col.key === "status"){
+          var st = (student.status || "").toLowerCase();
+          if(st === "ativo") cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFD5F5E3" } };
+          else if(st === "trancado") cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFFCF3CF" } };
+          else if(st) cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFEAEAEA" } };
+        }
+        if(col.isGroup){
+          cell.font = cell.value === "TRUE" ? { bold:true, color:{ argb:"FF1F7A4D" } } : { color:{ argb:"FFAAAAAA" } };
+        }
+      });
+    }
+
+    downloadWorkbook(wb, "endogin-alunos.xlsx");
   });
+
   $("exportSessionsBtn").addEventListener("click", function(){
+    if(typeof ExcelJS === "undefined"){ alert("A biblioteca de Excel ainda está carregando, tenta de novo em alguns segundos."); return; }
     sb.from("mentoring_sessions").select("*").then(function(r){
-      var rows = [["Aluno","Data/hora","Status","Observações"]];
+      var wb = new ExcelJS.Workbook();
+      var sheet = wb.addWorksheet("Sessões 1x1");
+      sheet.columns = [
+        { header:"Aluno", key:"aluno", width:26 },
+        { header:"Data/hora", key:"data", width:18 },
+        { header:"Status", key:"status", width:16 },
+        { header:"Observações", key:"obs", width:40 }
+      ];
       (r.data || []).forEach(function(s){
-        rows.push([studentName(s.student_id), fmtDate(s.scheduled_at), s.status, s.feedback_notes || ""]);
+        sheet.addRow({ aluno: studentName(s.student_id), data: fmtDate(s.scheduled_at), status: s.status, obs: s.feedback_notes || "" });
       });
-      downloadCsv("endogin-sessoes-1x1.csv", rows);
+      styleHeaderRow(sheet, 4);
+      zebraStripe(sheet, (r.data || []).length);
+      downloadWorkbook(wb, "endogin-sessoes-1x1.xlsx");
     });
   });
+
   $("exportReferralsBtn").addEventListener("click", function(){
+    if(typeof ExcelJS === "undefined"){ alert("A biblioteca de Excel ainda está carregando, tenta de novo em alguns segundos."); return; }
     sb.from("referrals").select("*").then(function(r){
-      var rows = [["Indicado por","Nome indicado","Contato","E-mail","Status","Data"]];
+      var wb = new ExcelJS.Workbook();
+      var sheet = wb.addWorksheet("Indicações");
+      sheet.columns = [
+        { header:"Indicado por", key:"por", width:26 },
+        { header:"Nome indicado", key:"nome", width:26 },
+        { header:"Contato", key:"contato", width:18 },
+        { header:"E-mail", key:"email", width:26 },
+        { header:"Status", key:"status", width:16 },
+        { header:"Data", key:"data", width:18 }
+      ];
       (r.data || []).forEach(function(ref){
-        rows.push([studentName(ref.referrer_student_id), ref.referred_name, ref.referred_contact || "", ref.referred_email || "", ref.status, fmtDate(ref.created_at)]);
+        sheet.addRow({ por: studentName(ref.referrer_student_id), nome: ref.referred_name, contato: ref.referred_contact || "", email: ref.referred_email || "", status: ref.status, data: fmtDate(ref.created_at) });
       });
-      downloadCsv("endogin-indicacoes.csv", rows);
+      styleHeaderRow(sheet, 6);
+      zebraStripe(sheet, (r.data || []).length);
+      downloadWorkbook(wb, "endogin-indicacoes.xlsx");
     });
   });
 </script>
