@@ -116,6 +116,29 @@
   .crm-stat-num{font-size:24px;font-weight:700;color:var(--eg-gold-100);}
   .crm-stat-label{font-size:11px;color:var(--eg-text-secondary);text-transform:uppercase;letter-spacing:.03em;margin-top:2px;}
   .crm-chart-wrap{max-width:340px;margin:0 auto 18px;}
+  .wpp-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+  .wpp-bar-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+  .wpp-bar-label{width:170px;flex:none;font-size:12px;color:var(--eg-text-secondary);text-align:right;}
+  .wpp-bar-track{flex:1;height:9px;border-radius:99px;background:var(--eg-bg-2);overflow:hidden;}
+  .wpp-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));}
+  .wpp-bar-num{width:36px;flex:none;font-size:12.5px;font-weight:700;color:var(--eg-text-primary);}
+  .wpp-bar-broadcast{margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);}
+  .search-input{width:100%;padding:9px 12px;font-size:12.5px;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:8px;color:var(--eg-text-primary);font-family:inherit;}
+  .toggle-group{display:inline-flex;border:1px solid var(--eg-navy-line);border-radius:8px;overflow:hidden;}
+  .toggle-btn{font-size:11.5px;font-weight:700;padding:8px 13px;background:var(--eg-bg-2);color:var(--eg-text-muted);border:none;cursor:pointer;font-family:inherit;}
+  .toggle-btn.active{background:rgba(201,151,75,0.16);color:var(--eg-gold-100);}
+  .filter-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+  .filter-block{margin-bottom:12px;}
+  .filter-block-label{font-size:10.5px;color:var(--eg-text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:6px;display:block;}
+  .filter-chip{font-size:11px;font-weight:600;padding:6px 11px;border-radius:99px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-secondary);cursor:pointer;user-select:none;display:inline-block;margin:0 6px 6px 0;}
+  .filter-chip.selected{background:rgba(201,151,75,0.16);border-color:var(--eg-gold-500);color:var(--eg-gold-100);}
+  .wpp-group-tag{font-size:9.5px;font-weight:700;background:rgba(201,151,75,0.14);color:var(--eg-gold-100);padding:3px 7px;border-radius:99px;margin:1px 3px 1px 0;display:inline-block;}
+  .wpp-alert{background:rgba(217,138,138,0.1);border:1px solid rgba(217,138,138,0.3);border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:12.5px;}
+  .wpp-alert b{color:var(--eg-red);}
+  .wpp-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--eg-navy-line);flex-wrap:wrap;}
+  .wpp-row:last-child{border-bottom:none;}
+  .wpp-group-section{margin-bottom:16px;}
+  .wpp-group-section-title{font-size:12.5px;font-weight:700;color:var(--eg-gold-100);margin-bottom:6px;}
   @media (max-width:720px){ .crm-stats-row{grid-template-columns:repeat(2,1fr);} }
 
   /* distribuição */
@@ -192,6 +215,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="alunos">Alunos</button>
       <button class="tab-btn" data-tab="crm">CRM</button>
+      <button class="tab-btn" data-tab="grupos">Grupos WhatsApp</button>
       <button class="tab-btn" data-tab="sessoes">Sessões 1x1</button>
       <button class="tab-btn" data-tab="trilha">Trilha CS</button>
       <button class="tab-btn" data-tab="aniversarios">Aniversários</button>
@@ -249,6 +273,54 @@
         </div>
         <div id="referralsLoading" class="loading-note">Carregando...</div>
         <div id="referralsList"></div>
+      </div>
+    </div>
+
+    <!-- ================= GRUPOS WHATSAPP ================= -->
+    <div class="tab-panel" id="tab-grupos">
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-brands fa-whatsapp icn"></i>Mentorados &amp; Grupos</h3></div>
+        <p class="hint" style="margin:-8px 0 16px;">Um raio-x de cada mentorado e em quais grupos de WhatsApp ele está — pra equipe nova se situar rápido e pra compartilhar com a diretoria.</p>
+        <div class="wpp-stats-row">
+          <div class="crm-stat-card"><div class="crm-stat-num" id="wppStatTotal">—</div><div class="crm-stat-label">Mentorados na base</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="wppStatAtivos">—</div><div class="crm-stat-label">Ativos</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="wppStatTrancados">—</div><div class="crm-stat-label">Trancados</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="wppStatDesativados">—</div><div class="crm-stat-label">Desativados</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="wppStatSemGrupo">—</div><div class="crm-stat-label">Sem nenhum grupo</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="wppStatGrupos">—</div><div class="crm-stat-label">Grupos/listas monitorados</div></div>
+        </div>
+        <div id="wppAlertWrap"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Tamanho de cada grupo</h3></div>
+        <p class="hint" style="margin:-8px 0 16px;">Ordem segue a jornada do mentorado — dos grupos de entrada (onboarding) até os avançados (Black Belt, Mentores Master). "Informes ENDOGIN" é uma lista à parte, por isso aparece separada abaixo.</p>
+        <div id="wppBarChart"></div>
+      </div>
+
+      <div class="card">
+        <div class="filter-row">
+          <input type="text" class="search-input" id="wppSearch" placeholder="Buscar por nome..." style="max-width:280px;">
+          <div class="toggle-group">
+            <button class="toggle-btn active" id="wppViewMentorado">Por mentorado</button>
+            <button class="toggle-btn" id="wppViewGrupo">Por grupo</button>
+          </div>
+          <button class="btn-secondary" id="wppClearFilters">Limpar filtros</button>
+        </div>
+        <div class="filter-block">
+          <span class="filter-block-label">Status</span>
+          <div id="wppStatusChips"></div>
+        </div>
+        <div class="filter-block">
+          <span class="filter-block-label">CS responsável</span>
+          <div id="wppCsChips"></div>
+        </div>
+        <div class="filter-block">
+          <span class="filter-block-label">Grupo</span>
+          <div id="wppGroupChips"></div>
+        </div>
+        <p class="hint" id="wppCount" style="margin-bottom:14px;"></p>
+        <div id="wppList"></div>
       </div>
     </div>
 
@@ -420,6 +492,10 @@
           <div id="alunoBranchChecks"></div>
           <p class="hint" id="alunoMentoriaRawHint" style="margin-top:6px;display:none;"></p>
         </div>
+        <div style="grid-column:1/-1;">
+          <label>Grupos de WhatsApp (clique pra marcar/desmarcar)</label>
+          <div id="alunoGroupChecks"></div>
+        </div>
 
         <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Contato profissional</label></div>
         <div><label>Instagram</label><input type="text" id="alunoFieldInstagram" placeholder="@usuario"></div>
@@ -578,6 +654,7 @@
   var currentStaff = null;
   var allStaff = [];
   var allBranches = [];
+  var allGroups = [];
   var allStudents = [];
   var staffBranchMap = {}; // staff_id -> [branch name,...]
   var teamEditingId = null;
@@ -585,6 +662,12 @@
   var teamSelectedBranches = [];
   var alunoEditingId = null;
   var alunoSelectedBranches = [];
+  var alunoSelectedGroups = [];
+  var wppSearchValue = "";
+  var wppViewMode = "mentorado";
+  var wppSelectedStatuses = [];
+  var wppSelectedCs = [];
+  var wppSelectedGroups = [];
   var allRecados = [];
   var recadoSelectedBranches = [];
   var recadoAllBranches = false;
@@ -701,7 +784,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id),staff:cs_id(full_name),disc_results(primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),disc_results(primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -711,6 +794,7 @@
       renderAlunos(allStudents);
       renderAniversarios(allStudents);
       populateStudentSelects();
+      renderGruposTab();
     });
   }
 
@@ -780,6 +864,22 @@
     });
   }
 
+  function renderAlunoGroupChecks(){
+    var wrap = $("alunoGroupChecks");
+    wrap.innerHTML = "";
+    allGroups.forEach(function(g){
+      var chip = document.createElement("span");
+      chip.className = "branch-chip" + (alunoSelectedGroups.indexOf(g.name) > -1 ? " selected" : "");
+      chip.textContent = g.name;
+      chip.addEventListener("click", function(){
+        var idx = alunoSelectedGroups.indexOf(g.name);
+        if(idx > -1) alunoSelectedGroups.splice(idx, 1); else alunoSelectedGroups.push(g.name);
+        renderAlunoGroupChecks();
+      });
+      wrap.appendChild(chip);
+    });
+  }
+
   function openAlunoModal(id){
     var student = allStudents.find(function(s){ return s.id === id; });
     if(!student) return;
@@ -787,6 +887,9 @@
     var activeDeliveries = (student.deliveries || []).filter(function(d){ return d.status === "ativo"; });
     alunoSelectedBranches = activeDeliveries.map(function(d){ return d.label; });
     renderAlunoBranchChecks();
+    var activeGroups = (student.student_whatsapp_groups || []).filter(function(g){ return g.status === "ativo"; });
+    alunoSelectedGroups = activeGroups.map(function(g){ return g.label; });
+    renderAlunoGroupChecks();
     $("alunoModalErr").textContent = "";
     $("alunoModalTitle").textContent = student.full_name;
     $("alunoModalEmail").textContent = student.email;
@@ -884,11 +987,45 @@
       if(r.error){ $("alunoModalErr").textContent = "Erro ao salvar: " + r.error.message; return; }
       syncStudentBranches(student, function(err){
         if(err){ $("alunoModalErr").textContent = "Status salvo, mas erro nas mentorias: " + err; return; }
-        $("alunoModal").classList.remove("open");
-        loadAlunos();
+        syncStudentGroups(student, function(err2){
+          if(err2){ $("alunoModalErr").textContent = "Status salvo, mas erro nos grupos de WhatsApp: " + err2; return; }
+          $("alunoModal").classList.remove("open");
+          loadAlunos();
+        });
       });
     });
   });
+
+  function syncStudentGroups(student, done){
+    var existing = student.student_whatsapp_groups || [];
+    var tasks = [];
+
+    existing.forEach(function(g){
+      var stillSelected = alunoSelectedGroups.indexOf(g.label) > -1;
+      if(stillSelected && g.status !== "ativo"){
+        tasks.push(sb.from("student_whatsapp_groups").update({ status: "ativo" }).eq("id", g.id));
+      } else if(!stillSelected && g.status === "ativo"){
+        tasks.push(sb.from("student_whatsapp_groups").update({ status: "inativo" }).eq("id", g.id));
+      }
+    });
+
+    var existingLabels = existing.map(function(g){ return g.label; });
+    var newOnes = alunoSelectedGroups.filter(function(name){ return existingLabels.indexOf(name) === -1; });
+    newOnes.forEach(function(name){
+      var group = allGroups.find(function(g){ return g.name === name; });
+      if(!group) return;
+      tasks.push(sb.from("student_whatsapp_groups").insert({
+        student_id: student.id, group_id: group.id, label: name,
+        status: "ativo", source: "manual"
+      }));
+    });
+
+    if(!tasks.length){ done(null); return; }
+    Promise.all(tasks).then(function(results){
+      var withError = results.find(function(r){ return r.error; });
+      done(withError ? withError.error.message : null);
+    });
+  }
 
   function syncStudentBranches(student, done){
     var existing = student.deliveries || [];
@@ -918,6 +1055,156 @@
       var withError = results.find(function(r){ return r.error; });
       done(withError ? withError.error.message : null);
     });
+  }
+
+  // ---------------- aba Grupos WhatsApp ----------------
+  function activeGroupLabels(student){
+    return (student.student_whatsapp_groups || []).filter(function(g){ return g.status === "ativo"; }).map(function(g){ return g.label; });
+  }
+
+  function wppStatusBucket(status){
+    if(status === "ativo") return "ativo";
+    if(status === "trancado") return "trancado";
+    return "desativado";
+  }
+
+  $("wppSearch").addEventListener("input", function(){ wppSearchValue = this.value; renderGruposTab(); });
+  $("wppViewMentorado").addEventListener("click", function(){ wppViewMode = "mentorado"; renderGruposTab(); });
+  $("wppViewGrupo").addEventListener("click", function(){ wppViewMode = "grupo"; renderGruposTab(); });
+  $("wppClearFilters").addEventListener("click", function(){
+    wppSearchValue = ""; $("wppSearch").value = "";
+    wppSelectedStatuses = []; wppSelectedCs = []; wppSelectedGroups = [];
+    renderGruposTab();
+  });
+
+  function toggleInArray(arr, val){
+    var idx = arr.indexOf(val);
+    if(idx > -1) arr.splice(idx, 1); else arr.push(val);
+  }
+
+  function renderGruposTab(){
+    if(!$("wppStatTotal")) return;
+    var total = allStudents.length;
+    var ativos = allStudents.filter(function(s){ return s.status === "ativo"; }).length;
+    var trancados = allStudents.filter(function(s){ return s.status === "trancado"; }).length;
+    var desativados = total - ativos - trancados;
+    var semGrupo = allStudents.filter(function(s){ return activeGroupLabels(s).length === 0; }).length;
+    var ativosSemGrupo = allStudents.filter(function(s){ return s.status === "ativo" && activeGroupLabels(s).length === 0; }).length;
+
+    $("wppStatTotal").textContent = total;
+    $("wppStatAtivos").textContent = ativos;
+    $("wppStatTrancados").textContent = trancados;
+    $("wppStatDesativados").textContent = desativados;
+    $("wppStatSemGrupo").textContent = semGrupo;
+    $("wppStatGrupos").textContent = allGroups.length;
+
+    $("wppAlertWrap").innerHTML = ativosSemGrupo
+      ? '<div class="wpp-alert">&bull; <b>' + ativosSemGrupo + ' mentorado(s) ATIVO(S)</b> sem nenhum grupo de WhatsApp atribuído<br><span class="hint">Provavelmente esqueceram de adicionar aos grupos no onboarding. Vale checar com o CS responsável.</span></div>'
+      : "";
+
+    // gráfico de barras
+    var mainGroups = allGroups.filter(function(g){ return !g.is_broadcast_list; });
+    var broadcastGroups = allGroups.filter(function(g){ return g.is_broadcast_list; });
+    var counts = {};
+    allGroups.forEach(function(g){ counts[g.id] = 0; });
+    allStudents.forEach(function(s){
+      (s.student_whatsapp_groups || []).forEach(function(g){
+        if(g.status === "ativo" && counts.hasOwnProperty(g.group_id)) counts[g.group_id]++;
+      });
+    });
+    var maxCount = Math.max(1, Object.keys(counts).map(function(k){ return counts[k]; }).reduce(function(a,b){ return Math.max(a,b); }, 0));
+    function barRowHtml(g){
+      var c = counts[g.id] || 0;
+      var pct = Math.round((c / maxCount) * 100);
+      return '<div class="wpp-bar-row"><span class="wpp-bar-label">' + g.name + '</span><div class="wpp-bar-track"><div class="wpp-bar-fill" style="width:' + pct + '%;"></div></div><span class="wpp-bar-num">' + c + '</span></div>';
+    }
+    var barHtml = mainGroups.map(barRowHtml).join("");
+    if(broadcastGroups.length){
+      barHtml += '<div class="wpp-bar-broadcast">' + broadcastGroups.map(barRowHtml).join("") + '</div>';
+    }
+    $("wppBarChart").innerHTML = barHtml || '<p class="hint">Nenhum grupo cadastrado ainda.</p>';
+
+    // chips de filtro
+    var statusOptions = [["ativo","Ativo"],["trancado","Trancado"],["desativado","Desativado"]];
+    $("wppStatusChips").innerHTML = "";
+    statusOptions.forEach(function(opt){
+      var chip = document.createElement("span");
+      chip.className = "filter-chip" + (wppSelectedStatuses.indexOf(opt[0]) > -1 ? " selected" : "");
+      chip.textContent = opt[1];
+      chip.addEventListener("click", function(){ toggleInArray(wppSelectedStatuses, opt[0]); renderGruposTab(); });
+      $("wppStatusChips").appendChild(chip);
+    });
+
+    var csOptions = allStaff.filter(function(s){ return s.role === "cs"; });
+    $("wppCsChips").innerHTML = "";
+    csOptions.forEach(function(s){
+      var chip = document.createElement("span");
+      chip.className = "filter-chip" + (wppSelectedCs.indexOf(s.id) > -1 ? " selected" : "");
+      chip.textContent = s.full_name;
+      chip.addEventListener("click", function(){ toggleInArray(wppSelectedCs, s.id); renderGruposTab(); });
+      $("wppCsChips").appendChild(chip);
+    });
+
+    $("wppGroupChips").innerHTML = "";
+    var semGrupoChip = document.createElement("span");
+    semGrupoChip.className = "filter-chip" + (wppSelectedGroups.indexOf("__sem_grupo__") > -1 ? " selected" : "");
+    semGrupoChip.textContent = "Sem grupo";
+    semGrupoChip.addEventListener("click", function(){ toggleInArray(wppSelectedGroups, "__sem_grupo__"); renderGruposTab(); });
+    $("wppGroupChips").appendChild(semGrupoChip);
+    allGroups.forEach(function(g){
+      var chip = document.createElement("span");
+      chip.className = "filter-chip" + (wppSelectedGroups.indexOf(g.name) > -1 ? " selected" : "");
+      chip.textContent = g.name;
+      chip.addEventListener("click", function(){ toggleInArray(wppSelectedGroups, g.name); renderGruposTab(); });
+      $("wppGroupChips").appendChild(chip);
+    });
+
+    $("wppViewMentorado").classList.toggle("active", wppViewMode === "mentorado");
+    $("wppViewGrupo").classList.toggle("active", wppViewMode === "grupo");
+
+    // filtragem
+    var search = wppSearchValue.trim().toLowerCase();
+    var filtered = allStudents.filter(function(s){
+      if(search && s.full_name.toLowerCase().indexOf(search) === -1) return false;
+      if(wppSelectedStatuses.length && wppSelectedStatuses.indexOf(wppStatusBucket(s.status)) === -1) return false;
+      if(wppSelectedCs.length && wppSelectedCs.indexOf(s.cs_id) === -1) return false;
+      if(wppSelectedGroups.length){
+        var labels = activeGroupLabels(s);
+        var matches = wppSelectedGroups.some(function(gname){
+          if(gname === "__sem_grupo__") return labels.length === 0;
+          return labels.indexOf(gname) > -1;
+        });
+        if(!matches) return false;
+      }
+      return true;
+    });
+
+    $("wppCount").innerHTML = 'Mostrando <b>' + filtered.length + '</b> de <b>' + total + '</b> mentorados';
+
+    var listEl = $("wppList");
+    if(wppViewMode === "mentorado"){
+      listEl.innerHTML = filtered.map(function(s){
+        var labels = activeGroupLabels(s);
+        var tags = labels.length ? labels.map(function(l){ return '<span class="wpp-group-tag">' + l + '</span>'; }).join("") : '<span class="hint">Sem grupo</span>';
+        var csName = (s.staff && s.staff.full_name) || (s.legacy_cs_label ? s.legacy_cs_label : "Sem CS");
+        return '<div class="wpp-row"><div><b>' + s.full_name + '</b> <span class="status-pill ' + s.status + '">' + s.status + '</span><br><span class="hint">' + csName + '</span></div><div style="max-width:55%;text-align:right;">' + tags + '</div></div>';
+      }).join("") || '<p class="hint">Nenhum mentorado encontrado com esses filtros.</p>';
+    } else {
+      var sections = allGroups.map(function(g){
+        var members = filtered.filter(function(s){ return activeGroupLabels(s).indexOf(g.name) > -1; });
+        if(!members.length) return "";
+        return '<div class="wpp-group-section"><div class="wpp-group-section-title">' + g.name + ' (' + members.length + ')</div>' +
+          members.map(function(s){ return '<div class="wpp-row"><span>' + s.full_name + '</span><span class="status-pill ' + s.status + '">' + s.status + '</span></div>'; }).join("") +
+          '</div>';
+      }).join("");
+      var semGrupoMembers = filtered.filter(function(s){ return activeGroupLabels(s).length === 0; });
+      if(semGrupoMembers.length){
+        sections += '<div class="wpp-group-section"><div class="wpp-group-section-title">Sem grupo (' + semGrupoMembers.length + ')</div>' +
+          semGrupoMembers.map(function(s){ return '<div class="wpp-row"><span>' + s.full_name + '</span><span class="status-pill ' + s.status + '">' + s.status + '</span></div>'; }).join("") +
+          '</div>';
+      }
+      listEl.innerHTML = sections || '<p class="hint">Nenhum mentorado encontrado com esses filtros.</p>';
+    }
   }
 
   // ---------------- credenciais de acesso do aluno (só master) ----------------
@@ -966,13 +1253,15 @@
     Promise.all([
       staffQuery,
       sb.from("branches").select("id,name").order("name"),
-      sb.from("staff_branches").select("staff_id,branch_id")
+      sb.from("staff_branches").select("staff_id,branch_id"),
+      sb.from("whatsapp_groups").select("id,name,sort_order,is_broadcast_list").order("sort_order")
     ]).then(function(results){
-      var staffRes = results[0], branchRes = results[1], sbRes = results[2];
+      var staffRes = results[0], branchRes = results[1], sbRes = results[2], groupsRes = results[3];
       $("equipeLoading").style.display = "none";
       if(staffRes.error){ $("equipeLoading").textContent = "Erro: " + staffRes.error.message; $("equipeLoading").style.display = "block"; return; }
       allStaff = staffRes.data || [];
       allBranches = branchRes.data || [];
+      allGroups = groupsRes.data || [];
       staffBranchMap = {};
       (sbRes.data || []).forEach(function(row){
         var branch = allBranches.find(function(b){ return b.id === row.branch_id; });
