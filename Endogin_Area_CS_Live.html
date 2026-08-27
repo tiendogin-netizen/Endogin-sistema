@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <style>
   :root{
     --eg-bg-0:#0b1420; --eg-bg-1:#101d2e; --eg-bg-2:#152436; --eg-bg-3:#1b2a3d;
@@ -110,6 +111,12 @@
   .team-photo-drop i{font-size:18px;color:var(--eg-gold-300);}
   .branch-chip{font-size:11px;font-weight:600;padding:7px 11px;border-radius:8px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-secondary);cursor:pointer;user-select:none;display:inline-block;margin:0 6px 6px 0;}
   .branch-chip.selected{background:rgba(201,151,75,0.16);border-color:var(--eg-gold-500);color:var(--eg-gold-100);}
+  .crm-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+  .crm-stat-card{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:10px;padding:14px 16px;}
+  .crm-stat-num{font-size:24px;font-weight:700;color:var(--eg-gold-100);}
+  .crm-stat-label{font-size:11px;color:var(--eg-text-secondary);text-transform:uppercase;letter-spacing:.03em;margin-top:2px;}
+  .crm-chart-wrap{max-width:340px;margin:0 auto 18px;}
+  @media (max-width:720px){ .crm-stats-row{grid-template-columns:repeat(2,1fr);} }
 
   /* distribuição */
   .dist-row{display:flex;align-items:center;gap:12px;padding:9px 0;}
@@ -225,6 +232,16 @@
 
     <!-- ================= CRM ================= -->
     <div class="tab-panel" id="tab-crm">
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-chart-pie icn"></i>Painel de indicações</h3></div>
+        <div class="crm-stats-row">
+          <div class="crm-stat-card"><div class="crm-stat-num" id="crmStatTotal">—</div><div class="crm-stat-label">Total de indicações</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="crmStatNovo">—</div><div class="crm-stat-label">Novos leads</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="crmStatNegociacao">—</div><div class="crm-stat-label">Em negociação</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="crmStatVendido">—</div><div class="crm-stat-label">Vendidos</div></div>
+        </div>
+        <div class="crm-chart-wrap"><canvas id="crmStatusChart" height="200"></canvas></div>
+      </div>
       <div class="card">
         <div class="card-head">
           <h3><i class="fa-solid fa-chart-line icn"></i>CRM de indicações</h3>
@@ -397,9 +414,38 @@
         <div id="alunoCsWrap"><label>CS responsável</label><select id="alunoFieldCs"></select></div>
         <div><label>Data de nascimento</label><input type="date" id="alunoFieldBirth"></div>
         <div><label>CPF</label><input type="text" id="alunoFieldCpf" placeholder="000.000.000-00"></div>
+        <div><label>Telefone / contato</label><input type="text" id="alunoFieldPhone" placeholder="(00) 00000-0000"></div>
         <div style="grid-column:1/-1;">
           <label>Mentorias (clique pra marcar/desmarcar)</label>
           <div id="alunoBranchChecks"></div>
+          <p class="hint" id="alunoMentoriaRawHint" style="margin-top:6px;display:none;"></p>
+        </div>
+
+        <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Contato profissional</label></div>
+        <div><label>Instagram</label><input type="text" id="alunoFieldInstagram" placeholder="@usuario"></div>
+        <div><label>CRM (médico)</label><input type="text" id="alunoFieldMedicalLicense" placeholder="00000/UF"></div>
+
+        <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Ciclo da mentoria</label></div>
+        <div><label>Data de entrada</label><input type="date" id="alunoFieldEntryDate"></div>
+        <div><label>Data de vencimento</label><input type="date" id="alunoFieldRenewalDate"></div>
+        <div><label>Status de renovação</label><input type="text" id="alunoFieldRenewalStatus" placeholder="ex: Renovado, A vencer, Vencido"></div>
+        <div><label>Temperatura</label><input type="text" id="alunoFieldTemperature" placeholder="ex: Quente, Morno, Frio"></div>
+
+        <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Sessão 1:1</label></div>
+        <div><label>Status do 1:1</label><input type="text" id="alunoFieldOneOnOneStatus" placeholder="ex: Pendente, Concluído"></div>
+        <div><label>Data do 1:1</label><input type="text" id="alunoFieldOneOnOneDate" placeholder="data ou observação livre"></div>
+        <div style="grid-column:1/-1;"><label>Resumo pós 1:1</label><input type="text" id="alunoFieldOneOnOneSummary"></div>
+
+        <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Perfil e logística</label></div>
+        <div><label>Restrição alimentar</label><input type="text" id="alunoFieldDietary"></div>
+        <div><label>Número do calçado</label><input type="text" id="alunoFieldShoeSize"></div>
+        <div><label>Tamanho da jaqueta</label><input type="text" id="alunoFieldJacketSize"></div>
+        <div><label>Tamanho da camiseta</label><input type="text" id="alunoFieldShirtSize"></div>
+        <div><label>Nº de indicações</label><input type="text" id="alunoFieldReferralCount"></div>
+
+        <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);">
+          <label>Anotações</label>
+          <textarea id="alunoFieldNotes" rows="3" style="width:100%;resize:vertical;"></textarea>
         </div>
       </div>
       <div class="err-msg" id="alunoModalErr"></div>
@@ -655,7 +701,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,deliveries(id,label,status,branch_id),staff:cs_id(full_name),disc_results(primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id),staff:cs_id(full_name),disc_results(primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -754,6 +800,29 @@
     $("alunoFieldStatus").value = student.status;
     $("alunoFieldBirth").value = student.birth_date || "";
     $("alunoFieldCpf").value = student.cpf || "";
+    $("alunoFieldPhone").value = student.phone || "";
+    $("alunoFieldInstagram").value = student.instagram || "";
+    $("alunoFieldMedicalLicense").value = student.medical_license || "";
+    $("alunoFieldEntryDate").value = student.entry_date || "";
+    $("alunoFieldRenewalDate").value = student.renewal_date || "";
+    $("alunoFieldRenewalStatus").value = student.renewal_status || "";
+    $("alunoFieldTemperature").value = student.temperature || "";
+    $("alunoFieldOneOnOneStatus").value = student.one_on_one_status || "";
+    $("alunoFieldOneOnOneDate").value = student.one_on_one_date || "";
+    $("alunoFieldOneOnOneSummary").value = student.one_on_one_summary || "";
+    $("alunoFieldDietary").value = student.dietary_restriction || "";
+    $("alunoFieldShoeSize").value = student.shoe_size || "";
+    $("alunoFieldJacketSize").value = student.jacket_size || "";
+    $("alunoFieldShirtSize").value = student.shirt_size || "";
+    $("alunoFieldReferralCount").value = student.referral_count || "";
+    $("alunoFieldNotes").value = student.notes || "";
+    var rawHint = $("alunoMentoriaRawHint");
+    if(student.mentoria_raw_import){
+      rawHint.style.display = "block";
+      rawHint.textContent = 'Mentoria original da planilha: "' + student.mentoria_raw_import + '" — confira e marque a mentoria certa acima.';
+    } else {
+      rawHint.style.display = "none";
+    }
 
     $("alunoCsWrap").style.display = currentStaff.isMasterLike ? "block" : "none";
     if(currentStaff.isMasterLike){
@@ -785,7 +854,27 @@
     var newStatus = $("alunoFieldStatus").value;
     $("alunoModalErr").textContent = "";
 
-    var updates = { status: newStatus, birth_date: $("alunoFieldBirth").value || null, cpf: $("alunoFieldCpf").value.trim() || null };
+    var updates = {
+      status: newStatus,
+      birth_date: $("alunoFieldBirth").value || null,
+      cpf: $("alunoFieldCpf").value.trim() || null,
+      phone: $("alunoFieldPhone").value.trim() || null,
+      instagram: $("alunoFieldInstagram").value.trim() || null,
+      medical_license: $("alunoFieldMedicalLicense").value.trim() || null,
+      entry_date: $("alunoFieldEntryDate").value || null,
+      renewal_date: $("alunoFieldRenewalDate").value || null,
+      renewal_status: $("alunoFieldRenewalStatus").value.trim() || null,
+      temperature: $("alunoFieldTemperature").value.trim() || null,
+      one_on_one_status: $("alunoFieldOneOnOneStatus").value.trim() || null,
+      one_on_one_date: $("alunoFieldOneOnOneDate").value.trim() || null,
+      one_on_one_summary: $("alunoFieldOneOnOneSummary").value.trim() || null,
+      dietary_restriction: $("alunoFieldDietary").value.trim() || null,
+      shoe_size: $("alunoFieldShoeSize").value.trim() || null,
+      jacket_size: $("alunoFieldJacketSize").value.trim() || null,
+      shirt_size: $("alunoFieldShirtSize").value.trim() || null,
+      referral_count: $("alunoFieldReferralCount").value.trim() || null,
+      notes: $("alunoFieldNotes").value.trim() || null
+    };
     if(currentStaff.isMasterLike){
       var csVal = $("alunoFieldCs").value;
       updates.cs_id = csVal || null;
@@ -1113,7 +1202,33 @@
       renderReferrals(r.data || []);
     });
   }
+  var crmChartInstance = null;
+  function renderCrmStats(list){
+    var counts = { novo:0, em_negociacao:0, vendido:0, perdido:0 };
+    list.forEach(function(r){ if(counts.hasOwnProperty(r.status)) counts[r.status]++; else counts.novo++; });
+    $("crmStatTotal").textContent = list.length;
+    $("crmStatNovo").textContent = counts.novo;
+    $("crmStatNegociacao").textContent = counts.em_negociacao;
+    $("crmStatVendido").textContent = counts.vendido;
+
+    var ctx = document.getElementById("crmStatusChart");
+    if(!ctx || typeof Chart === "undefined") return;
+    var data = [counts.novo, counts.em_negociacao, counts.vendido, counts.perdido];
+    if(crmChartInstance){ crmChartInstance.destroy(); }
+    crmChartInstance = new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels: ["Novo", "Em negociação", "Vendido", "Perdido"],
+        datasets: [{ data: data, backgroundColor: ["#5b8def", "#c9974b", "#3fae6a", "#b3475a"], borderWidth: 0 }]
+      },
+      options: {
+        plugins: { legend: { position: "bottom", labels: { color: "#c9c9d4", font: { size: 11 } } } }
+      }
+    });
+  }
+
   function renderReferrals(list){
+    renderCrmStats(list);
     var wrap = $("referralsList");
     if(!list.length){ wrap.innerHTML = '<div class="empty-note">Nenhuma indicação registrada ainda.</div>'; return; }
     wrap.innerHTML = "";
@@ -1131,7 +1246,7 @@
     });
     wrap.querySelectorAll("[data-referral-id]").forEach(function(sel){
       sel.addEventListener("change", function(){
-        sb.from("referrals").update({ status: sel.value }).eq("id", sel.getAttribute("data-referral-id")).then(function(){});
+        sb.from("referrals").update({ status: sel.value }).eq("id", sel.getAttribute("data-referral-id")).then(function(){ loadReferrals(); });
       });
     });
   }
