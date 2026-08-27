@@ -153,6 +153,12 @@
   .empty-note{color:var(--eg-text-muted);font-size:12.5px;padding:10px 0;font-style:italic;}
 
   .list-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--eg-navy-line);flex-wrap:wrap;}
+  .list-row.aniv-today{background:rgba(201,151,75,0.08);border-radius:10px;padding:12px 14px;margin:2px 0;border-bottom:1px solid var(--eg-navy-line);}
+  .aniv-badge{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:99px;display:inline-block;background:rgba(255,255,255,0.05);color:var(--eg-text-muted);}
+  .aniv-badge.today{background:var(--eg-green-bg);color:var(--eg-green);}
+  .aniv-badge.soon{background:rgba(201,151,75,0.16);color:var(--eg-gold-100);}
+  .aniv-art-btn{font-size:11px;font-weight:700;background:var(--eg-bg-2);border:1px solid var(--eg-border);color:var(--eg-gold-100);padding:6px 11px;border-radius:7px;cursor:pointer;white-space:nowrap;}
+  .aniv-art-btn:disabled{opacity:0.4;cursor:default;}
   .list-row:last-child{border-bottom:none;}
   .list-main b{display:block;font-size:12.5px;}
   .list-main span{display:block;font-size:11px;color:var(--eg-text-muted);margin-top:2px;}
@@ -350,10 +356,12 @@
     <div class="tab-panel" id="tab-aniversarios">
       <div class="card">
         <div class="card-head"><h3><i class="fa-solid fa-cake-candles icn"></i>Aniversários</h3></div>
-        <p class="hint" style="margin:-8px 0 14px;">Só aparece aqui quem já tem data de nascimento preenchida (edite pelo "Editar" na aba Alunos).</p>
+        <p class="hint" style="margin:-8px 0 14px;">Só aparece aqui quem já tem data de nascimento preenchida (edite pelo "Editar" na aba Alunos). Clique em "Baixar arte" pra gerar a imagem de parabéns já com foto e nome do aluno.</p>
+        <p class="hint" id="aniversariosSummary" style="display:none;margin:-4px 0 14px;font-weight:700;"></p>
         <div id="aniversariosList"></div>
       </div>
     </div>
+    <canvas id="birthdayCanvas" width="1080" height="1080" style="display:none;"></canvas>
 
     <!-- ================= RECADOS ================= -->
     <div class="tab-panel" id="tab-recados">
@@ -784,7 +792,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),disc_results(primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,photo_url,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),disc_results(primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -1667,8 +1675,9 @@
   // ---------------- Aniversários ----------------
   function renderAniversarios(list){
     var wrap = $("aniversariosList");
+    var summary = $("aniversariosSummary");
     var withBirth = list.filter(function(s){ return s.birth_date; });
-    if(!withBirth.length){ wrap.innerHTML = '<div class="empty-note">Ninguém com data de nascimento preenchida ainda.</div>'; return; }
+    if(!withBirth.length){ wrap.innerHTML = '<div class="empty-note">Ninguém com data de nascimento preenchida ainda.</div>'; summary.style.display = "none"; return; }
     var today = new Date();
     var todayMD = today.getMonth() * 31 + today.getDate();
     withBirth.forEach(function(s){
@@ -1680,14 +1689,143 @@
       s._display = ("0"+d.getDate()).slice(-2) + "/" + ("0"+(d.getMonth()+1)).slice(-2);
     });
     withBirth.sort(function(a,b){ return a._diff - b._diff; });
+
+    var hojeCount = withBirth.filter(function(s){ return s._diff === 0; }).length;
+    var semanaCount = withBirth.filter(function(s){ return s._diff > 0 && s._diff <= 7; }).length;
+    if(hojeCount || semanaCount){
+      summary.style.display = "block";
+      var parts = [];
+      if(hojeCount) parts.push('&#127881; ' + hojeCount + ' aniversariante(s) HOJE');
+      if(semanaCount) parts.push(semanaCount + ' nos próximos 7 dias');
+      summary.innerHTML = parts.join(' &middot; ');
+    } else {
+      summary.style.display = "none";
+    }
+
     wrap.innerHTML = "";
     withBirth.forEach(function(s){
-      var badge = s._diff === 0 ? "Hoje!" : (s._diff <= 7 ? "em " + s._diff + " dias" : s._display);
+      var isToday = s._diff === 0;
+      var isSoon = s._diff > 0 && s._diff <= 7;
+      var badgeClass = isToday ? "today" : (isSoon ? "soon" : "");
+      var badgeText = isToday ? "Hoje! 🎂" : (isSoon ? "em " + s._diff + " dias" : s._display);
       var row = document.createElement("div");
-      row.className = "list-row";
-      row.innerHTML = '<div class="list-main"><b>' + s.full_name + '</b><span>' + s._display + '</span></div><div class="list-side"><span class="branch-tag">' + badge + '</span></div>';
+      row.className = "list-row" + (isToday ? " aniv-today" : "");
+      row.innerHTML = '<div class="list-main"><b>' + s.full_name + '</b><span>' + s._display + '</span></div>' +
+        '<div class="list-side"><span class="aniv-badge ' + badgeClass + '">' + badgeText + '</span>' +
+        '<button class="aniv-art-btn" data-aniv-art="' + s.id + '"><i class="fa-solid fa-download"></i> Baixar arte</button></div>';
       wrap.appendChild(row);
     });
+    wrap.querySelectorAll("[data-aniv-art]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var student = withBirth.find(function(s){ return s.id === btn.getAttribute("data-aniv-art"); });
+        if(student) generateBirthdayArt(student);
+      });
+    });
+  }
+
+  // Arte de aniversário: foto do aluno (cadastrada no onboarding) + nome, gerada em canvas.
+  // Enquanto o Luiz não manda o template de verdade, isso desenha uma arte base
+  // com a identidade da Endogin. Pra trocar depois pelo template real, é só
+  // preencher BIRTHDAY_TEMPLATE_URL com a imagem e ajustar as posições abaixo.
+  var BIRTHDAY_TEMPLATE_URL = "";
+  var BIRTHDAY_PHOTO = { x: 540, y: 430, radius: 260 };
+  var BIRTHDAY_NAME_Y = 800;
+
+  function generateBirthdayArt(student){
+    var canvas = $("birthdayCanvas");
+    var ctx = canvas.getContext("2d");
+    var W = canvas.width, H = canvas.height;
+
+    function finish(){
+      var link = document.createElement("a");
+      link.download = "aniversario-" + student.full_name.trim().replace(/\s+/g, "-").toLowerCase() + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    function drawPhotoAndName(){
+      function drawName(){
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#f2dfae";
+        ctx.font = "700 54px 'Sora', sans-serif";
+        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.shadowBlur = 12;
+        ctx.fillText(student.full_name, W / 2, BIRTHDAY_NAME_Y);
+        ctx.shadowBlur = 0;
+        finish();
+      }
+      if(student.photo_url){
+        var img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = function(){
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(BIRTHDAY_PHOTO.x, BIRTHDAY_PHOTO.y, BIRTHDAY_PHOTO.radius, 0, Math.PI * 2);
+          ctx.closePath();
+          ctx.clip();
+          var scale = Math.max((BIRTHDAY_PHOTO.radius * 2) / img.width, (BIRTHDAY_PHOTO.radius * 2) / img.height);
+          var iw = img.width * scale, ih = img.height * scale;
+          ctx.drawImage(img, BIRTHDAY_PHOTO.x - iw / 2, BIRTHDAY_PHOTO.y - ih / 2, iw, ih);
+          ctx.restore();
+          ctx.beginPath();
+          ctx.arc(BIRTHDAY_PHOTO.x, BIRTHDAY_PHOTO.y, BIRTHDAY_PHOTO.radius, 0, Math.PI * 2);
+          ctx.lineWidth = 8;
+          ctx.strokeStyle = "#c9974b";
+          ctx.stroke();
+          drawName();
+        };
+        img.onerror = drawName;
+        img.src = student.photo_url;
+      } else {
+        // sem foto cadastrada ainda: iniciais num círculo dourado
+        ctx.beginPath();
+        ctx.arc(BIRTHDAY_PHOTO.x, BIRTHDAY_PHOTO.y, BIRTHDAY_PHOTO.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#152436";
+        ctx.fill();
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = "#c9974b";
+        ctx.stroke();
+        ctx.fillStyle = "#f2dfae";
+        ctx.font = "700 140px 'Sora', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(teamInitials(student.full_name).toUpperCase(), BIRTHDAY_PHOTO.x, BIRTHDAY_PHOTO.y + 10);
+        ctx.textBaseline = "alphabetic";
+        drawName();
+      }
+    }
+
+    if(BIRTHDAY_TEMPLATE_URL){
+      var bg = new Image();
+      bg.crossOrigin = "anonymous";
+      bg.onload = function(){ ctx.drawImage(bg, 0, 0, W, H); drawPhotoAndName(); };
+      bg.onerror = function(){ drawDefaultBackground(ctx, W, H); drawPhotoAndName(); };
+      bg.src = BIRTHDAY_TEMPLATE_URL;
+    } else {
+      drawDefaultBackground(ctx, W, H);
+      drawPhotoAndName();
+    }
+  }
+
+  function drawDefaultBackground(ctx, W, H){
+    var grad = ctx.createRadialGradient(W/2, H*0.35, 80, W/2, H*0.5, W*0.75);
+    grad.addColorStop(0, "#152436");
+    grad.addColorStop(1, "#0b1420");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = "rgba(201,151,75,0.5)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(40, 40, W - 80, H - 80);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#c9974b";
+    ctx.font = "700 30px 'Montserrat', sans-serif";
+    ctx.fillText("E N D O G I N", W / 2, 130);
+
+    ctx.fillStyle = "#f2dfae";
+    ctx.font = "700 72px 'Sora', sans-serif";
+    ctx.fillText("Feliz Aniversário!", W / 2, 220);
   }
 
   // ---------------- Feedbacks ----------------
