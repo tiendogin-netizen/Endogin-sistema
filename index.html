@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endogin OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --eg-bg-0:#0b1420; --eg-bg-1:#101d2e; --eg-bg-2:#152436;
+    --eg-gold-100:#f2dfae; --eg-gold-300:#e3bd76; --eg-gold-500:#c9974b; --eg-gold-700:#a3762f;
+    --eg-text-primary:#f3f0e8; --eg-text-muted:#6d7994; --eg-navy-line:rgba(255,255,255,0.06);
+    --eg-border:rgba(255,255,255,0.09);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;min-height:100vh;font-family:'Montserrat',sans-serif;color:var(--eg-text-primary);
+    background:radial-gradient(circle at 50% -10%,var(--eg-bg-1),var(--eg-bg-0));
+    display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .wrap{width:100%;max-width:440px;text-align:center;}
+  .brand-mark{width:52px;height:62px;border:1.5px solid var(--eg-gold-500);display:flex;align-items:center;justify-content:center;
+    font-family:'Sora',sans-serif;font-weight:600;font-size:20px;color:var(--eg-gold-100);margin:0 auto 14px;}
+  h1{font-family:'Sora',sans-serif;font-weight:600;font-size:24px;margin:0 0 6px;
+    background:linear-gradient(180deg,var(--eg-gold-100),var(--eg-gold-500));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  p.sub{color:var(--eg-text-muted);font-size:13px;margin:0 0 32px;}
+  .card{background:var(--eg-bg-1);border:1px solid var(--eg-navy-line);border-radius:14px;padding:22px;margin-bottom:14px;
+    text-align:left;display:flex;align-items:center;gap:16px;text-decoration:none;color:inherit;transition:border-color .15s;}
+  .card:hover{border-color:var(--eg-border-strong,rgba(201,151,75,0.35));}
+  .card-icon{width:44px;height:44px;border-radius:10px;background:var(--eg-bg-2);display:flex;align-items:center;justify-content:center;
+    font-size:19px;color:var(--eg-gold-300);flex:none;}
+  .card-title{font-weight:700;font-size:14.5px;margin-bottom:3px;}
+  .card-desc{font-size:12px;color:var(--eg-text-muted);}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand-mark">E</div>
+    <h1>Endogin OS</h1>
+    <p class="sub">Escolha onde você quer entrar</p>
+    <a class="card" href="/Endogin_Area_CS_Live.html">
+      <div class="card-icon">&#128101;</div>
+      <div>
+        <div class="card-title">Área CS</div>
+        <div class="card-desc">Equipe — alunos, CRM, sessões, grupos de WhatsApp e mais</div>
+      </div>
+    </a>
+    <a class="card" href="/Portal_Aluno_Live.html">
+      <div class="card-icon">&#127891;</div>
+      <div>
+        <div class="card-title">Portal do Aluno</div>
+        <div class="card-desc">Mentorados — acompanhamento da jornada na mentoria</div>
+      </div>
+    </a>
+  </div>
+</body>
+</html>
