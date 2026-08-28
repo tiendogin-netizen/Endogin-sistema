@@ -932,17 +932,30 @@
   // ---------------- calendário (aulas semanais / eventos) ----------------
   var WEEKDAY_LABEL = { segunda:"Segunda", terca:"Terça", quarta:"Quarta", quinta:"Quinta", sexta:"Sexta", sabado:"Sábado", domingo:"Domingo" };
 
+  function fmtEventDate(dateStr){
+    if(!dateStr) return "";
+    var parts = dateStr.split("-");
+    return parts.length === 3 ? (parts[2] + "/" + parts[1] + "/" + parts[0]) : dateStr;
+  }
+
   function loadCalendar(branchIds){
-    if(!branchIds.length) return;
+    var orParts = ["branch_id.is.null"];
+    if(branchIds && branchIds.length){ orParts.push("branch_id.in.(" + branchIds.join(",") + ")"); }
     sb.from("lessons")
-      .select("id,title,weekday,scheduled_time,duration_minutes,lesson_type,branch_id")
+      .select("id,title,weekday,event_date,scheduled_time,duration_minutes,lesson_type,branch_id")
       .in("lesson_type", ["semanal","evento"])
-      .in("branch_id", branchIds)
+      .or(orParts.join(","))
       .then(function(r){
         if(r.error || !r.data || !r.data.length) return;
-        $("calendarList").innerHTML = r.data.map(function(l){
-          var when = [WEEKDAY_LABEL[l.weekday] || l.weekday, l.scheduled_time ? l.scheduled_time.slice(0,5).replace(":", "h") : null]
-            .filter(Boolean).join(" · ");
+        var sorted = r.data.slice().sort(function(a,b){
+          if(a.lesson_type !== b.lesson_type) return a.lesson_type === "evento" ? -1 : 1;
+          return (a.weekday||"").localeCompare(b.weekday||"") || (a.scheduled_time||"").localeCompare(b.scheduled_time||"");
+        });
+        $("calendarList").innerHTML = sorted.map(function(l){
+          var timePart = l.scheduled_time ? l.scheduled_time.slice(0,5).replace(":", "h") : null;
+          var when = l.lesson_type === "evento"
+            ? [fmtEventDate(l.event_date), timePart].filter(Boolean).join(" · ")
+            : [WEEKDAY_LABEL[l.weekday] || l.weekday, timePart].filter(Boolean).join(" · ");
           return '<div class="cal-item">' +
             '<div class="cal-icn"><i class="fa-solid ' + (l.lesson_type === "evento" ? "fa-star" : "fa-play") + '"></i></div>' +
             '<div class="cal-info">' +

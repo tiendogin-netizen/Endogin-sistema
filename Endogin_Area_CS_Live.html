@@ -225,6 +225,7 @@
       <button class="tab-btn" data-tab="crm">CRM</button>
       <button class="tab-btn" data-tab="grupos">Grupos WhatsApp</button>
       <button class="tab-btn" data-tab="aulas">Aulas</button>
+      <button class="tab-btn" data-tab="calendario">Calendário</button>
       <button class="tab-btn" data-tab="sessoes">Sessões 1x1</button>
       <button class="tab-btn" data-tab="trilha">Trilha CS</button>
       <button class="tab-btn" data-tab="aniversarios">Aniversários</button>
@@ -347,6 +348,19 @@
       <div class="card">
         <div id="aulasEmpty" class="loading-note" style="display:none;">Nenhuma aula encontrada com essa busca.</div>
         <div id="aulasList"></div>
+      </div>
+    </div>
+
+    <!-- ================= CALENDÁRIO (aulas semanais / eventos) ================= -->
+    <div class="tab-panel" id="tab-calendario">
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-calendar-days icn"></i>Aulas da semana e encontros</h3>
+          <button class="btn-secondary" id="newLessonBtn"><i class="fa-solid fa-plus"></i> Nova aula/encontro</button>
+        </div>
+        <p class="hint" style="margin:-8px 0 14px;">É o que aparece no card "Calendário" do Portal do Aluno. Aula semanal repete toda semana no mesmo dia/horário; encontro é pontual, numa data específica.</p>
+        <div id="calendarioLoading" class="loading-note">Carregando...</div>
+        <div id="calendarioList"></div>
       </div>
     </div>
 
@@ -648,6 +662,41 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="lessonModal">
+  <div class="modal-card">
+    <div class="modal-head"><b id="lessonModalTitle">Nova aula/encontro</b><button class="modal-close" id="lessonModalClose"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div style="grid-column:1/-1;"><label>Título</label><input type="text" id="lessonFieldTitle" placeholder="Ex: Aula ao vivo de emagrecimento"></div>
+        <div>
+          <label>Tipo</label>
+          <select id="lessonFieldType">
+            <option value="semanal">Aula semanal (repete toda semana)</option>
+            <option value="evento">Encontro (data única)</option>
+          </select>
+        </div>
+        <div><label>Mentoria</label><select id="lessonFieldBranch"><option value="">Todas as mentorias</option></select></div>
+        <div id="lessonWeekdayWrap"><label>Dia da semana</label>
+          <select id="lessonFieldWeekday">
+            <option value="segunda">Segunda</option>
+            <option value="terca">Terça</option>
+            <option value="quarta">Quarta</option>
+            <option value="quinta">Quinta</option>
+            <option value="sexta">Sexta</option>
+            <option value="sabado">Sábado</option>
+            <option value="domingo">Domingo</option>
+          </select>
+        </div>
+        <div id="lessonDateWrap" style="display:none;"><label>Data</label><input type="date" id="lessonFieldDate"></div>
+        <div><label>Horário</label><input type="time" id="lessonFieldTime"></div>
+        <div><label>Duração (minutos)</label><input type="number" id="lessonFieldDuration" min="0" placeholder="ex: 60"></div>
+      </div>
+      <div class="err-msg" id="lessonModalErr"></div>
+    </div>
+    <div class="modal-foot"><span></span><button class="btn-primary" id="lessonSaveBtn">Salvar</button></div>
+  </div>
+</div>
+
 <!-- ================= MODAL: REGISTRAR FEEDBACK ================= -->
 <div class="modal-overlay" id="feedbackModal">
   <div class="modal-card">
@@ -783,6 +832,7 @@
         loadNps();
         loadAulas();
         loadRecados();
+        loadCalendarioAdmin();
       });
     });
   }
@@ -2267,6 +2317,148 @@
       btn.addEventListener("click", function(){
         var a = allRecados.find(function(x){ return x.id === btn.getAttribute("data-id"); });
         if(a) openRecadoForEdit(a);
+      });
+    });
+  }
+
+  // ---------------- Calendário (aulas semanais / encontros) ----------------
+  var allLessons = [];
+  var lessonEditingId = null;
+  var LESSON_WEEKDAY_LABEL = { segunda:"Segunda", terca:"Terça", quarta:"Quarta", quinta:"Quinta", sexta:"Sexta", sabado:"Sábado", domingo:"Domingo" };
+
+  function fmtEventDate(dateStr){
+    if(!dateStr) return "";
+    var parts = dateStr.split("-");
+    return parts.length === 3 ? (parts[2] + "/" + parts[1] + "/" + parts[0]) : dateStr;
+  }
+
+  function populateLessonBranchSelect(){
+    var sel = $("lessonFieldBranch");
+    sel.innerHTML = '<option value="">Todas as mentorias</option>' +
+      allBranches.map(function(b){ return '<option value="' + b.id + '">' + b.name + '</option>'; }).join("");
+  }
+
+  function toggleLessonTypeFields(){
+    var isEvento = $("lessonFieldType").value === "evento";
+    $("lessonWeekdayWrap").style.display = isEvento ? "none" : "block";
+    $("lessonDateWrap").style.display = isEvento ? "block" : "none";
+  }
+  $("lessonFieldType").addEventListener("change", toggleLessonTypeFields);
+
+  $("newLessonBtn").addEventListener("click", function(){
+    lessonEditingId = null;
+    $("lessonModalTitle").textContent = "Nova aula/encontro";
+    $("lessonModalErr").textContent = "";
+    $("lessonFieldTitle").value = "";
+    $("lessonFieldType").value = "semanal";
+    populateLessonBranchSelect();
+    $("lessonFieldBranch").value = "";
+    $("lessonFieldWeekday").value = "segunda";
+    $("lessonFieldDate").value = "";
+    $("lessonFieldTime").value = "";
+    $("lessonFieldDuration").value = "";
+    toggleLessonTypeFields();
+    $("lessonModal").classList.add("open");
+  });
+
+  function openLessonForEdit(l){
+    lessonEditingId = l.id;
+    $("lessonModalTitle").textContent = "Editar aula/encontro";
+    $("lessonModalErr").textContent = "";
+    $("lessonFieldTitle").value = l.title || "";
+    $("lessonFieldType").value = l.lesson_type;
+    populateLessonBranchSelect();
+    $("lessonFieldBranch").value = l.branch_id || "";
+    $("lessonFieldWeekday").value = l.weekday || "segunda";
+    $("lessonFieldDate").value = l.event_date || "";
+    $("lessonFieldTime").value = l.scheduled_time ? l.scheduled_time.slice(0,5) : "";
+    $("lessonFieldDuration").value = l.duration_minutes || "";
+    toggleLessonTypeFields();
+    $("lessonModal").classList.add("open");
+  }
+
+  $("lessonModalClose").addEventListener("click", function(){ $("lessonModal").classList.remove("open"); });
+
+  $("lessonSaveBtn").addEventListener("click", function(){
+    var title = $("lessonFieldTitle").value.trim();
+    var type = $("lessonFieldType").value;
+    $("lessonModalErr").textContent = "";
+    if(!title){ $("lessonModalErr").textContent = "Escreva o título."; return; }
+    if(type === "evento" && !$("lessonFieldDate").value){ $("lessonModalErr").textContent = "Escolha a data do encontro."; return; }
+    var payload = {
+      title: title,
+      lesson_type: type,
+      branch_id: $("lessonFieldBranch").value || null,
+      weekday: type === "semanal" ? $("lessonFieldWeekday").value : null,
+      event_date: type === "evento" ? $("lessonFieldDate").value : null,
+      scheduled_time: $("lessonFieldTime").value || null,
+      duration_minutes: $("lessonFieldDuration").value ? parseInt($("lessonFieldDuration").value, 10) : null
+    };
+    $("lessonSaveBtn").disabled = true;
+    var query = lessonEditingId
+      ? sb.from("lessons").update(payload).eq("id", lessonEditingId)
+      : sb.from("lessons").insert(payload);
+    query.then(function(r){
+      $("lessonSaveBtn").disabled = false;
+      if(r.error){ $("lessonModalErr").textContent = "Erro: " + r.error.message; return; }
+      $("lessonModal").classList.remove("open");
+      loadCalendarioAdmin();
+    });
+  });
+
+  function loadCalendarioAdmin(){
+    $("calendarioLoading").style.display = "block";
+    $("calendarioList").innerHTML = "";
+    sb.from("lessons")
+      .select("id,title,lesson_type,branch_id,weekday,event_date,scheduled_time,duration_minutes")
+      .in("lesson_type", ["semanal", "evento"])
+      .then(function(r){
+        $("calendarioLoading").style.display = "none";
+        if(r.error){ $("calendarioLoading").textContent = "Erro: " + r.error.message; $("calendarioLoading").style.display = "block"; return; }
+        allLessons = r.data || [];
+        renderCalendarioList();
+      });
+  }
+
+  function renderCalendarioList(){
+    var wrap = $("calendarioList");
+    $("newLessonBtn").style.display = currentStaff.isMasterLike ? "inline-flex" : "none";
+    if(!allLessons.length){ wrap.innerHTML = '<p class="hint">Nenhuma aula semanal ou encontro cadastrado ainda.</p>'; return; }
+    var sorted = allLessons.slice().sort(function(a, b){
+      if(a.lesson_type !== b.lesson_type) return a.lesson_type === "evento" ? -1 : 1;
+      return (a.weekday || "").localeCompare(b.weekday || "") || (a.scheduled_time || "").localeCompare(b.scheduled_time || "");
+    });
+    wrap.innerHTML = sorted.map(function(l){
+      var branch = allBranches.find(function(b){ return b.id === l.branch_id; });
+      var timePart = l.scheduled_time ? l.scheduled_time.slice(0, 5).replace(":", "h") : null;
+      var when = l.lesson_type === "evento"
+        ? [fmtEventDate(l.event_date), timePart].filter(Boolean).join(" · ")
+        : [LESSON_WEEKDAY_LABEL[l.weekday] || l.weekday, timePart].filter(Boolean).join(" · ");
+      return '<div class="wpp-row">' +
+        '<div>' +
+          '<span class="wpp-group-tag">' + (l.lesson_type === "evento" ? "Encontro" : "Aula semanal") + '</span> ' +
+          '<b>' + l.title + '</b>' +
+          '<div class="hint">' + (when || "sem horário definido") + (l.duration_minutes ? " · " + l.duration_minutes + " min" : "") + " · " + (branch ? branch.name : "Todas as mentorias") + '</div>' +
+        '</div>' +
+        (currentStaff.isMasterLike ? '<div style="display:flex;gap:6px;">' +
+          '<button class="btn-secondary lesson-edit-btn" data-id="' + l.id + '"><i class="fa-solid fa-pen"></i></button>' +
+          '<button class="btn-secondary lesson-del-btn" data-id="' + l.id + '"><i class="fa-solid fa-trash"></i></button>' +
+        '</div>' : '') +
+      '</div>';
+    }).join("");
+    wrap.querySelectorAll(".lesson-edit-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var l = allLessons.find(function(x){ return x.id === btn.getAttribute("data-id"); });
+        if(l) openLessonForEdit(l);
+      });
+    });
+    wrap.querySelectorAll(".lesson-del-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        if(!confirm("Apagar essa aula/encontro?")) return;
+        sb.from("lessons").delete().eq("id", btn.getAttribute("data-id")).then(function(r){
+          if(r.error){ alert("Erro ao apagar: " + r.error.message); return; }
+          loadCalendarioAdmin();
+        });
       });
     });
   }
