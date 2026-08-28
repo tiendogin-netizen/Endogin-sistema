@@ -328,10 +328,10 @@
         <div class="card-head"><h3>Como a carteira está distribuída</h3></div>
         <p class="hint" style="margin:-8px 0 12px;">Clique numa barra ou fatia pra ver a lista.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Clientes por mentoria</h4><div style="position:relative;height:220px;"><canvas id="carteirasMentoriaChart"></canvas></div></div>
-          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Clientes por CS responsável</h4><div style="position:relative;height:220px;"><canvas id="carteirasCsChart"></canvas></div></div>
-          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Distribuição por status</h4><div class="crm-chart-wrap"><canvas id="carteirasStatusChart" height="200"></canvas></div></div>
-          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Temperatura da carteira</h4><div class="crm-chart-wrap"><canvas id="carteirasTempChart" height="200"></canvas></div></div>
+          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Clientes por mentoria</h4><div id="carteirasMentoriaChartWrap" style="position:relative;min-height:60px;"><canvas id="carteirasMentoriaChart"></canvas></div></div>
+          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Clientes por CS responsável</h4><div id="carteirasCsChartWrap" style="position:relative;min-height:60px;"><canvas id="carteirasCsChart"></canvas></div></div>
+          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Distribuição por status</h4><div id="carteirasStatusChartWrap" class="crm-chart-wrap"><canvas id="carteirasStatusChart" height="200"></canvas></div></div>
+          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Temperatura da carteira</h4><div id="carteirasTempChartWrap" class="crm-chart-wrap"><canvas id="carteirasTempChart" height="200"></canvas></div></div>
         </div>
       </div>
 
@@ -340,7 +340,7 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
           <div>
             <h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Vencimentos da carteira ativa</h4>
-            <div style="position:relative;height:220px;"><canvas id="carteirasVencChart"></canvas></div>
+            <div id="carteirasVencChartWrap" style="position:relative;min-height:60px;"><canvas id="carteirasVencChart"></canvas></div>
           </div>
           <div>
             <h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Renovações/negociações em andamento</h4>
@@ -927,7 +927,9 @@
         currentStaff = r.data;
         // is_master (Thais) e is_super_admin (TI) enxergam a mesma amplitude
         // de tela — a diferença entre os dois fica só na aba Equipe.
-        currentStaff.isMasterLike = Boolean(currentStaff.isMasterLike || currentStaff.is_super_admin);
+        // (bug corrigido aqui: estava checando currentStaff.isMasterLike,
+        // que não existe no banco — o campo certo é is_master.)
+        currentStaff.isMasterLike = Boolean(currentStaff.is_master || currentStaff.is_super_admin);
         $("loginScreen").style.display = "none";
         $("appScreen").style.display = "block";
         $("userName").textContent = currentStaff.full_name;
@@ -2725,10 +2727,46 @@
   }
 
   var carteirasBarChartInstances = {};
-  function renderCarteirasBarChart(canvasId, entries, filterKeyPrefix, color){
-    entries.forEach(function(e, idx){ registerCarteirasFilter(filterKeyPrefix + idx, e.label, e.predicate); });
+  // Fallback em HTML puro (barrinha com CSS, sem depender do Chart.js) —
+  // usado quando o Chart.js não carrega (bloqueio de rede/adblock) ou
+  // enquanto a aba ainda não tem tamanho de verdade na tela. Garante que a
+  // seção nunca fica simplesmente vazia.
+  function carteirasKeyFor(filterKeyPrefixOrKeys, idx){
+    return Array.isArray(filterKeyPrefixOrKeys) ? filterKeyPrefixOrKeys[idx] : (filterKeyPrefixOrKeys + idx);
+  }
+
+  function renderCarteirasBarFallback(wrapId, entries, keys){
+    var wrap = $(wrapId);
+    if(!wrap) return;
+    var max = Math.max.apply(null, entries.map(function(e){ return e.count; }).concat([1]));
+    wrap.innerHTML = entries.map(function(e, idx){
+      return '<div class="wpp-bar-row" data-filter-key="' + keys[idx] + '">' +
+        '<div class="wpp-bar-label">' + e.label + '</div>' +
+        '<div class="wpp-bar-track"><div class="wpp-bar-fill" style="width:' + Math.round((e.count / max) * 100) + '%;"></div></div>' +
+        '<div class="wpp-bar-num">' + e.count + '</div>' +
+      '</div>';
+    }).join("");
+    wrap.querySelectorAll("[data-filter-key]").forEach(function(el){
+      el.addEventListener("click", function(){ applyCarteirasFilter(el.getAttribute("data-filter-key")); });
+    });
+  }
+
+  // filterKeyPrefixOrKeys: string prefix (vira prefix+índice, ex "mentoria_0")
+  // ou um array com a chave exata de cada barra (ex os "excl_..." já registrados).
+  // color: uma cor única ou um array de cores (uma por barra).
+  function renderCarteirasBarChart(canvasId, entries, filterKeyPrefixOrKeys, color){
+    var keys = entries.map(function(e, idx){ return carteirasKeyFor(filterKeyPrefixOrKeys, idx); });
+    if(typeof filterKeyPrefixOrKeys === "string"){
+      entries.forEach(function(e, idx){ registerCarteirasFilter(keys[idx], e.label, e.predicate); });
+    }
+    if(!entries.length) return;
+    var wrap = $(canvasId + "Wrap");
     var ctx = document.getElementById(canvasId);
-    if(!ctx || typeof Chart === "undefined") return;
+    if(!ctx || typeof Chart === "undefined"){
+      renderCarteirasBarFallback(canvasId + "Wrap", entries, keys);
+      return;
+    }
+    if(wrap) wrap.style.height = "220px";
     if(carteirasBarChartInstances[canvasId]) carteirasBarChartInstances[canvasId].destroy();
     var chart = new Chart(ctx, {
       type: "bar",
@@ -2745,8 +2783,46 @@
           x: { ticks: { color: "#c9c9d4", font: { size: 10.5 } }, grid: { color: "rgba(255,255,255,0.05)" } },
           y: { ticks: { color: "#c9c9d4", font: { size: 11 } }, grid: { display: false } }
         },
-        onClick: function(evt, els){ if(els.length){ applyCarteirasFilter(filterKeyPrefix + els[0].index); } },
+        onClick: function(evt, els){ if(els.length){ applyCarteirasFilter(keys[els[0].index]); } },
         onHover: function(evt, els){ evt.native.target.style.cursor = els.length ? "pointer" : "default"; }
+      }
+    });
+    carteirasBarChartInstances[canvasId] = chart;
+  }
+
+  // Fallback em lista (bolinha colorida + rótulo + número) pros donuts,
+  // pelo mesmo motivo do renderCarteirasBarFallback acima.
+  function renderCarteirasDonutFallback(wrapId, labels, data, colors, keys){
+    var wrap = $(wrapId);
+    if(!wrap) return;
+    var total = data.reduce(function(a, b){ return a + b; }, 0) || 1;
+    wrap.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;padding:6px 0;">' +
+      labels.map(function(l, idx){
+        return '<div class="wpp-bar-row" data-filter-key="' + keys[idx] + '" style="display:flex;align-items:center;gap:8px;">' +
+          '<span class="crm-stat-dot" style="background:' + colors[idx] + ';"></span>' +
+          '<span style="flex:1;font-size:12px;color:var(--eg-text-secondary);">' + l + '</span>' +
+          '<b style="font-size:12.5px;">' + data[idx] + '</b>' +
+          '<span class="hint" style="width:38px;text-align:right;">' + Math.round((data[idx] / total) * 100) + '%</span>' +
+        '</div>';
+      }).join("") + '</div>';
+    wrap.querySelectorAll("[data-filter-key]").forEach(function(el){
+      el.addEventListener("click", function(){ applyCarteirasFilter(el.getAttribute("data-filter-key")); });
+    });
+  }
+
+  function renderCarteirasDonut(canvasId, labels, data, colors, keys){
+    var ctx = document.getElementById(canvasId);
+    if(!ctx || typeof Chart === "undefined"){
+      renderCarteirasDonutFallback(canvasId + "Wrap", labels, data, colors, keys);
+      return;
+    }
+    if(carteirasBarChartInstances[canvasId]) carteirasBarChartInstances[canvasId].destroy();
+    var chart = new Chart(ctx, {
+      type: "doughnut",
+      data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }] },
+      options: {
+        plugins: { legend: { position: "bottom", labels: { color: "#c9c9d4", font: { size: 11 } } } },
+        onClick: function(evt, els){ if(els.length){ applyCarteirasFilter(keys[els[0].index]); } }
       }
     });
     carteirasBarChartInstances[canvasId] = chart;
@@ -2825,18 +2901,9 @@
     $("carteirasSubtitle").textContent = "atualizado em " + new Date().toLocaleDateString("pt-BR") +
       " · dados de " + csEntries.length + " carteira(s) (" + csEntries.map(function(e){ return e.label; }).join(", ") + ")";
 
-    var ctxStatus = document.getElementById("carteirasStatusChart");
-    if(ctxStatus && typeof Chart !== "undefined"){
-      if(carteirasStatusChartInstance) carteirasStatusChartInstance.destroy();
-      carteirasStatusChartInstance = new Chart(ctxStatus, {
-        type: "doughnut",
-        data: { labels: ["Ativo", "Desativado", "Trancado"], datasets: [{ data: [buckets.ativo.length, buckets.desativado.length, buckets.trancado.length], backgroundColor: ["#3fae6a", "#b3475a", "#c9974b"], borderWidth: 0 }] },
-        options: {
-          plugins: { legend: { position: "bottom", labels: { color: "#c9c9d4", font: { size: 11 } } } },
-          onClick: function(evt, els){ if(els.length){ applyCarteirasFilter(["ativos", "desativados", "trancados"][els[0].index]); } }
-        }
-      });
-    }
+    renderCarteirasDonut("carteirasStatusChart", ["Ativo", "Desativado", "Trancado"],
+      [buckets.ativo.length, buckets.desativado.length, buckets.trancado.length],
+      ["#3fae6a", "#b3475a", "#c9974b"], ["ativos", "desativados", "trancados"]);
 
     var tempCounts = { "Não definido": 0, "Quente": 0, "Morno": 0, "Frio": 0 };
     list.forEach(function(s){ tempCounts[carteiraTemperatureLabel(s)]++; });
@@ -2844,18 +2911,9 @@
     registerCarteirasFilter("temp_quente", "Temperatura: quente", function(s){ return carteiraTemperatureLabel(s) === "Quente"; });
     registerCarteirasFilter("temp_morno", "Temperatura: morno", function(s){ return carteiraTemperatureLabel(s) === "Morno"; });
     registerCarteirasFilter("temp_frio", "Temperatura: frio", function(s){ return carteiraTemperatureLabel(s) === "Frio"; });
-    var ctxTemp = document.getElementById("carteirasTempChart");
-    if(ctxTemp && typeof Chart !== "undefined"){
-      if(carteirasTempChartInstance) carteirasTempChartInstance.destroy();
-      carteirasTempChartInstance = new Chart(ctxTemp, {
-        type: "doughnut",
-        data: { labels: ["Não definido", "Quente", "Morno", "Frio"], datasets: [{ data: [tempCounts["Não definido"], tempCounts["Quente"], tempCounts["Morno"], tempCounts["Frio"]], backgroundColor: ["#5b6472", "#b3475a", "#c9974b", "#5b8def"], borderWidth: 0 }] },
-        options: {
-          plugins: { legend: { position: "bottom", labels: { color: "#c9c9d4", font: { size: 11 } } } },
-          onClick: function(evt, els){ if(els.length){ applyCarteirasFilter(["temp_nao", "temp_quente", "temp_morno", "temp_frio"][els[0].index]); } }
-        }
-      });
-    }
+    renderCarteirasDonut("carteirasTempChart", ["Não definido", "Quente", "Morno", "Frio"],
+      [tempCounts["Não definido"], tempCounts["Quente"], tempCounts["Morno"], tempCounts["Frio"]],
+      ["#5b6472", "#b3475a", "#c9974b", "#5b8def"], ["temp_nao", "temp_quente", "temp_morno", "temp_frio"]);
 
     var excl = { vencido: 0, d30: 0, d60: 0, d90: 0, emdia: 0, semdata: 0 };
     buckets.ativo.forEach(function(s){
@@ -2874,37 +2932,17 @@
     registerCarteirasFilter("excl_emdia", "Em dia (mais de 90 dias)", function(s){ return carteiraStatusBucket(s.status) === "ativo" && !s.is_lifetime && s.renewal_date && daysUntil(s.renewal_date) > 90; });
     registerCarteirasFilter("excl_semdata", "Sem data de vencimento", function(s){ return carteiraStatusBucket(s.status) === "ativo" && (s.is_lifetime || !s.renewal_date); });
 
+    var exclKeys = ["excl_vencido", "excl_d30", "excl_d60", "excl_d90", "excl_emdia", "excl_semdata"];
     var exclEntries = [
-      { label: "Vencido", count: excl.vencido, predicate: CARTEIRAS_FILTERS["excl_vencido"].predicate },
-      { label: "Vence em 30 dias", count: excl.d30, predicate: CARTEIRAS_FILTERS["excl_d30"].predicate },
-      { label: "Vence em 60 dias", count: excl.d60, predicate: CARTEIRAS_FILTERS["excl_d60"].predicate },
-      { label: "Vence em 90 dias", count: excl.d90, predicate: CARTEIRAS_FILTERS["excl_d90"].predicate },
-      { label: "Em dia", count: excl.emdia, predicate: CARTEIRAS_FILTERS["excl_emdia"].predicate },
-      { label: "Sem data", count: excl.semdata, predicate: CARTEIRAS_FILTERS["excl_semdata"].predicate }
+      { label: "Vencido", count: excl.vencido },
+      { label: "Vence em 30 dias", count: excl.d30 },
+      { label: "Vence em 60 dias", count: excl.d60 },
+      { label: "Vence em 90 dias", count: excl.d90 },
+      { label: "Em dia", count: excl.emdia },
+      { label: "Sem data", count: excl.semdata }
     ];
     var exclColors = ["#b3475a", "#c9974b", "#c9974b", "#5b8def", "#3fae6a", "#5b6472"];
-    var exclCtx = document.getElementById("carteirasVencChart");
-    if(exclCtx && typeof Chart !== "undefined"){
-      if(carteirasBarChartInstances["carteirasVencChart"]) carteirasBarChartInstances["carteirasVencChart"].destroy();
-      var exclKeys = ["excl_vencido", "excl_d30", "excl_d60", "excl_d90", "excl_emdia", "excl_semdata"];
-      var exclChart = new Chart(exclCtx, {
-        type: "bar",
-        data: { labels: exclEntries.map(function(e){ return e.label; }), datasets: [{ data: exclEntries.map(function(e){ return e.count; }), backgroundColor: exclColors, borderRadius: 5, maxBarThickness: 26 }] },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { ticks: { color: "#c9c9d4", font: { size: 10.5 } }, grid: { color: "rgba(255,255,255,0.05)" } },
-            y: { ticks: { color: "#c9c9d4", font: { size: 11 } }, grid: { display: false } }
-          },
-          onClick: function(evt, els){ if(els.length){ applyCarteirasFilter(exclKeys[els[0].index]); } },
-          onHover: function(evt, els){ evt.native.target.style.cursor = els.length ? "pointer" : "default"; }
-        }
-      });
-      carteirasBarChartInstances["carteirasVencChart"] = exclChart;
-    }
+    renderCarteirasBarChart("carteirasVencChart", exclEntries, exclKeys, exclColors);
 
     var ownerGroups = {};
     var negociacaoSorted = emNegociacao.slice().sort(function(a, b){
