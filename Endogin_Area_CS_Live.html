@@ -628,15 +628,17 @@
 
 <div class="modal-overlay" id="recadoModal">
   <div class="modal-card">
-    <div class="modal-head"><b>Novo recado</b><button class="modal-close" id="recadoModalClose"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-head"><b id="recadoModalTitle">Novo recado</b><button class="modal-close" id="recadoModalClose"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
       <div class="form-grid">
         <div style="grid-column:1/-1;"><label>Título (opcional)</label><input type="text" id="recadoFieldTitle" placeholder="Ex: Novo material da semana"></div>
         <div style="grid-column:1/-1;"><label>Mensagem</label><textarea id="recadoFieldMessage" rows="4" placeholder="Escreva o recado..."></textarea></div>
-        <div style="grid-column:1/-1;"><label>Link (opcional)</label><input type="text" id="recadoFieldLink" placeholder="https://..."></div>
-        <div style="grid-column:1/-1;"><label>Anexo — PDF, imagem, etc. (opcional)</label><input type="file" id="recadoFieldFile"></div>
+        <div><label>Link (opcional)</label><input type="text" id="recadoFieldLink" placeholder="https://..."></div>
+        <div><label>Prazo de vencimento</label><input type="date" id="recadoFieldExpires"></div>
+        <div style="grid-column:1/-1;"><label>Anexo — PDF, imagem, etc. (opcional)</label><input type="file" id="recadoFieldFile"><span class="hint" id="recadoFieldFileCurrent"></span></div>
         <div style="grid-column:1/-1;">
           <label>Pra quais mentorias?</label>
+          <p class="hint" style="margin:0 0 8px;">Marque "Todas as mentorias" ou escolha uma ou mais individualmente.</p>
           <div id="recadoBranchChecks" class="branch-checks"></div>
         </div>
       </div>
@@ -709,6 +711,13 @@
   var recadoSelectedBranches = [];
   var recadoAllBranches = false;
   var recadoFile = null;
+  var recadoEditingId = null;
+
+  function defaultRecadoExpiresValue(){
+    var d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().slice(0, 10);
+  }
 
   function $(id){ return document.getElementById(id); }
 
@@ -2071,23 +2080,76 @@
     });
   }
 
+  function openRecadoBranchPickerFresh(){
+    // se por algum motivo allBranches ainda não carregou (ex: clicou rápido
+    // demais depois do login), busca de novo na hora, direto, em vez de
+    // deixar a lista de mentorias aparecer vazia.
+    if(allBranches && allBranches.length){ renderRecadoBranchChecks(); return; }
+    sb.from("branches").select("id,name").order("name").then(function(r){
+      allBranches = r.data || [];
+      renderRecadoBranchChecks();
+    });
+  }
+
   $("newRecadoBtn").addEventListener("click", function(){
+    recadoEditingId = null;
+    $("recadoModalTitle").textContent = "Novo recado";
+    $("recadoSaveBtn").textContent = "Publicar recado";
     $("recadoModalErr").textContent = "";
     $("recadoFieldTitle").value = "";
     $("recadoFieldMessage").value = "";
     $("recadoFieldLink").value = "";
+    $("recadoFieldExpires").value = defaultRecadoExpiresValue();
     $("recadoFieldFile").value = "";
+    $("recadoFieldFileCurrent").textContent = "";
     recadoFile = null;
     recadoSelectedBranches = [];
     recadoAllBranches = false;
-    renderRecadoBranchChecks();
+    openRecadoBranchPickerFresh();
     $("recadoModal").classList.add("open");
   });
+
+  function openRecadoForEdit(a){
+    recadoEditingId = a.id;
+    $("recadoModalTitle").textContent = "Editar recado";
+    $("recadoSaveBtn").textContent = "Salvar alterações";
+    $("recadoModalErr").textContent = "";
+    $("recadoFieldTitle").value = a.title || "";
+    $("recadoFieldMessage").value = a.message || "";
+    $("recadoFieldLink").value = a.link_url || "";
+    $("recadoFieldExpires").value = a.expires_at ? a.expires_at.slice(0, 10) : defaultRecadoExpiresValue();
+    $("recadoFieldFile").value = "";
+    $("recadoFieldFileCurrent").textContent = a.attachment_url ? ("Anexo atual: " + (a.attachment_name || "arquivo") + " (escolha outro pra substituir)") : "";
+    recadoFile = null;
+    recadoAllBranches = Boolean(a.all_branches);
+    recadoSelectedBranches = a.all_branches ? [] : (a.announcement_branches || []).map(function(row){
+      var b = allBranches.find(function(x){ return x.id === row.branch_id; });
+      return b ? b.name : null;
+    }).filter(Boolean);
+    openRecadoBranchPickerFresh();
+    $("recadoModal").classList.add("open");
+  }
+
   $("recadoModalClose").addEventListener("click", function(){ $("recadoModal").classList.remove("open"); });
 
   $("recadoFieldFile").addEventListener("change", function(e){
     recadoFile = (e.target.files && e.target.files[0]) || null;
   });
+
+  function syncAnnouncementBranches(announcementId, done){
+    sb.from("announcement_branches").delete().eq("announcement_id", announcementId).then(function(){
+      if(recadoAllBranches || !recadoSelectedBranches.length){ done(); return; }
+      var rows = recadoSelectedBranches.map(function(name){
+        var b = allBranches.find(function(x){ return x.name === name; });
+        return b ? { announcement_id: announcementId, branch_id: b.id } : null;
+      }).filter(Boolean);
+      if(!rows.length){ done(); return; }
+      sb.from("announcement_branches").insert(rows).then(function(r2){
+        if(r2.error){ done("Recado salvo, mas erro ao vincular mentorias: " + r2.error.message); return; }
+        done();
+      });
+    });
+  }
 
   $("recadoSaveBtn").addEventListener("click", function(){
     var message = $("recadoFieldMessage").value.trim();
@@ -2097,35 +2159,40 @@
 
     $("recadoSaveBtn").disabled = true;
 
+    var expiresRaw = $("recadoFieldExpires").value;
+    var expiresAt = expiresRaw ? new Date(expiresRaw + "T23:59:59").toISOString() : null;
+    var existing = recadoEditingId ? allRecados.find(function(x){ return x.id === recadoEditingId; }) : null;
+
+    function finish(err){
+      $("recadoSaveBtn").disabled = false;
+      if(err){ $("recadoModalErr").textContent = err; return; }
+      $("recadoModal").classList.remove("open");
+      loadRecados();
+    }
+
     function afterUpload(attachmentUrl, attachmentName){
-      sb.from("announcements").insert({
-        created_by: currentStaff.id,
+      var payload = {
         title: $("recadoFieldTitle").value.trim() || null,
         message: message,
         link_url: $("recadoFieldLink").value.trim() || null,
         attachment_url: attachmentUrl,
         attachment_name: attachmentName,
-        all_branches: recadoAllBranches
-      }).select().single().then(function(r){
-        if(r.error){ $("recadoSaveBtn").disabled = false; $("recadoModalErr").textContent = "Erro: " + r.error.message; return; }
-        var announcementId = r.data.id;
-        if(recadoAllBranches || !recadoSelectedBranches.length){
-          $("recadoSaveBtn").disabled = false;
-          $("recadoModal").classList.remove("open");
-          loadRecados();
-          return;
-        }
-        var rows = recadoSelectedBranches.map(function(name){
-          var b = allBranches.find(function(x){ return x.name === name; });
-          return b ? { announcement_id: announcementId, branch_id: b.id } : null;
-        }).filter(Boolean);
-        sb.from("announcement_branches").insert(rows).then(function(r2){
-          $("recadoSaveBtn").disabled = false;
-          if(r2.error){ $("recadoModalErr").textContent = "Recado criado, mas erro ao vincular mentorias: " + r2.error.message; return; }
-          $("recadoModal").classList.remove("open");
-          loadRecados();
+        all_branches: recadoAllBranches,
+        expires_at: expiresAt
+      };
+
+      if(recadoEditingId){
+        sb.from("announcements").update(payload).eq("id", recadoEditingId).then(function(r){
+          if(r.error){ finish("Erro: " + r.error.message); return; }
+          syncAnnouncementBranches(recadoEditingId, finish);
         });
-      });
+      } else {
+        payload.created_by = currentStaff.id;
+        sb.from("announcements").insert(payload).select().single().then(function(r){
+          if(r.error){ finish("Erro: " + r.error.message); return; }
+          syncAnnouncementBranches(r.data.id, finish);
+        });
+      }
     }
 
     if(recadoFile){
@@ -2135,6 +2202,9 @@
         var pub = sb.storage.from("recados").getPublicUrl(path);
         afterUpload(pub.data.publicUrl, recadoFile.name);
       });
+    } else if(existing){
+      // editando e não escolheu arquivo novo — mantém o anexo que já tinha
+      afterUpload(existing.attachment_url || null, existing.attachment_name || null);
     } else {
       afterUpload(null, null);
     }
@@ -2144,7 +2214,7 @@
     $("recadosLoading").style.display = "block";
     $("recadosList").innerHTML = "";
     sb.from("announcements")
-      .select("id,title,message,link_url,attachment_url,attachment_name,all_branches,is_active,created_at,created_by,staff:created_by(full_name),announcement_branches(branch_id)")
+      .select("id,title,message,link_url,attachment_url,attachment_name,all_branches,is_active,expires_at,created_at,created_by,staff:created_by(full_name),announcement_branches(branch_id)")
       .order("created_at", { ascending: false })
       .then(function(r){
         $("recadosLoading").style.display = "none";
@@ -2165,15 +2235,23 @@
             return b ? '<span class="branch-tag">' + b.name + '</span>' : "";
           });
       var canManage = currentStaff.isMasterLike || a.created_by === currentStaff.id;
-      return '<div class="card" style="margin-bottom:12px;">' +
+      var expired = a.expires_at && new Date(a.expires_at).getTime() < Date.now();
+      var expiryBadge = a.expires_at
+        ? '<span class="hint" style="' + (expired ? 'color:#e08a8a;' : '') + '">' + (expired ? "Vencido em " : "Vence em ") + fmtDate(a.expires_at) + '</span>'
+        : '';
+      return '<div class="card" style="margin-bottom:12px;' + (expired ? 'opacity:0.6;' : '') + '">' +
         '<div class="card-head"><h3 style="font-size:14px;">' + (a.title || "Recado") + '</h3>' +
-        (canManage ? '<button class="btn-secondary recado-del-btn" data-id="' + a.id + '"><i class="fa-solid fa-trash"></i></button>' : '') +
+        (canManage ? '<div style="display:flex;gap:6px;">' +
+          '<button class="btn-secondary recado-edit-btn" data-id="' + a.id + '"><i class="fa-solid fa-pen"></i></button>' +
+          '<button class="btn-secondary recado-del-btn" data-id="' + a.id + '"><i class="fa-solid fa-trash"></i></button>' +
+        '</div>' : '') +
         '</div>' +
         '<p style="margin:0 0 10px;font-size:13px;color:var(--eg-text-secondary);white-space:pre-wrap;">' + a.message + '</p>' +
         (a.link_url ? '<p style="margin:0 0 8px;"><a href="' + a.link_url + '" target="_blank" rel="noopener" style="color:var(--eg-gold-300);font-size:12.5px;"><i class="fa-solid fa-link"></i> ' + a.link_url + '</a></p>' : '') +
         (a.attachment_url ? '<p style="margin:0 0 8px;"><a href="' + a.attachment_url + '" target="_blank" rel="noopener" style="color:var(--eg-gold-300);font-size:12.5px;"><i class="fa-solid fa-paperclip"></i> ' + (a.attachment_name || "anexo") + '</a></p>' : '') +
         '<div style="margin-bottom:6px;">' + branchNames.join("") + '</div>' +
         '<span class="hint">' + ((a.staff && a.staff.full_name) || "—") + ' · ' + fmtDate(a.created_at) + '</span>' +
+        (expiryBadge ? '<br>' + expiryBadge : '') +
         '</div>';
     }).join("");
     wrap.querySelectorAll(".recado-del-btn").forEach(function(btn){
@@ -2183,6 +2261,12 @@
           if(r.error){ alert("Erro ao apagar: " + r.error.message); return; }
           loadRecados();
         });
+      });
+    });
+    wrap.querySelectorAll(".recado-edit-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var a = allRecados.find(function(x){ return x.id === btn.getAttribute("data-id"); });
+        if(a) openRecadoForEdit(a);
       });
     });
   }
