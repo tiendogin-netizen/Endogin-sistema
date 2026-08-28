@@ -224,6 +224,7 @@
       <button class="tab-btn active" data-tab="alunos">Alunos</button>
       <button class="tab-btn" data-tab="crm">CRM</button>
       <button class="tab-btn" data-tab="grupos">Grupos WhatsApp</button>
+      <button class="tab-btn" data-tab="aulas">Aulas</button>
       <button class="tab-btn" data-tab="sessoes">Sessões 1x1</button>
       <button class="tab-btn" data-tab="trilha">Trilha CS</button>
       <button class="tab-btn" data-tab="aniversarios">Aniversários</button>
@@ -332,6 +333,20 @@
         </div>
         <p class="hint" id="wppCount" style="margin-bottom:14px;"></p>
         <div id="wppList"></div>
+      </div>
+    </div>
+
+    <!-- ================= AULAS ================= -->
+    <div class="tab-panel" id="tab-aulas">
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-graduation-cap icn"></i>Catálogo de aulas (Cademi)</h3></div>
+        <p class="hint" style="margin:-8px 0 16px;">Busca por título, módulo ou nome do curso — pra achar rápido a aula certa e mandar pro aluno. Sem transcrição, só o catálogo (título, módulo, link, duração).</p>
+        <input type="text" class="search-input" id="aulasSearch" placeholder="Buscar por título, módulo ou curso..." style="max-width:320px;">
+        <p class="hint" id="aulasCount" style="margin:10px 0 0;"></p>
+      </div>
+      <div class="card">
+        <div id="aulasEmpty" class="loading-note" style="display:none;">Nenhuma aula encontrada com essa busca.</div>
+        <div id="aulasList"></div>
       </div>
     </div>
 
@@ -757,6 +772,7 @@
         loadTrilha();
         loadFeedbacks();
         loadNps();
+        loadAulas();
         loadRecados();
       });
     });
@@ -1246,6 +1262,48 @@
       listEl.innerHTML = sections || '<p class="hint">Nenhum mentorado encontrado com esses filtros.</p>';
     }
   }
+
+  // ---------------- Aulas (catálogo da Cademi — busca por título/módulo/curso,
+  // sem transcrição, só ajuda a CS achar a aula certa pra indicar ao aluno) ----------------
+  var allAulaCourses = [];
+  function loadAulas(){
+    sb.from("courses")
+      .select("id,name,branch_id,course_lessons(id,title,module,url,duration)")
+      .order("name")
+      .then(function(r){
+        allAulaCourses = (r.data || []).filter(function(c){ return c.course_lessons && c.course_lessons.length; });
+        renderAulas();
+      });
+  }
+
+  function renderAulas(){
+    var term = ($("aulasSearch").value || "").trim().toLowerCase();
+    var html = "";
+    var totalShown = 0;
+    allAulaCourses.forEach(function(course){
+      var lessons = course.course_lessons.filter(function(l){
+        if(!term) return true;
+        return (l.title || "").toLowerCase().indexOf(term) > -1 ||
+               (l.module || "").toLowerCase().indexOf(term) > -1 ||
+               (course.name || "").toLowerCase().indexOf(term) > -1;
+      });
+      if(!lessons.length) return;
+      totalShown += lessons.length;
+      html += '<div style="margin-bottom:18px;">' +
+        '<span class="wpp-group-tag">' + course.name + '</span>' +
+        lessons.map(function(l){
+          var meta = [l.module, l.duration].filter(Boolean).join(" · ");
+          return '<div class="wpp-row"><div><b>' + l.title + '</b>' + (meta ? '<br><span class="hint">' + meta + '</span>' : '') + '</div>' +
+            (l.url ? '<a class="btn-secondary" href="' + l.url + '" target="_blank" rel="noopener">Abrir</a>' : '') +
+          '</div>';
+        }).join("") +
+      '</div>';
+    });
+    $("aulasList").innerHTML = html;
+    $("aulasEmpty").style.display = totalShown ? "none" : "block";
+    $("aulasCount").textContent = totalShown + " aula(s) encontrada(s) em " + allAulaCourses.length + " curso(s) no catálogo.";
+  }
+  $("aulasSearch").addEventListener("input", renderAulas);
 
   // ---------------- credenciais de acesso do aluno (só master) ----------------
   $("alunoSaveCredBtn").addEventListener("click", function(){
