@@ -278,6 +278,7 @@
     </div>
     <div class="side-links">
       <button class="side-link active" data-page="jornada"><i class="fa-solid fa-route"></i>Jornada</button>
+      <button class="side-link" data-page="aulas"><i class="fa-solid fa-graduation-cap"></i>Aulas</button>
       <button class="side-link" data-page="opiniao"><i class="fa-regular fa-comment-dots"></i>Feedback &amp; NPS</button>
     </div>
     <div class="side-cta">
@@ -378,6 +379,18 @@
             <div class="card-head"><h3><i class="fa-regular fa-calendar-days icn"></i>Calendário</h3></div>
             <div id="calendarList"><div class="empty-state">Sua CS ainda não cadastrou aulas ou encontros pra sua mentoria.</div></div>
           </div>
+        </div>
+      </div>
+
+      <!-- ================= PÁGINA: AULAS ================= -->
+      <div class="page-view" id="page-aulas">
+        <div class="section-title"><i class="fa-solid fa-graduation-cap"></i>AULAS</div>
+        <div class="card2">
+          <div class="card-head"><h3><i class="fa-solid fa-magnifying-glass icn"></i>Buscar aula</h3></div>
+          <p class="hint" style="margin:0 0 12px;">Busca pelo título, módulo ou nome do curso. Aqui mostra só as aulas que fazem parte da sua mentoria.</p>
+          <input type="text" id="aulasSearch" placeholder="Ex: emagrecimento, hormonal, casos clínicos...">
+          <div id="aulasEmpty" class="hint" style="display:none;">Nenhuma aula encontrada com essa busca.</div>
+          <div id="aulasList"></div>
         </div>
       </div>
 
@@ -758,6 +771,7 @@
     }
     loadCalendar(branchIds);
     loadRecados();
+    loadAulas(branchIds);
 
     showPage("jornada");
   }
@@ -933,9 +947,59 @@
       });
   }
 
+  // ---------------- aulas (assistente de busca — SEM transcrição, só ajuda
+  // o aluno a achar a aula certa pelo título/módulo/curso) ----------------
+  var allAulaCourses = [];
+  function loadAulas(branchIds){
+    var orParts = ["branch_id.is.null"];
+    if(branchIds && branchIds.length){ orParts.push("branch_id.in.(" + branchIds.join(",") + ")"); }
+    sb.from("courses")
+      .select("id,name,branch_id,course_lessons(id,title,module,url,duration)")
+      .or(orParts.join(","))
+      .order("name")
+      .then(function(r){
+        allAulaCourses = (r.data || []).filter(function(c){ return c.course_lessons && c.course_lessons.length; });
+        renderAulas();
+      });
+  }
+
+  function renderAulas(){
+    var term = ($("aulasSearch").value || "").trim().toLowerCase();
+    var html = "";
+    var totalShown = 0;
+    allAulaCourses.forEach(function(course){
+      var lessons = course.course_lessons.filter(function(l){
+        if(!term) return true;
+        return (l.title || "").toLowerCase().indexOf(term) > -1 ||
+               (l.module || "").toLowerCase().indexOf(term) > -1 ||
+               (course.name || "").toLowerCase().indexOf(term) > -1;
+      });
+      if(!lessons.length) return;
+      totalShown += lessons.length;
+      html += '<div style="margin-bottom:18px;">' +
+        '<span class="cat-badge">' + course.name + '</span>' +
+        lessons.map(function(l){
+          var meta = [l.module, l.duration].filter(Boolean).join(" · ");
+          return '<div class="cal-item">' +
+            '<div class="cal-icn"><i class="fa-solid fa-play"></i></div>' +
+            '<div class="cal-info">' +
+              '<b>' + l.title + '</b>' +
+              (meta ? '<span>' + meta + '</span>' : '') +
+            '</div>' +
+            (l.url ? '<a class="btn-secondary" href="' + l.url + '" target="_blank" rel="noopener" style="flex-shrink:0;">Assistir</a>' : '') +
+          '</div>';
+        }).join("") +
+      '</div>';
+    });
+    $("aulasList").innerHTML = html;
+    $("aulasEmpty").style.display = totalShown ? "none" : "block";
+  }
+  $("aulasSearch").addEventListener("input", renderAulas);
+
   // ---------------- navegação entre páginas ----------------
   var pageEls = {
     jornada: $("page-jornada"),
+    aulas: $("page-aulas"),
     opiniao: $("page-opiniao")
   };
   var sideLinkBtns = document.querySelectorAll(".side-link");
