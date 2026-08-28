@@ -968,7 +968,12 @@
       // gráficos (Chart.js) ficam com tamanho 0 se forem criados dentro de
       // uma aba escondida (display:none) — recriando quando a aba de
       // Carteiras é aberta garante que eles nascem já com o tamanho certo.
-      if(btn.getAttribute("data-tab") === "carteiras" && carteirasStudents.length){ renderCarteiras(); }
+      // O setTimeout(...,30) é necessário: sem ele, o Chart.js mede o
+      // tamanho do canvas ANTES do navegador aplicar o display:block que
+      // acabou de ser ligado na linha de cima, e continua achando que é 0.
+      if(btn.getAttribute("data-tab") === "carteiras" && carteirasStudents.length){
+        setTimeout(renderCarteiras, 30);
+      }
     });
   });
 
