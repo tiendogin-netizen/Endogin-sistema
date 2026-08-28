@@ -145,12 +145,13 @@
   .crm-stat-card[data-filter-key]{transition:border-color .15s,background .15s;cursor:pointer;}
   .crm-stat-card[data-filter-key]:hover{border-color:var(--eg-gold-500);}
   .crm-stat-card.selected{border-color:var(--eg-gold-500);background:rgba(201,151,75,0.1);}
-  .crm-stat-card{border-top-width:3px;border-top-style:solid;position:relative;}
-  .crm-stat-card.accent-blue{border-top-color:#5b8def;}
-  .crm-stat-card.accent-green{border-top-color:#3fae6a;}
-  .crm-stat-card.accent-red{border-top-color:#b3475a;}
-  .crm-stat-card.accent-gold{border-top-color:#c9974b;}
-  .crm-stat-card.accent-purple{border-top-color:#8f7fd6;}
+  .crm-stat-card{border-width:1.5px;border-style:solid;border-color:var(--eg-navy-line);position:relative;}
+  .crm-stat-card.accent-blue{border-color:#5b8def;}
+  .crm-stat-card.accent-green{border-color:#3fae6a;}
+  .crm-stat-card.accent-red{border-color:#b3475a;}
+  .crm-stat-card.accent-gold{border-color:#c9974b;}
+  .crm-stat-card.accent-purple{border-color:#8f7fd6;}
+  .crm-stat-chevron{position:absolute;top:12px;right:14px;color:var(--eg-text-muted);font-size:10px;}
   .crm-stat-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
   .crm-stat-dot.blue{background:#5b8def;} .crm-stat-dot.green{background:#3fae6a;}
   .crm-stat-dot.red{background:#b3475a;} .crm-stat-dot.gold{background:#c9974b;}
@@ -2847,6 +2848,7 @@
       { key: "trancados", label: "Trancados", num: buckets.trancado.length, sub: pct(buckets.trancado.length, list.length) + " da base", accent: "gold" }
     ].map(function(c){
       return '<div class="crm-stat-card accent-' + c.accent + '" data-filter-key="' + c.key + '">' +
+        '<span class="crm-stat-chevron"><i class="fa-solid fa-chevron-down"></i></span>' +
         '<div class="crm-stat-label"><span class="crm-stat-dot ' + c.accent + '"></span>' + c.label + '</div>' +
         '<div class="crm-stat-num">' + c.num + '</div>' +
         (c.sub ? '<div class="hint" style="margin-top:4px;">' + c.sub + '</div>' : '') + '</div>';
@@ -2876,6 +2878,7 @@
       { key: "venc90", label: "Vence em 90 dias", num: em90.length, sub: "até " + fmtEventDate(addDaysStr(90)), accent: "purple" }
     ].map(function(c){
       return '<div class="crm-stat-card accent-' + c.accent + '" data-filter-key="' + c.key + '">' +
+        '<span class="crm-stat-chevron"><i class="fa-solid fa-chevron-down"></i></span>' +
         '<div class="crm-stat-label"><span class="crm-stat-dot ' + c.accent + '"></span>' + c.label + '</div>' +
         '<div class="crm-stat-num">' + c.num + '</div>' +
         '<div class="hint" style="margin-top:4px;">' + c.sub + '</div></div>';
