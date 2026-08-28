@@ -328,8 +328,8 @@
         <div class="card-head"><h3>Como a carteira está distribuída</h3></div>
         <p class="hint" style="margin:-8px 0 12px;">Clique numa barra ou fatia pra ver a lista.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Clientes por mentoria</h4><canvas id="carteirasMentoriaChart"></canvas></div>
-          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Clientes por CS responsável</h4><canvas id="carteirasCsChart"></canvas></div>
+          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Clientes por mentoria</h4><div style="position:relative;height:220px;"><canvas id="carteirasMentoriaChart"></canvas></div></div>
+          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Clientes por CS responsável</h4><div style="position:relative;height:220px;"><canvas id="carteirasCsChart"></canvas></div></div>
           <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Distribuição por status</h4><div class="crm-chart-wrap"><canvas id="carteirasStatusChart" height="200"></canvas></div></div>
           <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Temperatura da carteira</h4><div class="crm-chart-wrap"><canvas id="carteirasTempChart" height="200"></canvas></div></div>
         </div>
@@ -340,7 +340,7 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
           <div>
             <h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Vencimentos da carteira ativa</h4>
-            <canvas id="carteirasVencChart"></canvas>
+            <div style="position:relative;height:220px;"><canvas id="carteirasVencChart"></canvas></div>
           </div>
           <div>
             <h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Renovações/negociações em andamento</h4>
@@ -965,6 +965,10 @@
       document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.remove("active"); });
       btn.classList.add("active");
       $("tab-" + btn.getAttribute("data-tab")).classList.add("active");
+      // gráficos (Chart.js) ficam com tamanho 0 se forem criados dentro de
+      // uma aba escondida (display:none) — recriando quando a aba de
+      // Carteiras é aberta garante que eles nascem já com o tamanho certo.
+      if(btn.getAttribute("data-tab") === "carteiras" && carteirasStudents.length){ renderCarteiras(); }
     });
   });
 
@@ -2661,6 +2665,10 @@
   }
   function carteiraIsInRenewalTalks(s){
     var t = (s.renewal_status || "").toLowerCase();
+    if(!t) return false;
+    // "renovado" já foi resolvido — não é negociação em andamento. Só conta
+    // como "em negociação/renovação" quem ainda está em tratativa.
+    if(t.indexOf("renovado") > -1 || t.indexOf("cancelado") > -1 || t.indexOf("não renov") > -1 || t.indexOf("nao renov") > -1) return false;
     return t.indexOf("negocia") > -1 || t.indexOf("renova") > -1;
   }
   function carteiraWhenLabel(s){
@@ -2725,6 +2733,8 @@
       },
       options: {
         indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
           x: { ticks: { color: "#c9c9d4", font: { size: 10.5 } }, grid: { color: "rgba(255,255,255,0.05)" } },
@@ -2877,6 +2887,8 @@
         data: { labels: exclEntries.map(function(e){ return e.label; }), datasets: [{ data: exclEntries.map(function(e){ return e.count; }), backgroundColor: exclColors, borderRadius: 5, maxBarThickness: 26 }] },
         options: {
           indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
             x: { ticks: { color: "#c9c9d4", font: { size: 10.5 } }, grid: { color: "rgba(255,255,255,0.05)" } },
