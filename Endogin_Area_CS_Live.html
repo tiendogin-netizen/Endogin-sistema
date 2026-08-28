@@ -125,6 +125,12 @@
   .wpp-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));}
   .wpp-bar-num{width:36px;flex:none;font-size:12.5px;font-weight:700;color:var(--eg-text-primary);}
   .wpp-bar-broadcast{margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);}
+  .crm-stat-card[data-filter-key]{transition:border-color .15s,background .15s;}
+  .crm-stat-card[data-filter-key]:hover{border-color:var(--eg-gold-500);}
+  .crm-stat-card.selected{border-color:var(--eg-gold-500);background:rgba(201,151,75,0.1);}
+  .wpp-bar-row[data-filter-key]{transition:background .15s;border-radius:6px;}
+  .wpp-bar-row[data-filter-key]:hover{background:rgba(255,255,255,0.03);}
+  .wpp-bar-row.selected .wpp-bar-label{color:var(--eg-gold-100);font-weight:700;}
   .search-input{width:100%;padding:9px 12px;font-size:12.5px;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:8px;color:var(--eg-text-primary);font-family:inherit;}
   .toggle-group{display:inline-flex;border:1px solid var(--eg-navy-line);border-radius:8px;overflow:hidden;}
   .toggle-btn{font-size:11.5px;font-weight:700;padding:8px 13px;background:var(--eg-bg-2);color:var(--eg-text-muted);border:none;cursor:pointer;font-family:inherit;}
@@ -222,6 +228,7 @@
 
     <div class="tabs">
       <button class="tab-btn active" data-tab="alunos">Alunos</button>
+      <button class="tab-btn" data-tab="carteiras">Carteiras CS</button>
       <button class="tab-btn" data-tab="crm">CRM</button>
       <button class="tab-btn" data-tab="grupos">Grupos WhatsApp</button>
       <button class="tab-btn" data-tab="aulas">Aulas</button>
@@ -264,6 +271,60 @@
           <thead><tr><th>Aluno</th><th>Contato</th><th>Mentorias</th><th>Status</th><th>CS</th><th></th></tr></thead>
           <tbody id="alunosBody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ================= CARTEIRAS CS ================= -->
+    <div class="tab-panel" id="tab-carteiras">
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-chart-pie icn"></i>Carteiras CS Endogin</h3></div>
+        <p class="hint" id="carteirasSubtitle" style="margin:-8px 0 0;">Painel de vencimentos, renovação e temperatura da carteira.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Visão geral</h3></div>
+        <p class="hint" style="margin:-8px 0 12px;">Clique em qualquer cartão pra ver a lista de alunos.</p>
+        <div class="crm-stats-row" id="carteirasKpiTotais"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Vencimentos e renovação · alunos ativos</h3></div>
+        <p class="hint" style="margin:-8px 0 12px;">Janelas cumulativas — inclui os dias já vencidos até o limite indicado. Clique num cartão pra ver a lista.</p>
+        <div class="crm-stats-row" id="carteirasKpiVencimentos" style="grid-template-columns:repeat(5,1fr);"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Como a carteira está distribuída</h3></div>
+        <p class="hint" style="margin:-8px 0 12px;">Clique numa barra ou fatia pra ver a lista.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Clientes por mentoria</h4><div id="carteirasPorMentoria"></div></div>
+          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Clientes por CS responsável</h4><div id="carteirasPorCs"></div></div>
+          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Distribuição por status</h4><div class="crm-chart-wrap"><canvas id="carteirasStatusChart" height="200"></canvas></div></div>
+          <div><h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Temperatura da carteira</h4><div class="crm-chart-wrap"><canvas id="carteirasTempChart" height="200"></canvas></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Detalhe de vencimentos e renovações</h3></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div>
+            <h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Vencimentos da carteira ativa</h4>
+            <div id="carteirasVencBars"></div>
+          </div>
+          <div>
+            <h4 class="hint" style="margin:0 0 10px;text-transform:none;font-size:12.5px;">Renovações/negociações em andamento</h4>
+            <div id="carteirasRenovacoesList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="carteirasListCard">
+        <div class="card-head">
+          <h3 id="carteirasListTitle">Alunos</h3>
+          <input type="text" class="search-input" id="carteirasSearch" placeholder="Buscar por nome, CS ou mentoria..." style="max-width:260px;">
+        </div>
+        <p class="hint" id="carteirasListHint" style="margin:-8px 0 12px;"></p>
+        <div id="carteirasStudentsList"></div>
       </div>
     </div>
 
@@ -554,9 +615,15 @@
 
         <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Ciclo da mentoria</label></div>
         <div><label>Data de entrada</label><input type="date" id="alunoFieldEntryDate"></div>
-        <div><label>Data de vencimento</label><input type="date" id="alunoFieldRenewalDate"></div>
+        <div>
+          <label>Data de vencimento</label>
+          <input type="date" id="alunoFieldRenewalDate">
+          <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-weight:400;"><input type="checkbox" id="alunoFieldLifetime" style="width:auto;"> Vitalício (não vence)</label>
+        </div>
         <div><label>Status de renovação</label><input type="text" id="alunoFieldRenewalStatus" placeholder="ex: Renovado, A vencer, Vencido"></div>
         <div><label>Temperatura</label><input type="text" id="alunoFieldTemperature" placeholder="ex: Quente, Morno, Frio"></div>
+        <div><label>Responsável pela renovação</label><select id="alunoFieldRenewalOwner"><option value="">Sem responsável definido</option></select></div>
+        <div style="grid-column:1/-1;"><label>Nota da renovação</label><input type="text" id="alunoFieldRenewalNote" placeholder="ex: tentando contato, mensalidade pendente..."></div>
 
         <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Sessão 1:1</label></div>
         <div><label>Status do 1:1</label><input type="text" id="alunoFieldOneOnOneStatus" placeholder="ex: Pendente, Concluído"></div>
@@ -690,6 +757,20 @@
         <div id="lessonDateWrap" style="display:none;"><label>Data</label><input type="date" id="lessonFieldDate"></div>
         <div><label>Horário</label><input type="time" id="lessonFieldTime"></div>
         <div><label>Duração (minutos)</label><input type="number" id="lessonFieldDuration" min="0" placeholder="ex: 60"></div>
+        <div>
+          <label>Categoria</label>
+          <select id="lessonFieldCategory">
+            <option value="Geral">Geral</option>
+            <option value="Vendas">Vendas</option>
+            <option value="Pro Hormonal">Pro Hormonal</option>
+            <option value="Encontros">Encontros</option>
+            <option value="Endogin Black Belt">Endogin Black Belt</option>
+            <option value="Endogin Mentores Masters">Endogin Mentores Masters</option>
+          </select>
+        </div>
+        <div><label>Capa (link da imagem, opcional)</label><input type="text" id="lessonFieldCover" placeholder="https://..."></div>
+        <div style="grid-column:1/-1;"><label>Descrição curta (opcional)</label><input type="text" id="lessonFieldDescription" placeholder="Ex: Ao vivo no Zoom, com o Dr. Vinícius."></div>
+        <div style="grid-column:1/-1;"><label>Link da aula/encontro (opcional)</label><input type="text" id="lessonFieldLink" placeholder="https://..."></div>
       </div>
       <div class="err-msg" id="lessonModalErr"></div>
     </div>
@@ -833,6 +914,7 @@
         loadAulas();
         loadRecados();
         loadCalendarioAdmin();
+        loadCarteiras();
       });
     });
   }
@@ -898,7 +980,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,photo_url,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),disc_results(primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,photo_url,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -1023,8 +1105,20 @@
     $("alunoFieldMedicalLicense").value = student.medical_license || "";
     $("alunoFieldEntryDate").value = student.entry_date || "";
     $("alunoFieldRenewalDate").value = student.renewal_date || "";
+    $("alunoFieldLifetime").checked = Boolean(student.is_lifetime);
     $("alunoFieldRenewalStatus").value = student.renewal_status || "";
     $("alunoFieldTemperature").value = student.temperature || "";
+    $("alunoFieldRenewalNote").value = student.renewal_note || "";
+    (function(){
+      var sel = $("alunoFieldRenewalOwner");
+      sel.innerHTML = '<option value="">Sem responsável definido</option>';
+      allStaff.filter(function(s){ return s.is_active; }).forEach(function(s){
+        var opt = document.createElement("option");
+        opt.value = s.id; opt.textContent = s.full_name;
+        if(s.id === student.renewal_owner_id) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    })();
     $("alunoFieldOneOnOneStatus").value = student.one_on_one_status || "";
     $("alunoFieldOneOnOneDate").value = student.one_on_one_date || "";
     $("alunoFieldOneOnOneSummary").value = student.one_on_one_summary || "";
@@ -1081,8 +1175,11 @@
       medical_license: $("alunoFieldMedicalLicense").value.trim() || null,
       entry_date: $("alunoFieldEntryDate").value || null,
       renewal_date: $("alunoFieldRenewalDate").value || null,
+      is_lifetime: $("alunoFieldLifetime").checked,
       renewal_status: $("alunoFieldRenewalStatus").value.trim() || null,
       temperature: $("alunoFieldTemperature").value.trim() || null,
+      renewal_owner_id: $("alunoFieldRenewalOwner").value || null,
+      renewal_note: $("alunoFieldRenewalNote").value.trim() || null,
       one_on_one_status: $("alunoFieldOneOnOneStatus").value.trim() || null,
       one_on_one_date: $("alunoFieldOneOnOneDate").value.trim() || null,
       one_on_one_summary: $("alunoFieldOneOnOneSummary").value.trim() || null,
@@ -2357,6 +2454,10 @@
     $("lessonFieldDate").value = "";
     $("lessonFieldTime").value = "";
     $("lessonFieldDuration").value = "";
+    $("lessonFieldCategory").value = "Geral";
+    $("lessonFieldCover").value = "";
+    $("lessonFieldDescription").value = "";
+    $("lessonFieldLink").value = "";
     toggleLessonTypeFields();
     $("lessonModal").classList.add("open");
   });
@@ -2373,6 +2474,10 @@
     $("lessonFieldDate").value = l.event_date || "";
     $("lessonFieldTime").value = l.scheduled_time ? l.scheduled_time.slice(0,5) : "";
     $("lessonFieldDuration").value = l.duration_minutes || "";
+    $("lessonFieldCategory").value = l.category || "Geral";
+    $("lessonFieldCover").value = l.cover_url || "";
+    $("lessonFieldDescription").value = l.description || "";
+    $("lessonFieldLink").value = l.link_url || "";
     toggleLessonTypeFields();
     $("lessonModal").classList.add("open");
   }
@@ -2392,7 +2497,11 @@
       weekday: type === "semanal" ? $("lessonFieldWeekday").value : null,
       event_date: type === "evento" ? $("lessonFieldDate").value : null,
       scheduled_time: $("lessonFieldTime").value || null,
-      duration_minutes: $("lessonFieldDuration").value ? parseInt($("lessonFieldDuration").value, 10) : null
+      duration_minutes: $("lessonFieldDuration").value ? parseInt($("lessonFieldDuration").value, 10) : null,
+      category: $("lessonFieldCategory").value || null,
+      cover_url: $("lessonFieldCover").value.trim() || null,
+      description: $("lessonFieldDescription").value.trim() || null,
+      link_url: $("lessonFieldLink").value.trim() || null
     };
     $("lessonSaveBtn").disabled = true;
     var query = lessonEditingId
@@ -2410,7 +2519,7 @@
     $("calendarioLoading").style.display = "block";
     $("calendarioList").innerHTML = "";
     sb.from("lessons")
-      .select("id,title,lesson_type,branch_id,weekday,event_date,scheduled_time,duration_minutes")
+      .select("id,title,lesson_type,branch_id,weekday,event_date,scheduled_time,duration_minutes,category,cover_url,description,link_url")
       .in("lesson_type", ["semanal", "evento"])
       .then(function(r){
         $("calendarioLoading").style.display = "none";
@@ -2437,8 +2546,10 @@
       return '<div class="wpp-row">' +
         '<div>' +
           '<span class="wpp-group-tag">' + (l.lesson_type === "evento" ? "Encontro" : "Aula semanal") + '</span> ' +
+          (l.category ? '<span class="wpp-group-tag" style="opacity:0.7;">' + l.category + '</span> ' : '') +
           '<b>' + l.title + '</b>' +
           '<div class="hint">' + (when || "sem horário definido") + (l.duration_minutes ? " · " + l.duration_minutes + " min" : "") + " · " + (branch ? branch.name : "Todas as mentorias") + '</div>' +
+          (l.description ? '<div class="hint">' + l.description + '</div>' : '') +
         '</div>' +
         (currentStaff.isMasterLike ? '<div style="display:flex;gap:6px;">' +
           '<button class="btn-secondary lesson-edit-btn" data-id="' + l.id + '"><i class="fa-solid fa-pen"></i></button>' +
@@ -2462,6 +2573,295 @@
       });
     });
   }
+
+  // ---------------- Carteiras CS (painel de vencimentos/renovação) ----------------
+  var carteirasStudents = [];
+  var carteirasFilterKey = null;
+  var carteirasStatusChartInstance = null;
+  var carteirasTempChartInstance = null;
+  var CARTEIRAS_FILTERS = {};
+
+  function loadCarteiras(){
+    sb.from("students")
+      .select("id,full_name,status,cs_id,legacy_cs_label,renewal_date,is_lifetime,temperature,renewal_status,renewal_note,renewal_owner_id,staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),deliveries(label,status,branch_id)")
+      .then(function(r){
+        if(r.error) return;
+        carteirasStudents = r.data || [];
+        renderCarteiras();
+      });
+  }
+
+  function parseDateOnly(dateStr){
+    if(!dateStr) return null;
+    var p = dateStr.split("-");
+    if(p.length !== 3) return null;
+    return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+  }
+  function daysUntil(dateStr){
+    var d = parseDateOnly(dateStr);
+    if(!d) return null;
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    return Math.round((d.getTime() - today.getTime()) / 86400000);
+  }
+  function addDaysStr(n){ var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+  function pct(n, total){ return total ? Math.round((n / total) * 100) + "%" : "0%"; }
+
+  function carteiraStatusBucket(status){
+    if(status === "trancado") return "trancado";
+    if(status === "inativo" || status === "cancelado") return "desativado";
+    return "ativo"; // ativo, onboarding, em_reonboarding
+  }
+  function carteiraMentoriaLabel(s){
+    var activeDelivery = (s.deliveries || []).find(function(d){ return d.status === "ativo"; });
+    return activeDelivery ? activeDelivery.label : "Desativado/Trancado";
+  }
+  function carteiraCsLabel(s){
+    return (s.staff && s.staff.full_name) || s.legacy_cs_label || "Sem CS";
+  }
+  function carteiraTemperatureLabel(s){
+    var t = (s.temperature || "").trim().toLowerCase();
+    if(t.indexOf("quente") > -1) return "Quente";
+    if(t.indexOf("morno") > -1) return "Morno";
+    if(t.indexOf("frio") > -1) return "Frio";
+    return "Não definido";
+  }
+  function carteiraIsInRenewalTalks(s){
+    var t = (s.renewal_status || "").toLowerCase();
+    return t.indexOf("negocia") > -1 || t.indexOf("renova") > -1;
+  }
+  function carteiraWhenLabel(s){
+    if(s.is_lifetime) return "Vitalício";
+    if(!s.renewal_date) return "sem data de vencimento";
+    var d = daysUntil(s.renewal_date);
+    return d < 0 ? (Math.abs(d) + "d vencido") : ("vence em " + d + "d");
+  }
+
+  function registerCarteirasFilter(key, label, predicate){
+    CARTEIRAS_FILTERS[key] = { label: label, predicate: predicate };
+  }
+
+  function renderCarteirasHighlight(){
+    document.querySelectorAll("#tab-carteiras [data-filter-key]").forEach(function(el){
+      el.classList.toggle("selected", el.getAttribute("data-filter-key") === carteirasFilterKey);
+    });
+  }
+
+  function applyCarteirasFilter(key){
+    carteirasFilterKey = key;
+    renderCarteirasHighlight();
+    renderCarteirasList();
+    var listCard = $("carteirasListCard");
+    if(listCard) listCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function renderCarteirasList(){
+    var search = ($("carteirasSearch").value || "").trim().toLowerCase();
+    var filter = carteirasFilterKey ? CARTEIRAS_FILTERS[carteirasFilterKey] : null;
+    var list = carteirasStudents;
+    if(filter) list = list.filter(filter.predicate);
+    if(search){
+      list = list.filter(function(s){
+        return (s.full_name || "").toLowerCase().indexOf(search) > -1 ||
+          carteiraCsLabel(s).toLowerCase().indexOf(search) > -1 ||
+          carteiraMentoriaLabel(s).toLowerCase().indexOf(search) > -1;
+      });
+    }
+    $("carteirasListTitle").textContent = filter ? filter.label : "Alunos";
+    $("carteirasListHint").textContent = list.length + " aluno(s) encontrado(s)" +
+      (filter ? " · clique de novo no cartão ou recarregue a aba pra limpar o filtro" : "");
+    var wrap = $("carteirasStudentsList");
+    if(!list.length){ wrap.innerHTML = '<p class="hint">Nenhum aluno encontrado.</p>'; return; }
+    wrap.innerHTML = list.slice(0, 300).map(function(s){
+      return '<div class="wpp-row"><div><b>' + s.full_name + '</b> <span class="status-pill ' + s.status + '">' + s.status + '</span><br>' +
+        '<span class="hint">' + carteiraCsLabel(s) + ' · ' + carteiraMentoriaLabel(s) + ' · ' + carteiraWhenLabel(s) + '</span></div></div>';
+    }).join("") + (list.length > 300 ? '<p class="hint" style="margin-top:10px;">mostrando os primeiros 300 — use a busca pra refinar.</p>' : '');
+  }
+
+  function renderCarteirasBarList(containerId, entries, filterKeyPrefix){
+    var wrap = $(containerId);
+    var max = Math.max.apply(null, entries.map(function(e){ return e.count; }).concat([1]));
+    wrap.innerHTML = entries.map(function(e, idx){
+      return '<div class="wpp-bar-row" data-filter-key="' + filterKeyPrefix + idx + '">' +
+        '<div class="wpp-bar-label">' + e.label + '</div>' +
+        '<div class="wpp-bar-track"><div class="wpp-bar-fill" style="width:' + Math.round((e.count / max) * 100) + '%;"></div></div>' +
+        '<div class="wpp-bar-num">' + e.count + '</div>' +
+      '</div>';
+    }).join("");
+    entries.forEach(function(e, idx){ registerCarteirasFilter(filterKeyPrefix + idx, e.label, e.predicate); });
+    wrap.querySelectorAll("[data-filter-key]").forEach(function(el){
+      el.addEventListener("click", function(){ applyCarteirasFilter(el.getAttribute("data-filter-key")); });
+    });
+  }
+
+  function renderCarteiras(){
+    var list = carteirasStudents;
+    if(!list.length) return;
+
+    var buckets = { ativo: [], desativado: [], trancado: [] };
+    list.forEach(function(s){ buckets[carteiraStatusBucket(s.status)].push(s); });
+
+    registerCarteirasFilter("total", "Todos os alunos", function(){ return true; });
+    registerCarteirasFilter("ativos", "Ativos", function(s){ return carteiraStatusBucket(s.status) === "ativo"; });
+    registerCarteirasFilter("desativados", "Desativados", function(s){ return carteiraStatusBucket(s.status) === "desativado"; });
+    registerCarteirasFilter("trancados", "Trancados", function(s){ return carteiraStatusBucket(s.status) === "trancado"; });
+
+    $("carteirasKpiTotais").innerHTML = [
+      { key: "total", label: "Total de clientes", num: list.length, sub: "" },
+      { key: "ativos", label: "Ativos", num: buckets.ativo.length, sub: pct(buckets.ativo.length, list.length) + " da base" },
+      { key: "desativados", label: "Desativados", num: buckets.desativado.length, sub: pct(buckets.desativado.length, list.length) + " da base" },
+      { key: "trancados", label: "Trancados", num: buckets.trancado.length, sub: pct(buckets.trancado.length, list.length) + " da base" }
+    ].map(function(c){
+      return '<div class="crm-stat-card" data-filter-key="' + c.key + '"><div class="crm-stat-num">' + c.num + '</div><div class="crm-stat-label">' + c.label + '</div>' +
+        (c.sub ? '<div class="hint" style="margin-top:4px;">' + c.sub + '</div>' : '') + '</div>';
+    }).join("");
+    $("carteirasKpiTotais").querySelectorAll("[data-filter-key]").forEach(function(el){
+      el.addEventListener("click", function(){ applyCarteirasFilter(el.getAttribute("data-filter-key")); });
+    });
+
+    var ativosComData = buckets.ativo.filter(function(s){ return !s.is_lifetime && s.renewal_date; });
+    var vencidos = ativosComData.filter(function(s){ return daysUntil(s.renewal_date) < 0; });
+    var em30 = ativosComData.filter(function(s){ return daysUntil(s.renewal_date) <= 30; });
+    var em60 = ativosComData.filter(function(s){ return daysUntil(s.renewal_date) <= 60; });
+    var em90 = ativosComData.filter(function(s){ return daysUntil(s.renewal_date) <= 90; });
+    var emNegociacao = buckets.ativo.filter(carteiraIsInRenewalTalks);
+
+    registerCarteirasFilter("vencidos", "Vencidos", function(s){ return carteiraStatusBucket(s.status) === "ativo" && !s.is_lifetime && s.renewal_date && daysUntil(s.renewal_date) < 0; });
+    registerCarteirasFilter("venc30", "Vence em até 30 dias", function(s){ return carteiraStatusBucket(s.status) === "ativo" && !s.is_lifetime && s.renewal_date && daysUntil(s.renewal_date) <= 30; });
+    registerCarteirasFilter("venc60", "Vence em até 60 dias", function(s){ return carteiraStatusBucket(s.status) === "ativo" && !s.is_lifetime && s.renewal_date && daysUntil(s.renewal_date) <= 60; });
+    registerCarteirasFilter("venc90", "Vence em até 90 dias", function(s){ return carteiraStatusBucket(s.status) === "ativo" && !s.is_lifetime && s.renewal_date && daysUntil(s.renewal_date) <= 90; });
+    registerCarteirasFilter("negociacao", "Em renovação/negociação", carteiraIsInRenewalTalks);
+
+    $("carteirasKpiVencimentos").innerHTML = [
+      { key: "vencidos", label: "Vencidos", num: vencidos.length, sub: "já passou do vencimento" },
+      { key: "negociacao", label: "Em renovação/negociação", num: emNegociacao.length, sub: "tratativa em andamento" },
+      { key: "venc30", label: "Vence em 30 dias", num: em30.length, sub: "até " + fmtEventDate(addDaysStr(30)) },
+      { key: "venc60", label: "Vence em 60 dias", num: em60.length, sub: "até " + fmtEventDate(addDaysStr(60)) },
+      { key: "venc90", label: "Vence em 90 dias", num: em90.length, sub: "até " + fmtEventDate(addDaysStr(90)) }
+    ].map(function(c){
+      return '<div class="crm-stat-card" data-filter-key="' + c.key + '"><div class="crm-stat-num">' + c.num + '</div><div class="crm-stat-label">' + c.label + '</div>' +
+        '<div class="hint" style="margin-top:4px;">' + c.sub + '</div></div>';
+    }).join("");
+    $("carteirasKpiVencimentos").querySelectorAll("[data-filter-key]").forEach(function(el){
+      el.addEventListener("click", function(){ applyCarteirasFilter(el.getAttribute("data-filter-key")); });
+    });
+
+    var mentoriaCounts = {};
+    list.forEach(function(s){ var m = carteiraMentoriaLabel(s); mentoriaCounts[m] = (mentoriaCounts[m] || 0) + 1; });
+    var mentoriaEntries = Object.keys(mentoriaCounts).sort(function(a, b){ return mentoriaCounts[b] - mentoriaCounts[a]; }).map(function(m){
+      return { label: m, count: mentoriaCounts[m], predicate: function(s){ return carteiraMentoriaLabel(s) === m; } };
+    });
+    renderCarteirasBarList("carteirasPorMentoria", mentoriaEntries, "mentoria_");
+
+    var csCounts = {};
+    list.forEach(function(s){ var c = carteiraCsLabel(s); csCounts[c] = (csCounts[c] || 0) + 1; });
+    var csEntries = Object.keys(csCounts).sort(function(a, b){ return csCounts[b] - csCounts[a]; }).map(function(c){
+      return { label: c, count: csCounts[c], predicate: function(s){ return carteiraCsLabel(s) === c; } };
+    });
+    renderCarteirasBarList("carteirasPorCs", csEntries, "cs_");
+
+    $("carteirasSubtitle").textContent = "atualizado em " + new Date().toLocaleDateString("pt-BR") +
+      " · dados de " + csEntries.length + " carteira(s) (" + csEntries.map(function(e){ return e.label; }).join(", ") + ")";
+
+    var ctxStatus = document.getElementById("carteirasStatusChart");
+    if(ctxStatus && typeof Chart !== "undefined"){
+      if(carteirasStatusChartInstance) carteirasStatusChartInstance.destroy();
+      carteirasStatusChartInstance = new Chart(ctxStatus, {
+        type: "doughnut",
+        data: { labels: ["Ativo", "Desativado", "Trancado"], datasets: [{ data: [buckets.ativo.length, buckets.desativado.length, buckets.trancado.length], backgroundColor: ["#3fae6a", "#b3475a", "#c9974b"], borderWidth: 0 }] },
+        options: {
+          plugins: { legend: { position: "bottom", labels: { color: "#c9c9d4", font: { size: 11 } } } },
+          onClick: function(evt, els){ if(els.length){ applyCarteirasFilter(["ativos", "desativados", "trancados"][els[0].index]); } }
+        }
+      });
+    }
+
+    var tempCounts = { "Não definido": 0, "Quente": 0, "Morno": 0, "Frio": 0 };
+    list.forEach(function(s){ tempCounts[carteiraTemperatureLabel(s)]++; });
+    registerCarteirasFilter("temp_nao", "Temperatura: não definida", function(s){ return carteiraTemperatureLabel(s) === "Não definido"; });
+    registerCarteirasFilter("temp_quente", "Temperatura: quente", function(s){ return carteiraTemperatureLabel(s) === "Quente"; });
+    registerCarteirasFilter("temp_morno", "Temperatura: morno", function(s){ return carteiraTemperatureLabel(s) === "Morno"; });
+    registerCarteirasFilter("temp_frio", "Temperatura: frio", function(s){ return carteiraTemperatureLabel(s) === "Frio"; });
+    var ctxTemp = document.getElementById("carteirasTempChart");
+    if(ctxTemp && typeof Chart !== "undefined"){
+      if(carteirasTempChartInstance) carteirasTempChartInstance.destroy();
+      carteirasTempChartInstance = new Chart(ctxTemp, {
+        type: "doughnut",
+        data: { labels: ["Não definido", "Quente", "Morno", "Frio"], datasets: [{ data: [tempCounts["Não definido"], tempCounts["Quente"], tempCounts["Morno"], tempCounts["Frio"]], backgroundColor: ["#5b6472", "#b3475a", "#c9974b", "#5b8def"], borderWidth: 0 }] },
+        options: {
+          plugins: { legend: { position: "bottom", labels: { color: "#c9c9d4", font: { size: 11 } } } },
+          onClick: function(evt, els){ if(els.length){ applyCarteirasFilter(["temp_nao", "temp_quente", "temp_morno", "temp_frio"][els[0].index]); } }
+        }
+      });
+    }
+
+    var excl = { vencido: 0, d30: 0, d60: 0, d90: 0, emdia: 0, semdata: 0 };
+    buckets.ativo.forEach(function(s){
+      if(s.is_lifetime || !s.renewal_date){ excl.semdata++; return; }
+      var d = daysUntil(s.renewal_date);
+      if(d < 0) excl.vencido++;
+      else if(d <= 30) excl.d30++;
+      else if(d <= 60) excl.d60++;
+      else if(d <= 90) excl.d90++;
+      else excl.emdia++;
+    });
+    registerCarteirasFilter("excl_vencido", "Vencido", function(s){ return carteiraStatusBucket(s.status) === "ativo" && !s.is_lifetime && s.renewal_date && daysUntil(s.renewal_date) < 0; });
+    registerCarteirasFilter("excl_d30", "Vence em até 30 dias", function(s){ return carteiraStatusBucket(s.status) === "ativo" && !s.is_lifetime && s.renewal_date && daysUntil(s.renewal_date) >= 0 && daysUntil(s.renewal_date) <= 30; });
+    registerCarteirasFilter("excl_d60", "Vence entre 31 e 60 dias", function(s){ return carteiraStatusBucket(s.status) === "ativo" && !s.is_lifetime && s.renewal_date && daysUntil(s.renewal_date) > 30 && daysUntil(s.renewal_date) <= 60; });
+    registerCarteirasFilter("excl_d90", "Vence entre 61 e 90 dias", function(s){ return carteiraStatusBucket(s.status) === "ativo" && !s.is_lifetime && s.renewal_date && daysUntil(s.renewal_date) > 60 && daysUntil(s.renewal_date) <= 90; });
+    registerCarteirasFilter("excl_emdia", "Em dia (mais de 90 dias)", function(s){ return carteiraStatusBucket(s.status) === "ativo" && !s.is_lifetime && s.renewal_date && daysUntil(s.renewal_date) > 90; });
+    registerCarteirasFilter("excl_semdata", "Sem data de vencimento", function(s){ return carteiraStatusBucket(s.status) === "ativo" && (s.is_lifetime || !s.renewal_date); });
+
+    var exclEntries = [
+      { key: "excl_vencido", label: "Vencido", count: excl.vencido },
+      { key: "excl_d30", label: "Vence em 30 dias", count: excl.d30 },
+      { key: "excl_d60", label: "Vence em 60 dias", count: excl.d60 },
+      { key: "excl_d90", label: "Vence em 90 dias", count: excl.d90 },
+      { key: "excl_emdia", label: "Em dia", count: excl.emdia },
+      { key: "excl_semdata", label: "Sem data", count: excl.semdata }
+    ];
+    var exclMax = Math.max.apply(null, exclEntries.map(function(e){ return e.count; }).concat([1]));
+    $("carteirasVencBars").innerHTML = exclEntries.map(function(e){
+      return '<div class="wpp-bar-row" data-filter-key="' + e.key + '">' +
+        '<div class="wpp-bar-label">' + e.label + '</div>' +
+        '<div class="wpp-bar-track"><div class="wpp-bar-fill" style="width:' + Math.round((e.count / exclMax) * 100) + '%;"></div></div>' +
+        '<div class="wpp-bar-num">' + e.count + '</div>' +
+      '</div>';
+    }).join("");
+    $("carteirasVencBars").querySelectorAll("[data-filter-key]").forEach(function(el){
+      el.addEventListener("click", function(){ applyCarteirasFilter(el.getAttribute("data-filter-key")); });
+    });
+
+    var ownerGroups = {};
+    var negociacaoSorted = emNegociacao.slice().sort(function(a, b){
+      var da = a.renewal_date ? daysUntil(a.renewal_date) : 999999;
+      var db = b.renewal_date ? daysUntil(b.renewal_date) : 999999;
+      return da - db;
+    });
+    negociacaoSorted.forEach(function(s){
+      var owner = (s.renewal_owner && s.renewal_owner.full_name) || "Não atribuído";
+      ownerGroups[owner] = ownerGroups[owner] || [];
+      ownerGroups[owner].push(s);
+    });
+    var ownerNames = Object.keys(ownerGroups).sort(function(a, b){ return ownerGroups[b].length - ownerGroups[a].length; });
+    var ownerBarsHtml = ownerNames.map(function(owner){
+      var n = ownerGroups[owner].length;
+      var max = emNegociacao.length || 1;
+      return '<div class="wpp-bar-row"><div class="wpp-bar-label">' + owner + '</div><div class="wpp-bar-track"><div class="wpp-bar-fill" style="width:' + Math.round((n / max) * 100) + '%;"></div></div><div class="wpp-bar-num">' + n + '</div></div>';
+    }).join("");
+    var ownerCardsHtml = negociacaoSorted.slice(0, 12).map(function(s){
+      var owner = (s.renewal_owner && s.renewal_owner.full_name) || "Não atribuído";
+      return '<div class="wpp-row"><div><b>' + s.full_name + '</b><br><span class="hint">' + carteiraMentoriaLabel(s) + ' · ' + carteiraCsLabel(s) + ' · <span style="color:#e08a8a;">' + carteiraWhenLabel(s) + '</span></span>' +
+        (s.renewal_note ? '<br><span class="hint">' + s.renewal_note + '</span>' : '') + '</div>' +
+        '<div><span class="branch-tag">' + owner + '</span></div></div>';
+    }).join("");
+    $("carteirasRenovacoesList").innerHTML = (ownerBarsHtml || '<p class="hint">Ninguém marcado como "em negociação/renovação" no momento — isso depende do texto em "Status de renovação" conter "negocia" ou "renova".</p>') +
+      (ownerCardsHtml ? '<div style="margin-top:14px;">' + ownerCardsHtml + '</div>' : '');
+
+    renderCarteirasHighlight();
+    renderCarteirasList();
+  }
+
+  $("carteirasSearch").addEventListener("input", renderCarteirasList);
 
   // ---------------- Relatórios (exportação em Excel organizado) ----------------
   var ALUNO_EXPORT_COLUMNS = [

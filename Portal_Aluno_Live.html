@@ -179,6 +179,48 @@
   .cal-info b{display:block;font-size:13px;font-weight:600;margin-top:1px;}
   .cal-info span{font-size:11px;color:var(--eg-text-muted);}
   .cat-badge{font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;display:inline-block;letter-spacing:0.2px;margin-bottom:4px;background:rgba(201,151,75,0.16);color:var(--eg-gold-100);border:1px solid var(--eg-border-strong);}
+  .cat-badge.vendas{background:rgba(201,151,75,0.18);color:var(--eg-gold-100);border:1px solid var(--eg-border-strong);}
+  .cat-badge.geral{background:rgba(255,255,255,0.06);color:var(--eg-text-secondary);border:1px solid var(--eg-navy-line);}
+  .cat-badge.pro-hormonal{background:rgba(143,166,199,0.16);color:#9fb3d6;border:1px solid rgba(143,166,199,0.35);}
+  .cat-badge.encontros{background:rgba(143,199,159,0.12);color:#8fc79f;border:1px solid rgba(143,199,159,0.35);}
+  .cat-badge.black-belt{background:rgba(8,13,23,0.65);color:var(--eg-gold-300);border:1px solid var(--eg-gold-700);}
+  .cat-badge.masters{background:linear-gradient(90deg, rgba(242,223,174,0.2), rgba(201,151,75,0.2));color:var(--eg-gold-100);border:1px solid var(--eg-border-strong);}
+
+  .calw-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--eg-navy-line);align-items:center;}
+  .calw-item:last-child{border-bottom:none;padding-bottom:0;}
+  .calw-cover{width:56px;height:56px;border-radius:10px;object-fit:cover;flex-shrink:0;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);}
+  .calw-icn{width:56px;height:56px;border-radius:10px;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);display:flex;align-items:center;justify-content:center;color:var(--eg-gold-300);font-size:18px;flex-shrink:0;}
+  .calw-info{flex:1;min-width:0;}
+  .calw-info b{display:block;font-size:13.5px;font-weight:600;margin-top:1px;}
+  .calw-info span{font-size:11.5px;color:var(--eg-text-muted);}
+  .calw-side{display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto;flex-shrink:0;}
+  .calw-live{font-size:9.5px;font-weight:700;color:var(--eg-gold-300);border:1px solid var(--eg-border-strong);padding:3px 8px;border-radius:99px;white-space:nowrap;}
+  .calw-watch-btn{width:32px;height:32px;border-radius:50%;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);color:var(--eg-gold-100);display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:12px;}
+  .calw-watch-btn:hover{background:var(--eg-gold-500);color:#221708;border-color:transparent;}
+
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .book-card-inner{display:flex;gap:22px;align-items:center;}
+  .book-cover-img{width:140px;flex-shrink:0;border-radius:8px;box-shadow:0 16px 40px rgba(0,0,0,0.45);display:block;}
+  .book-cover-placeholder{width:140px;height:190px;flex-shrink:0;border-radius:8px;background:linear-gradient(150deg,var(--eg-gold-700),var(--eg-gold-500));display:flex;align-items:center;justify-content:center;color:#221708;font-size:28px;box-shadow:0 16px 40px rgba(0,0,0,0.45);}
+  .book-info{flex:1;min-width:0;}
+  .book-info h3{margin:10px 0 4px;font-size:18px;font-weight:700;}
+  .book-authors{margin:0 0 12px;font-size:12px;color:var(--eg-gold-300);font-weight:600;}
+  .book-desc{margin:0 0 16px;font-size:12.5px;color:var(--eg-text-secondary);line-height:1.6;}
+  .book-price{font-size:11px;color:var(--eg-text-muted);}
+  .course-card{position:relative;overflow:hidden;padding:0;}
+  .course-card-bg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0.28;}
+  .course-card-bg.placeholder{background:linear-gradient(135deg,var(--eg-navy-line),var(--eg-bg-2));}
+  .course-card-content{position:relative;padding:22px 24px;}
+  .course-card-content h3{margin:10px 0 10px;font-size:18px;font-weight:700;line-height:1.3;}
+  .course-card-content p{margin:0 0 16px;font-size:12.5px;color:var(--eg-text-secondary);line-height:1.6;}
+  .course-stats{display:flex;gap:16px;margin-bottom:18px;flex-wrap:wrap;}
+  .course-stats div{display:flex;flex-direction:column;}
+  .course-stats b{font-size:18px;font-weight:700;color:var(--eg-gold-100);}
+  .course-stats span{font-size:10.5px;color:var(--eg-text-muted);}
+  @media (max-width:600px){
+    .book-card-inner{flex-direction:column;align-items:flex-start;}
+    .course-card-bg{display:none;}
+  }
 
   .star-input{display:flex;gap:8px;font-size:22px;}
   .star-input i{color:var(--eg-text-muted);cursor:pointer;transition:color .1s;}
@@ -308,6 +350,8 @@
     </div>
     <div class="side-links">
       <button class="side-link active" data-page="jornada"><i class="fa-solid fa-route"></i>Jornada</button>
+      <button class="side-link" data-page="calendario"><i class="fa-regular fa-calendar-days"></i>Calendário</button>
+      <button class="side-link" data-page="conteudos"><i class="fa-solid fa-book"></i>Conteúdos</button>
       <button class="side-link" data-page="opiniao"><i class="fa-regular fa-comment-dots"></i>Feedback &amp; NPS</button>
     </div>
     <div class="side-cta">
@@ -398,15 +442,56 @@
           </div>
         </div>
 
+        <div class="card2">
+          <div class="card-head"><h3><i class="fa-solid fa-bullhorn icn"></i>Recados</h3></div>
+          <div id="recadosList"><div class="empty-state">Nenhum recado por aqui ainda.</div></div>
+        </div>
+      </div>
+
+      <!-- ================= PÁGINA: CALENDÁRIO ================= -->
+      <div class="page-view" id="page-calendario">
+        <div class="section-title"><i class="fa-regular fa-calendar-days"></i>CALENDÁRIO DA SEMANA</div>
+        <div class="card2">
+          <div id="calendarList"><div class="empty-state">Sua CS ainda não cadastrou aulas ou encontros pra sua mentoria.</div></div>
+        </div>
+      </div>
+
+      <!-- ================= PÁGINA: CONTEÚDOS ================= -->
+      <div class="page-view" id="page-conteudos">
+        <div class="section-title"><i class="fa-solid fa-layer-group"></i>CONTEÚDOS E OFERTAS</div>
         <div class="grid-2">
-          <div class="card2">
-            <div class="card-head"><h3><i class="fa-solid fa-bullhorn icn"></i>Recados</h3></div>
-            <div id="recadosList"><div class="empty-state">Nenhum recado por aqui ainda.</div></div>
+          <div class="card2" style="margin-bottom:0;">
+            <div class="book-card-inner">
+              <div class="book-cover-placeholder"><i class="fa-solid fa-book"></i></div>
+              <div class="book-info">
+                <span class="badge gold">Lançamento dos fundadores</span>
+                <h3>O Código Endogin</h3>
+                <p class="book-authors">Dr. Caio Saraiva &amp; Dr. Vinícius Carruego</p>
+                <p class="book-desc">57 histórias da maior mentoria do Brasil, que ensinam o médico a construir riqueza e a ter tempo livre sem corromper a alma.</p>
+                <div class="btn-row">
+                  <button class="btn-primary">Quero meu exemplar</button>
+                </div>
+                <p class="book-price" style="margin-top:10px;">Capa dura · edição limitada</p>
+              </div>
+            </div>
           </div>
 
-          <div class="card2">
-            <div class="card-head"><h3><i class="fa-regular fa-calendar-days icn"></i>Calendário</h3></div>
-            <div id="calendarList"><div class="empty-state">Sua CS ainda não cadastrou aulas ou encontros pra sua mentoria.</div></div>
+          <div class="card2 course-card" style="margin-bottom:0;">
+            <div class="course-card-bg placeholder"></div>
+            <div class="course-card-content">
+              <span class="badge gold">Curso Endogin 3 · como foi</span>
+              <h3>750+ médicos no Curso Endogin 3</h3>
+              <p>Três dias em Alphaville-SP com o Dr. Caio e o Dr. Vinícius: Método Endogin de Emagrecimento, TRH por todas as vias, pellets e progestinas, com casos clínicos reais.</p>
+              <div class="course-stats">
+                <div><b>750+</b><span>médicos presentes</span></div>
+                <div><b>3</b><span>dias de imersão</span></div>
+                <div><b>12h+</b><span>conteúdo prático</span></div>
+              </div>
+              <div class="btn-row">
+                <button class="btn-primary">Garantir vaga no Curso 4</button>
+                <button class="btn-secondary">Ver como foi</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -938,30 +1023,71 @@
     return parts.length === 3 ? (parts[2] + "/" + parts[1] + "/" + parts[0]) : dateStr;
   }
 
+  var CATEGORY_SLUG = {
+    "Vendas": "vendas", "Geral": "geral", "Pro Hormonal": "pro-hormonal",
+    "Encontros": "encontros", "Endogin Black Belt": "black-belt", "Endogin Mentores Masters": "masters"
+  };
+  var WEEKDAY_ORDER = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"];
+
+  function parseDateOnly(dateStr){
+    if(!dateStr) return null;
+    var p = dateStr.split("-");
+    if(p.length !== 3) return null;
+    return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+  }
+  function nextWeekdayOffset(weekday){
+    var idx = WEEKDAY_ORDER.indexOf(weekday);
+    if(idx < 0) return null;
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    return (idx - today.getDay() + 7) % 7;
+  }
+  function relativeDayTag(offsetDays){
+    if(offsetDays === null || offsetDays === undefined) return "";
+    if(offsetDays === 0) return "HOJE";
+    if(offsetDays === 1) return "AMANHÃ";
+    return "EM " + offsetDays + " DIAS";
+  }
+
   function loadCalendar(branchIds){
     var orParts = ["branch_id.is.null"];
     if(branchIds && branchIds.length){ orParts.push("branch_id.in.(" + branchIds.join(",") + ")"); }
     sb.from("lessons")
-      .select("id,title,weekday,event_date,scheduled_time,duration_minutes,lesson_type,branch_id")
-      .in("lesson_type", ["semanal","evento"])
+      .select("id,title,weekday,event_date,scheduled_time,duration_minutes,lesson_type,branch_id,category,cover_url,description,link_url")
+      .in("lesson_type", ["semanal", "evento"])
       .or(orParts.join(","))
       .then(function(r){
-        if(r.error || !r.data || !r.data.length) return;
-        var sorted = r.data.slice().sort(function(a,b){
-          if(a.lesson_type !== b.lesson_type) return a.lesson_type === "evento" ? -1 : 1;
-          return (a.weekday||"").localeCompare(b.weekday||"") || (a.scheduled_time||"").localeCompare(b.scheduled_time||"");
-        });
-        $("calendarList").innerHTML = sorted.map(function(l){
-          var timePart = l.scheduled_time ? l.scheduled_time.slice(0,5).replace(":", "h") : null;
-          var when = l.lesson_type === "evento"
-            ? [fmtEventDate(l.event_date), timePart].filter(Boolean).join(" · ")
-            : [WEEKDAY_LABEL[l.weekday] || l.weekday, timePart].filter(Boolean).join(" · ");
-          return '<div class="cal-item">' +
-            '<div class="cal-icn"><i class="fa-solid ' + (l.lesson_type === "evento" ? "fa-star" : "fa-play") + '"></i></div>' +
-            '<div class="cal-info">' +
-              '<span class="cat-badge">' + (l.lesson_type === "evento" ? "Encontro" : "Aula semanal") + '</span>' +
+        if(r.error || !r.data) return;
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        var items = r.data.map(function(l){
+          var offset;
+          if(l.lesson_type === "evento"){
+            var d = parseDateOnly(l.event_date);
+            offset = d ? Math.round((d.getTime() - today.getTime()) / 86400000) : null;
+          } else {
+            offset = nextWeekdayOffset(l.weekday);
+          }
+          return { l: l, offset: offset };
+        }).filter(function(x){ return x.offset === null || x.offset >= 0; });
+        items.sort(function(a, b){ return (a.offset === null ? 999 : a.offset) - (b.offset === null ? 999 : b.offset); });
+        if(!items.length){ $("calendarList").innerHTML = '<div class="empty-state">Sua CS ainda não cadastrou aulas ou encontros pra sua mentoria.</div>'; return; }
+        $("calendarList").innerHTML = items.map(function(x){
+          var l = x.l;
+          var timePart = l.scheduled_time ? l.scheduled_time.slice(0, 5).replace(":", "h") : null;
+          var dayLabel = l.lesson_type === "evento" ? fmtEventDate(l.event_date) : (WEEKDAY_LABEL[l.weekday] || l.weekday);
+          var when = [dayLabel, timePart].filter(Boolean).join(" · ") + (l.description ? " · " + l.description : "");
+          var catSlug = CATEGORY_SLUG[l.category] || "geral";
+          var catLabel = l.category ? ("Aula de " + l.category) : (l.lesson_type === "evento" ? "Encontro" : "Aula semanal");
+          var tag = relativeDayTag(x.offset);
+          return '<div class="calw-item">' +
+            (l.cover_url ? '<img class="calw-cover" src="' + l.cover_url + '" alt="Capa da aula">' : '<div class="calw-icn"><i class="fa-solid ' + (l.lesson_type === "evento" ? "fa-star" : "fa-play") + '"></i></div>') +
+            '<div class="calw-info">' +
+              '<span class="cat-badge ' + catSlug + '">' + catLabel + '</span>' +
               '<b>' + l.title + '</b>' +
-              (when ? '<span>' + when + (l.duration_minutes ? " · " + l.duration_minutes + " min" : "") + '</span>' : '') +
+              '<span>' + when + (l.duration_minutes ? " · " + l.duration_minutes + " min" : "") + '</span>' +
+            '</div>' +
+            '<div class="calw-side">' +
+              (tag ? '<span class="calw-live">' + tag + '</span>' : '') +
+              (l.link_url ? '<a class="calw-watch-btn" href="' + l.link_url + '" target="_blank" rel="noopener" title="Assistir/entrar"><i class="fa-solid fa-play"></i></a>' : '') +
             '</div>' +
           '</div>';
         }).join("");
@@ -1091,6 +1217,8 @@
   // ---------------- navegação entre páginas ----------------
   var pageEls = {
     jornada: $("page-jornada"),
+    calendario: $("page-calendario"),
+    conteudos: $("page-conteudos"),
     opiniao: $("page-opiniao")
   };
   var sideLinkBtns = document.querySelectorAll(".side-link");
