@@ -185,6 +185,36 @@
   .star-input i.active{color:var(--eg-gold-300);}
   .fb-thanks{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;padding:26px 10px;color:var(--eg-text-secondary);}
   .fb-thanks i{font-size:28px;color:var(--eg-gold-300);margin-bottom:2px;}
+
+  /* ---------- chatbot flutuante de aulas ---------- */
+  .aula-chat-fab{
+    position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;border:none;z-index:50;
+    background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));color:#241705;font-size:22px;cursor:pointer;
+    box-shadow:0 10px 28px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;
+  }
+  .aula-chat-panel{
+    position:fixed;bottom:92px;right:24px;width:340px;max-width:calc(100vw - 32px);height:460px;max-height:calc(100vh - 130px);
+    background:var(--eg-bg-1);border:1px solid var(--eg-border-strong);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.5);
+    display:none;flex-direction:column;overflow:hidden;z-index:50;
+  }
+  .aula-chat-panel.open{display:flex;}
+  .aula-chat-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--eg-navy-line);flex-shrink:0;}
+  .aula-chat-head b{display:block;font-size:13.5px;}
+  .aula-chat-head span{display:block;font-size:11px;color:var(--eg-text-muted);margin-top:1px;}
+  .aula-chat-close{background:none;border:none;color:var(--eg-text-muted);font-size:15px;cursor:pointer;}
+  .aula-chat-messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
+  .chat-bubble{max-width:88%;padding:9px 12px;border-radius:12px;font-size:12.5px;line-height:1.45;}
+  .chat-bubble.chat-bot{align-self:flex-start;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-bottom-left-radius:3px;}
+  .chat-bubble.chat-user{align-self:flex-end;background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));color:#221708;font-weight:600;border-bottom-right-radius:3px;}
+  .chat-lessons{margin-top:8px;display:flex;flex-direction:column;gap:8px;}
+  .chat-lesson-card{background:var(--eg-bg-1);border:1px solid var(--eg-navy-line);border-radius:9px;padding:8px 10px;}
+  .chat-lesson-card b{display:block;font-size:12px;}
+  .chat-lesson-card span{display:block;font-size:10.5px;color:var(--eg-text-muted);margin-top:2px;}
+  .chat-lesson-card a{display:inline-block;margin-top:5px;font-size:11px;color:var(--eg-gold-300);text-decoration:none;}
+  .aula-chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--eg-navy-line);flex-shrink:0;}
+  .aula-chat-input-row input{flex:1;margin:0;}
+  .aula-chat-input-row button{width:38px;height:38px;flex-shrink:0;border:none;border-radius:9px;background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));color:#221708;cursor:pointer;font-size:13px;}
+  @media (max-width:480px){ .aula-chat-panel{right:16px;bottom:82px;} .aula-chat-fab{right:16px;bottom:16px;} }
   .fb-thanks b{font-size:14px;color:var(--eg-text-primary);}
   .fb-thanks span{font-size:12px;}
   .nps-question{margin:0 0 14px;font-size:13px;color:var(--eg-text-secondary);line-height:1.6;}
@@ -278,7 +308,6 @@
     </div>
     <div class="side-links">
       <button class="side-link active" data-page="jornada"><i class="fa-solid fa-route"></i>Jornada</button>
-      <button class="side-link" data-page="aulas"><i class="fa-solid fa-graduation-cap"></i>Aulas</button>
       <button class="side-link" data-page="opiniao"><i class="fa-regular fa-comment-dots"></i>Feedback &amp; NPS</button>
     </div>
     <div class="side-cta">
@@ -382,18 +411,6 @@
         </div>
       </div>
 
-      <!-- ================= PÁGINA: AULAS ================= -->
-      <div class="page-view" id="page-aulas">
-        <div class="section-title"><i class="fa-solid fa-graduation-cap"></i>AULAS</div>
-        <div class="card2">
-          <div class="card-head"><h3><i class="fa-solid fa-magnifying-glass icn"></i>Buscar aula</h3></div>
-          <p class="hint" style="margin:0 0 12px;">Busca pelo título, módulo ou nome do curso. Aqui mostra só as aulas que fazem parte da sua mentoria.</p>
-          <input type="text" id="aulasSearch" placeholder="Ex: emagrecimento, hormonal, casos clínicos...">
-          <div id="aulasEmpty" class="hint" style="display:none;">Nenhuma aula encontrada com essa busca.</div>
-          <div id="aulasList"></div>
-        </div>
-      </div>
-
       <!-- ================= PÁGINA: FEEDBACK & NPS ================= -->
       <div class="page-view" id="page-opiniao">
         <div class="section-title"><i class="fa-regular fa-comment-dots"></i>SUA OPINIÃO</div>
@@ -448,6 +465,20 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ===================== CHATBOT: assistente de aulas ===================== -->
+  <button class="aula-chat-fab" id="aulaChatToggle"><i class="fa-solid fa-comment-dots"></i></button>
+  <div class="aula-chat-panel" id="aulaChatPanel">
+    <div class="aula-chat-head">
+      <div><b>Assistente de aulas</b><span>Me diz o que você procura</span></div>
+      <button class="aula-chat-close" id="aulaChatClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="aula-chat-messages" id="aulaChatMessages"></div>
+    <div class="aula-chat-input-row">
+      <input type="text" id="aulaChatInput" placeholder="Ex: aula sobre emagrecimento...">
+      <button id="aulaChatSend"><i class="fa-solid fa-paper-plane"></i></button>
     </div>
   </div>
 </div>
@@ -771,7 +802,7 @@
     }
     loadCalendar(branchIds);
     loadRecados();
-    loadAulas(branchIds);
+    loadAulaCatalog(branchIds);
 
     showPage("jornada");
   }
@@ -947,10 +978,11 @@
       });
   }
 
-  // ---------------- aulas (assistente de busca — SEM transcrição, só ajuda
-  // o aluno a achar a aula certa pelo título/módulo/curso) ----------------
+  // ---------------- chatbot de aulas — SEM transcrição, só ajuda o aluno a
+  // achar a aula certa pelo título/módulo/curso. Busca local (sem custo de
+  // IA): quebra a pergunta em palavras e cruza com o catálogo. ----------------
   var allAulaCourses = [];
-  function loadAulas(branchIds){
+  function loadAulaCatalog(branchIds){
     var orParts = ["branch_id.is.null"];
     if(branchIds && branchIds.length){ orParts.push("branch_id.in.(" + branchIds.join(",") + ")"); }
     sb.from("courses")
@@ -959,47 +991,93 @@
       .order("name")
       .then(function(r){
         allAulaCourses = (r.data || []).filter(function(c){ return c.course_lessons && c.course_lessons.length; });
-        renderAulas();
       });
   }
 
-  function renderAulas(){
-    var term = ($("aulasSearch").value || "").trim().toLowerCase();
-    var html = "";
-    var totalShown = 0;
-    allAulaCourses.forEach(function(course){
-      var lessons = course.course_lessons.filter(function(l){
-        if(!term) return true;
-        return (l.title || "").toLowerCase().indexOf(term) > -1 ||
-               (l.module || "").toLowerCase().indexOf(term) > -1 ||
-               (course.name || "").toLowerCase().indexOf(term) > -1;
-      });
-      if(!lessons.length) return;
-      totalShown += lessons.length;
-      html += '<div style="margin-bottom:18px;">' +
-        '<span class="cat-badge">' + course.name + '</span>' +
-        lessons.map(function(l){
-          var meta = [l.module, l.duration].filter(Boolean).join(" · ");
-          return '<div class="cal-item">' +
-            '<div class="cal-icn"><i class="fa-solid fa-play"></i></div>' +
-            '<div class="cal-info">' +
-              '<b>' + l.title + '</b>' +
-              (meta ? '<span>' + meta + '</span>' : '') +
-            '</div>' +
-            (l.url ? '<a class="btn-secondary" href="' + l.url + '" target="_blank" rel="noopener" style="flex-shrink:0;">Assistir</a>' : '') +
-          '</div>';
-        }).join("") +
-      '</div>';
-    });
-    $("aulasList").innerHTML = html;
-    $("aulasEmpty").style.display = totalShown ? "none" : "block";
+  function escapeHtml(s){
+    return (s || "").toString()
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
-  $("aulasSearch").addEventListener("input", renderAulas);
+
+  function normalizeText(s){
+    return (s || "").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  }
+
+  var STOPWORDS = ["a","o","as","os","de","da","do","das","dos","um","uma","com","sem","que","pra","para","sobre","aula","aulas","tem","tenho","queria","quero","procuro","procurando","achar","encontrar","onde","qual","quais","como"];
+
+  function searchLessons(query){
+    var tokens = normalizeText(query).split(/\s+/).filter(function(t){ return t.length > 2 && STOPWORDS.indexOf(t) === -1; });
+    if(!tokens.length) return [];
+    var results = [];
+    allAulaCourses.forEach(function(course){
+      (course.course_lessons || []).forEach(function(l){
+        var haystack = normalizeText([l.title, l.module, course.name].filter(Boolean).join(" "));
+        var score = 0;
+        tokens.forEach(function(t){ if(haystack.indexOf(t) > -1) score++; });
+        if(score > 0) results.push({ lesson: l, course: course, score: score });
+      });
+    });
+    results.sort(function(a, b){ return b.score - a.score; });
+    return results.slice(0, 5);
+  }
+
+  function appendChatBubble(role, html){
+    var el = document.createElement("div");
+    el.className = "chat-bubble " + (role === "user" ? "chat-user" : "chat-bot");
+    el.innerHTML = html;
+    $("aulaChatMessages").appendChild(el);
+    $("aulaChatMessages").scrollTop = $("aulaChatMessages").scrollHeight;
+  }
+
+  function renderLessonResults(results){
+    return '<div class="chat-lessons">' + results.map(function(r){
+      var meta = [r.course.name, r.lesson.module].filter(Boolean).join(" · ");
+      return '<div class="chat-lesson-card">' +
+        '<b>' + escapeHtml(r.lesson.title) + '</b>' +
+        (meta ? '<span>' + escapeHtml(meta) + '</span>' : '') +
+        (r.lesson.url ? '<a href="' + r.lesson.url + '" target="_blank" rel="noopener">Assistir aula <i class="fa-solid fa-arrow-up-right-from-square"></i></a>' : '') +
+      '</div>';
+    }).join("") + '</div>';
+  }
+
+  function handleAulaChatSend(){
+    var input = $("aulaChatInput");
+    var text = input.value.trim();
+    if(!text) return;
+    appendChatBubble("user", escapeHtml(text));
+    input.value = "";
+    if(!allAulaCourses.length){
+      appendChatBubble("bot", "Ainda não achei sua mentoria pra puxar o catálogo — tenta de novo em alguns segundos.");
+      return;
+    }
+    var results = searchLessons(text);
+    if(results.length){
+      appendChatBubble("bot", "Achei isso aqui pra você:" + renderLessonResults(results));
+    } else {
+      appendChatBubble("bot", "Não encontrei nenhuma aula com esses termos. Tenta descrever de outro jeito — o assunto, ou o tema da aula — ou fala direto com sua CS.");
+    }
+  }
+
+  var aulaChatStarted = false;
+  $("aulaChatToggle").addEventListener("click", function(){
+    var panel = $("aulaChatPanel");
+    var opening = !panel.classList.contains("open");
+    panel.classList.toggle("open");
+    if(opening && !aulaChatStarted){
+      aulaChatStarted = true;
+      appendChatBubble("bot", "Oi! Me conta o que você está procurando (ex: \"aula sobre emagrecimento\" ou \"casos clínicos de TRH\") que eu acho pra você no catálogo.");
+    }
+  });
+  $("aulaChatClose").addEventListener("click", function(){ $("aulaChatPanel").classList.remove("open"); });
+  $("aulaChatSend").addEventListener("click", handleAulaChatSend);
+  $("aulaChatInput").addEventListener("keydown", function(e){
+    if(e.key === "Enter"){ e.preventDefault(); handleAulaChatSend(); }
+  });
 
   // ---------------- navegação entre páginas ----------------
   var pageEls = {
     jornada: $("page-jornada"),
-    aulas: $("page-aulas"),
     opiniao: $("page-opiniao")
   };
   var sideLinkBtns = document.querySelectorAll(".side-link");
