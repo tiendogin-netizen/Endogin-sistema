@@ -78,6 +78,23 @@
   .branch-tag.inactive{background:rgba(255,255,255,0.05);color:var(--eg-text-muted);text-decoration:line-through;}
   .disc-badge{font-size:9.5px;font-weight:700;background:rgba(255,255,255,0.06);color:var(--eg-text-secondary);border:1px solid var(--eg-navy-line);padding:3px 8px;border-radius:99px;margin-left:6px;display:inline-block;}
   .row-edit-btn{font-size:11px;font-weight:700;background:var(--eg-bg-2);border:1px solid var(--eg-border);color:var(--eg-gold-100);padding:6px 11px;border-radius:7px;cursor:pointer;white-space:nowrap;}
+  .wa-link{color:#25D366;margin-left:6px;text-decoration:none;font-size:13px;}
+  .wa-link:hover{opacity:0.75;}
+
+  /* ---------- chat de busca de aulas (Área CS) ---------- */
+  .aula-chat-embed{display:flex;flex-direction:column;height:460px;border:1px solid var(--eg-navy-line);border-radius:12px;overflow:hidden;background:var(--eg-bg-1);}
+  .aula-chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .chat-bubble{max-width:88%;padding:9px 12px;border-radius:12px;font-size:12.5px;line-height:1.45;}
+  .chat-bubble.chat-bot{align-self:flex-start;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-bottom-left-radius:3px;}
+  .chat-bubble.chat-user{align-self:flex-end;background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));color:#221708;font-weight:600;border-bottom-right-radius:3px;}
+  .chat-lessons{margin-top:8px;display:flex;flex-direction:column;gap:8px;}
+  .chat-lesson-card{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:9px;padding:8px 10px;}
+  .chat-lesson-card b{display:block;font-size:12px;}
+  .chat-lesson-card span{display:block;font-size:10.5px;color:var(--eg-text-muted);margin-top:2px;}
+  .chat-lesson-card a{display:inline-block;margin-top:5px;font-size:11px;color:var(--eg-gold-300);text-decoration:none;}
+  .aula-chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--eg-navy-line);flex-shrink:0;}
+  .aula-chat-input-row input{flex:1;margin:0;}
+  .aula-chat-input-row button{width:38px;height:38px;flex-shrink:0;border:none;border-radius:9px;background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));color:#221708;cursor:pointer;font-size:13px;}
   select, input[type=text], input[type=email], input[type=password]{
     background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:8px;color:var(--eg-text-primary);
     padding:8px 10px;font-family:inherit;font-size:12.5px;
@@ -152,6 +169,17 @@
   .crm-stat-card.accent-gold{border-color:#c9974b;}
   .crm-stat-card.accent-purple{border-color:#8f7fd6;}
   .crm-stat-chevron{position:absolute;top:12px;right:14px;color:var(--eg-text-muted);font-size:10px;}
+  .carteira-status-pill{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:99px;display:inline-block;white-space:nowrap;}
+  .carteira-status-pill.ativo{background:var(--eg-green-bg);color:var(--eg-green);}
+  .carteira-status-pill.desativado{background:var(--eg-red-bg);color:var(--eg-red);}
+  .carteira-status-pill.trancado{background:rgba(201,151,75,0.16);color:var(--eg-gold-100);}
+  .carteira-inline-select{font-size:11px;font-weight:700;padding:4px 8px;border-radius:99px;cursor:pointer;min-width:0;}
+  .carteira-status-select{background:var(--eg-bg-2);color:var(--eg-text-primary);border:1px solid var(--eg-navy-line);}
+  .carteira-renewal-select{background:var(--eg-bg-2);color:var(--eg-text-primary);border:1px solid var(--eg-navy-line);}
+  .carteira-table-wrap{overflow-x:auto;}
+  .carteira-table-wrap table{white-space:nowrap;}
+  .carteira-days-overdue{color:var(--eg-red);font-weight:600;}
+  .carteira-days-upcoming{color:#5b8def;font-weight:600;}
   .crm-stat-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
   .crm-stat-dot.blue{background:#5b8def;} .crm-stat-dot.green{background:#3fae6a;}
   .crm-stat-dot.red{background:#b3475a;} .crm-stat-dot.gold{background:#c9974b;}
@@ -353,10 +381,14 @@
       <div class="card" id="carteirasListCard">
         <div class="card-head">
           <h3 id="carteirasListTitle">Alunos</h3>
-          <input type="text" class="search-input" id="carteirasSearch" placeholder="Buscar por nome, CS ou mentoria..." style="max-width:260px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="hint" id="carteirasListHint"></span>
+            <input type="text" class="search-input" id="carteirasSearch" placeholder="Buscar por nome, CS ou mentoria..." style="max-width:230px;">
+            <button class="btn-secondary" id="carteirasToggleFull"><i class="fa-solid fa-table"></i> Ver carteira completa</button>
+          </div>
         </div>
-        <p class="hint" id="carteirasListHint" style="margin:-8px 0 12px;"></p>
         <div id="carteirasStudentsList"></div>
+        <p class="hint" style="text-align:center;margin-top:14px;font-style:italic;">Carteiras CS Endogin · gerado a partir dos dados de cada Customer Success</p>
       </div>
     </div>
 
@@ -433,14 +465,15 @@
     <!-- ================= AULAS ================= -->
     <div class="tab-panel" id="tab-aulas">
       <div class="card">
-        <div class="card-head"><h3><i class="fa-solid fa-graduation-cap icn"></i>Catálogo de aulas (Cademi)</h3></div>
-        <p class="hint" style="margin:-8px 0 16px;">Busca por título, módulo ou nome do curso — pra achar rápido a aula certa e mandar pro aluno. Sem transcrição, só o catálogo (título, módulo, link, duração).</p>
-        <input type="text" class="search-input" id="aulasSearch" placeholder="Buscar por título, módulo ou curso..." style="max-width:320px;">
-        <p class="hint" id="aulasCount" style="margin:10px 0 0;"></p>
-      </div>
-      <div class="card">
-        <div id="aulasEmpty" class="loading-note" style="display:none;">Nenhuma aula encontrada com essa busca.</div>
-        <div id="aulasList"></div>
+        <div class="card-head"><h3><i class="fa-solid fa-graduation-cap icn"></i>Buscar aula (chat)</h3></div>
+        <p class="hint" style="margin:-8px 0 16px;">Digite o assunto ou o nome da aula que você está procurando — sem lista, é só perguntar, igual um chat. Sem transcrição, só o catálogo (título, módulo, link, duração).</p>
+        <div class="aula-chat-embed">
+          <div class="aula-chat-messages" id="aulasChatMessages"></div>
+          <div class="aula-chat-input-row">
+            <input type="text" id="aulasChatInput" placeholder="Ex: aula sobre emagrecimento...">
+            <button id="aulasChatSend"><i class="fa-solid fa-paper-plane"></i></button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -615,7 +648,7 @@
 <div class="modal-overlay" id="alunoModal">
   <div class="modal-card">
     <div class="modal-head">
-      <div><b id="alunoModalTitle">Editar aluno</b><br><span class="hint" id="alunoModalEmail"></span><br><span class="hint" id="alunoModalDisc" style="display:block;margin-top:3px;"></span></div>
+      <div><b id="alunoModalTitle">Editar aluno</b><br><span class="hint" id="alunoModalEmail"></span><span id="alunoModalWa"></span><br><span class="hint" id="alunoModalDisc" style="display:block;margin-top:3px;"></span></div>
       <button class="modal-close" id="alunoModalClose"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="modal-body">
@@ -977,6 +1010,9 @@
       if(btn.getAttribute("data-tab") === "carteiras" && carteirasStudents.length){
         setTimeout(renderCarteiras, 30);
       }
+      if(btn.getAttribute("data-tab") === "aulas"){
+        startAulasChatIfNeeded();
+      }
     });
   });
 
@@ -1059,6 +1095,20 @@
 
   var DISC_PROFILE_LABEL = { D:"Dominante", I:"Influente", S:"Estável", C:"Cauteloso" };
 
+  // ---------------- link direto pro WhatsApp do aluno ----------------
+  function waLink(phone){
+    var digits = (phone || "").replace(/\D/g, "");
+    if(!digits) return "";
+    // já tem DDI (13 dígitos com 55, ou 12 pra fixo) — senão assume Brasil e prefixa 55
+    if(digits.length <= 11) digits = "55" + digits;
+    return "https://wa.me/" + digits;
+  }
+  function waLinkHtml(phone){
+    var link = waLink(phone);
+    if(!link) return "";
+    return ' <a href="' + link + '" target="_blank" rel="noopener" class="wa-link" title="Chamar no WhatsApp" onclick="event.stopPropagation();"><i class="fa-brands fa-whatsapp"></i></a>';
+  }
+
   function discBadge(student){
     var profile = student.disc_results && student.disc_results[0] && student.disc_results[0].primary_profile;
     if(!profile) return "";
@@ -1077,7 +1127,7 @@
       var tr = document.createElement("tr");
       tr.innerHTML =
         '<td><b>' + s.full_name + '</b>' + discBadge(s) + '<br><span class="hint">' + s.email + '</span></td>' +
-        '<td>' + (s.phone || "—") + '</td>' +
+        '<td>' + (s.phone || "—") + waLinkHtml(s.phone) + '</td>' +
         '<td>' + tags + '</td>' +
         '<td><span class="status-pill ' + s.status + '">' + s.status + '</span></td>' +
         '<td>' + csName + '</td>' +
@@ -1136,6 +1186,7 @@
     $("alunoModalErr").textContent = "";
     $("alunoModalTitle").textContent = student.full_name;
     $("alunoModalEmail").textContent = student.email;
+    $("alunoModalWa").innerHTML = waLinkHtml(student.phone);
     var discEl = $("alunoModalDisc");
     if(discEl){
       var profile = student.disc_results && student.disc_results[0] && student.disc_results[0].primary_profile;
@@ -1465,8 +1516,9 @@
     }
   }
 
-  // ---------------- Aulas (catálogo da Cademi — busca por título/módulo/curso,
-  // sem transcrição, só ajuda a CS achar a aula certa pra indicar ao aluno) ----------------
+  // ---------------- Aulas (catálogo da Cademi — busca por chat, sem lista de
+  // nomes: a CS digita o assunto/título e o bot cruza com o catálogo pra
+  // achar a aula certa e mandar pro aluno. Sem transcrição, só o catálogo) ----------------
   var allAulaCourses = [];
   function loadAulas(){
     sb.from("courses")
@@ -1474,38 +1526,77 @@
       .order("name")
       .then(function(r){
         allAulaCourses = (r.data || []).filter(function(c){ return c.course_lessons && c.course_lessons.length; });
-        renderAulas();
       });
   }
 
-  function renderAulas(){
-    var term = ($("aulasSearch").value || "").trim().toLowerCase();
-    var html = "";
-    var totalShown = 0;
-    allAulaCourses.forEach(function(course){
-      var lessons = course.course_lessons.filter(function(l){
-        if(!term) return true;
-        return (l.title || "").toLowerCase().indexOf(term) > -1 ||
-               (l.module || "").toLowerCase().indexOf(term) > -1 ||
-               (course.name || "").toLowerCase().indexOf(term) > -1;
-      });
-      if(!lessons.length) return;
-      totalShown += lessons.length;
-      html += '<div style="margin-bottom:18px;">' +
-        '<span class="wpp-group-tag">' + course.name + '</span>' +
-        lessons.map(function(l){
-          var meta = [l.module, l.duration].filter(Boolean).join(" · ");
-          return '<div class="wpp-row"><div><b>' + l.title + '</b>' + (meta ? '<br><span class="hint">' + meta + '</span>' : '') + '</div>' +
-            (l.url ? '<a class="btn-secondary" href="' + l.url + '" target="_blank" rel="noopener">Abrir</a>' : '') +
-          '</div>';
-        }).join("") +
-      '</div>';
-    });
-    $("aulasList").innerHTML = html;
-    $("aulasEmpty").style.display = totalShown ? "none" : "block";
-    $("aulasCount").textContent = totalShown + " aula(s) encontrada(s) em " + allAulaCourses.length + " curso(s) no catálogo.";
+  function escapeHtml(s){
+    return (s || "").toString()
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
-  $("aulasSearch").addEventListener("input", renderAulas);
+  function normalizeText(s){
+    return (s || "").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  }
+  var AULA_STOPWORDS = ["a","o","as","os","de","da","do","das","dos","um","uma","com","sem","que","pra","para","sobre","aula","aulas","tem","tenho","queria","quero","procuro","procurando","achar","encontrar","onde","qual","quais","como"];
+  function searchAulas(query){
+    var tokens = normalizeText(query).split(/\s+/).filter(function(t){ return t.length > 2 && AULA_STOPWORDS.indexOf(t) === -1; });
+    if(!tokens.length) return [];
+    var results = [];
+    allAulaCourses.forEach(function(course){
+      (course.course_lessons || []).forEach(function(l){
+        var haystack = normalizeText([l.title, l.module, course.name].filter(Boolean).join(" "));
+        var score = 0;
+        tokens.forEach(function(t){ if(haystack.indexOf(t) > -1) score++; });
+        if(score > 0) results.push({ lesson: l, course: course, score: score });
+      });
+    });
+    results.sort(function(a, b){ return b.score - a.score; });
+    return results.slice(0, 6);
+  }
+  function appendAulaChatBubble(role, html){
+    var el = document.createElement("div");
+    el.className = "chat-bubble " + (role === "user" ? "chat-user" : "chat-bot");
+    el.innerHTML = html;
+    $("aulasChatMessages").appendChild(el);
+    $("aulasChatMessages").scrollTop = $("aulasChatMessages").scrollHeight;
+  }
+  function renderAulaResults(results){
+    return '<div class="chat-lessons">' + results.map(function(r){
+      var meta = [r.course.name, r.lesson.module, r.lesson.duration].filter(Boolean).join(" · ");
+      return '<div class="chat-lesson-card">' +
+        '<b>' + escapeHtml(r.lesson.title) + '</b>' +
+        (meta ? '<span>' + escapeHtml(meta) + '</span>' : '') +
+        (r.lesson.url ? '<a href="' + r.lesson.url + '" target="_blank" rel="noopener">Abrir aula <i class="fa-solid fa-arrow-up-right-from-square"></i></a>' : '') +
+      '</div>';
+    }).join("") + '</div>';
+  }
+  function handleAulasChatSend(){
+    var input = $("aulasChatInput");
+    var text = input.value.trim();
+    if(!text) return;
+    appendAulaChatBubble("user", escapeHtml(text));
+    input.value = "";
+    if(!allAulaCourses.length){
+      appendAulaChatBubble("bot", "Catálogo ainda carregando — tenta de novo em alguns segundos.");
+      return;
+    }
+    var results = searchAulas(text);
+    if(results.length){
+      appendAulaChatBubble("bot", "Achei isso aqui no catálogo:" + renderAulaResults(results));
+    } else {
+      appendAulaChatBubble("bot", "Não encontrei nenhuma aula com esses termos. Tenta descrever de outro jeito — o assunto ou o tema da aula.");
+    }
+  }
+  var aulasChatStarted = false;
+  function startAulasChatIfNeeded(){
+    if(aulasChatStarted) return;
+    aulasChatStarted = true;
+    appendAulaChatBubble("bot", "Oi! Me conta o que você está procurando (ex: \"aula sobre emagrecimento\" ou \"casos clínicos de TRH\") que eu acho pra você no catálogo.");
+  }
+  $("aulasChatSend").addEventListener("click", handleAulasChatSend);
+  $("aulasChatInput").addEventListener("keydown", function(e){
+    if(e.key === "Enter"){ e.preventDefault(); handleAulasChatSend(); }
+  });
 
   // ---------------- credenciais de acesso do aluno (só master) ----------------
   $("alunoSaveCredBtn").addEventListener("click", function(){
@@ -2623,13 +2714,14 @@
   // ---------------- Carteiras CS (painel de vencimentos/renovação) ----------------
   var carteirasStudents = [];
   var carteirasFilterKey = null;
+  var carteirasFullListOpen = false;
   var carteirasStatusChartInstance = null;
   var carteirasTempChartInstance = null;
   var CARTEIRAS_FILTERS = {};
 
   function loadCarteiras(){
     sb.from("students")
-      .select("id,full_name,status,cs_id,legacy_cs_label,renewal_date,is_lifetime,temperature,renewal_status,renewal_note,renewal_owner_id,staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),deliveries(label,status,branch_id)")
+      .select("id,full_name,phone,status,cs_id,legacy_cs_label,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_note,renewal_owner_id,staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),deliveries(label,status,branch_id)")
       .then(function(r){
         if(r.error) return;
         carteirasStudents = r.data || [];
@@ -2698,10 +2790,98 @@
 
   function applyCarteirasFilter(key){
     carteirasFilterKey = key;
+    carteirasFullListOpen = true;
+    updateCarteirasToggleBtn();
     renderCarteirasHighlight();
     renderCarteirasList();
     var listCard = $("carteirasListCard");
     if(listCard) listCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function updateCarteirasToggleBtn(){
+    var btn = $("carteirasToggleFull");
+    if(!btn) return;
+    btn.innerHTML = carteirasFullListOpen
+      ? '<i class="fa-solid fa-table"></i> Ocultar carteira completa'
+      : '<i class="fa-solid fa-table"></i> Ver carteira completa';
+  }
+  $("carteirasToggleFull").addEventListener("click", function(){
+    carteirasFullListOpen = !carteirasFullListOpen;
+    updateCarteirasToggleBtn();
+    renderCarteirasList();
+  });
+
+  function carteiraStatusPillHtml(s){
+    var bucket = carteiraStatusBucket(s.status);
+    var label = bucket === "ativo" ? "Ativo" : (bucket === "trancado" ? "Trancado" : "Desativado");
+    return '<span class="carteira-status-pill ' + bucket + '">' + label + '</span>';
+  }
+
+  // ---------------- edição inline (status + situação de renovação) ----------------
+  var CARTEIRA_STATUS_OPTIONS = [
+    ["onboarding", "Onboarding"], ["ativo", "Ativo"], ["inativo", "Inativo"],
+    ["em_reonboarding", "Em reonboarding"], ["trancado", "Trancado"], ["cancelado", "Cancelado"]
+  ];
+  var CARTEIRA_RENEWAL_STATUS_OPTIONS = ["Renovado", "A vencer", "Em negociação", "Vencido", "Cancelado"];
+
+  function carteiraStatusSelectHtml(s){
+    var opts = CARTEIRA_STATUS_OPTIONS.map(function(o){
+      return '<option value="' + o[0] + '"' + (s.status === o[0] ? " selected" : "") + '>' + o[1] + '</option>';
+    }).join("");
+    return '<select class="carteira-inline-select carteira-status-select" data-id="' + s.id + '" onclick="event.stopPropagation();">' + opts + '</select>';
+  }
+  function carteiraRenewalSelectHtml(s){
+    var cur = s.renewal_status || "";
+    var known = CARTEIRA_RENEWAL_STATUS_OPTIONS.indexOf(cur) > -1;
+    var opts = '<option value=""' + (cur === "" ? " selected" : "") + '>—</option>' +
+      CARTEIRA_RENEWAL_STATUS_OPTIONS.map(function(o){
+        return '<option value="' + o + '"' + (cur === o ? " selected" : "") + '>' + o + '</option>';
+      }).join("") +
+      (cur && !known ? '<option value="' + cur + '" selected>' + cur + '</option>' : "");
+    return '<select class="carteira-inline-select carteira-renewal-select" data-id="' + s.id + '" onclick="event.stopPropagation();">' + opts + '</select>';
+  }
+  function updateCarteiraField(id, field, value, extra){
+    var updates = {};
+    updates[field] = value;
+    if(extra) Object.keys(extra).forEach(function(k){ updates[k] = extra[k]; });
+    sb.from("students").update(updates).eq("id", id).then(function(r){
+      if(r.error){ alert("Erro ao salvar: " + r.error.message); loadCarteiras(); return; }
+      var s = carteirasStudents.find(function(x){ return x.id === id; });
+      if(s) Object.keys(updates).forEach(function(k){ s[k] = updates[k]; });
+      var alunoS = allStudents.find(function(x){ return x.id === id; });
+      if(alunoS) Object.keys(updates).forEach(function(k){ alunoS[k] = updates[k]; });
+      renderCarteiras();
+    });
+  }
+  function carteiraWireInlineSelects(wrap){
+    wrap.querySelectorAll(".carteira-status-select").forEach(function(sel){
+      sel.addEventListener("change", function(){
+        updateCarteiraField(sel.getAttribute("data-id"), "status", sel.value);
+      });
+    });
+    wrap.querySelectorAll(".carteira-renewal-select").forEach(function(sel){
+      sel.addEventListener("change", function(){
+        var val = sel.value || null;
+        // marcar como "Renovado" já deixa o aluno Ativo de novo — não precisa
+        // ir em outra tela pra isso.
+        var extra = val === "Renovado" ? { status: "ativo" } : null;
+        updateCarteiraField(sel.getAttribute("data-id"), "renewal_status", val, extra);
+      });
+    });
+  }
+  function carteiraVencimentoCell(s){
+    if(s.is_lifetime) return '<span class="hint">Vitalício</span>';
+    if(!s.renewal_date) return '<span class="hint">—</span>';
+    var d = daysUntil(s.renewal_date);
+    var cls = d < 0 ? "carteira-days-overdue" : "carteira-days-upcoming";
+    return fmtEventDate(s.renewal_date) + ' <span class="' + cls + '">(' + d + 'd)</span>';
+  }
+  function carteiraRenovacaoLabel(s){
+    if(s.is_lifetime || !s.renewal_date) return "—";
+    var d = daysUntil(s.renewal_date);
+    if(d < 0) return "Vencido";
+    if(d <= 30) return "A vencer";
+    return "—";
   }
 
   function renderCarteirasList(){
@@ -2718,13 +2898,33 @@
     }
     $("carteirasListTitle").textContent = filter ? filter.label : "Alunos";
     $("carteirasListHint").textContent = list.length + " aluno(s) encontrado(s)" +
-      (filter ? " · clique de novo no cartão ou recarregue a aba pra limpar o filtro" : "");
+      (filter ? " · clique de novo no cartão pra limpar o filtro" : "");
     var wrap = $("carteirasStudentsList");
+    if(!carteirasFullListOpen){
+      wrap.innerHTML = '<p class="hint">Clique em "Ver carteira completa" pra abrir a lista detalhada.</p>';
+      return;
+    }
     if(!list.length){ wrap.innerHTML = '<p class="hint">Nenhum aluno encontrado.</p>'; return; }
-    wrap.innerHTML = list.slice(0, 300).map(function(s){
-      return '<div class="wpp-row"><div><b>' + s.full_name + '</b> <span class="status-pill ' + s.status + '">' + s.status + '</span><br>' +
-        '<span class="hint">' + carteiraCsLabel(s) + ' · ' + carteiraMentoriaLabel(s) + ' · ' + carteiraWhenLabel(s) + '</span></div></div>';
-    }).join("") + (list.length > 300 ? '<p class="hint" style="margin-top:10px;">mostrando os primeiros 300 — use a busca pra refinar.</p>' : '');
+    var shown = list.slice(0, 300);
+    wrap.innerHTML = '<div class="carteira-table-wrap"><table><thead><tr>' +
+      '<th>Nome completo</th><th>Mentoria</th><th>CS responsável</th><th>Status</th><th>Entrada</th><th>Vencimento</th><th>Situação</th><th>Temperatura</th><th>Renovação</th>' +
+      '</tr></thead><tbody>' +
+      shown.map(function(s){
+        var temp = carteiraTemperatureLabel(s);
+        return '<tr>' +
+          '<td><b>' + s.full_name + '</b>' + waLinkHtml(s.phone) + '</td>' +
+          '<td>' + carteiraMentoriaLabel(s) + '</td>' +
+          '<td>' + carteiraCsLabel(s) + '</td>' +
+          '<td>' + carteiraStatusSelectHtml(s) + '</td>' +
+          '<td>' + (s.entry_date ? fmtEventDate(s.entry_date) : "—") + '</td>' +
+          '<td>' + carteiraVencimentoCell(s) + '</td>' +
+          '<td>' + carteiraRenewalSelectHtml(s) + '</td>' +
+          '<td>' + (temp === "Não definido" ? "—" : temp) + '</td>' +
+          '<td>' + carteiraRenovacaoLabel(s) + '</td>' +
+        '</tr>';
+      }).join("") + '</tbody></table></div>' +
+      (list.length > 300 ? '<p class="hint" style="margin-top:10px;">mostrando os primeiros 300 — use a busca pra refinar.</p>' : '');
+    carteiraWireInlineSelects(wrap);
   }
 
   var carteirasBarChartInstances = {};
@@ -2974,6 +3174,7 @@
       (ownerCardsHtml ? '<div style="margin-top:14px;">' + ownerCardsHtml + '</div>' : '');
 
     renderCarteirasHighlight();
+    updateCarteirasToggleBtn();
     renderCarteirasList();
   }
 
