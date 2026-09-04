@@ -241,6 +241,12 @@
   .trilha-body b{display:block;font-size:12.5px;}
   .trilha-body.done b{color:var(--eg-text-secondary);text-decoration:line-through;text-decoration-color:var(--eg-navy-line);}
   .trilha-body p{margin:3px 0 0;font-size:11.5px;color:var(--eg-text-secondary);line-height:1.5;}
+  .curso-progress-item{padding:8px 0;}
+  .curso-progress-item .curso-progress-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px;}
+  .curso-progress-item .curso-progress-name{font-size:12.5px;font-weight:600;}
+  .curso-progress-item .curso-progress-pct{font-size:11.5px;color:var(--eg-text-muted);flex-shrink:0;}
+  .curso-progress-track{height:6px;border-radius:4px;background:var(--eg-navy-line);overflow:hidden;}
+  .curso-progress-fill{height:100%;background:var(--eg-gold-500);border-radius:4px;}
   .metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
   .metric-card{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:12px;padding:14px 16px;}
   .metric-card .lbl{font-size:10.5px;color:var(--eg-text-muted);margin-bottom:6px;}
@@ -704,6 +710,10 @@
       <div id="alunoTrilhaCard" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--eg-navy-line);">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--eg-text-muted);margin-bottom:8px;">Trilha do aluno</div>
         <div id="alunoTrilhaWrap"><p class="hint">Carregando...</p></div>
+      </div>
+      <div id="alunoCursoProgressCard" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--eg-navy-line);">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--eg-text-muted);margin-bottom:8px;">Progresso nos cursos (Cademi)</div>
+        <div id="alunoCursoProgressWrap"><p class="hint">Carregando...</p></div>
       </div>
       <div class="form-grid">
         <div><label>Status</label>
@@ -1277,6 +1287,30 @@
   }
   function renderTrilhaItems(items){ return items.join(""); }
 
+  // % assistido em cada produto/curso da Cademi, alimentado pelo webhook
+  // "user.progress" (course_progress) — é progresso no PRODUTO inteiro
+  // (ex: "Aulas Endogin"), não por aula individual.
+  function loadAlunoCourseProgress(student){
+    var wrap = $("alunoCursoProgressWrap");
+    if(!wrap) return;
+    wrap.innerHTML = '<p class="hint">Carregando...</p>';
+    sb.from("course_progress").select("progress_percentage,updated_at,courses(name)").eq("student_id", student.id).order("progress_percentage", { ascending: false }).then(function(res){
+      var rows = res.data || [];
+      if(!rows.length){
+        wrap.innerHTML = '<p class="hint">Ainda sem dados de progresso vindos da Cademi.</p>';
+        return;
+      }
+      wrap.innerHTML = rows.map(function(r){
+        var pct = Math.max(0, Math.min(100, Math.round(Number(r.progress_percentage) || 0)));
+        var name = (r.courses && r.courses.name) || "Curso";
+        return '<div class="curso-progress-item">' +
+          '<div class="curso-progress-top"><span class="curso-progress-name">' + name + '</span><span class="curso-progress-pct">' + pct + '%</span></div>' +
+          '<div class="curso-progress-track"><div class="curso-progress-fill" style="width:' + pct + '%;"></div></div>' +
+          '</div>';
+      }).join("");
+    });
+  }
+
   function openAlunoModal(id){
     var student = allStudents.find(function(s){ return s.id === id; });
     if(!student) return;
@@ -1326,6 +1360,7 @@
     $("alunoFieldOneOnOneDate").value = student.one_on_one_date || "";
     $("alunoFieldOneOnOneSummary").value = student.one_on_one_summary || "";
     loadAlunoTrilha(student);
+    loadAlunoCourseProgress(student);
     $("alunoFieldDietary").value = student.dietary_restriction || "";
     $("alunoFieldShoeSize").value = student.shoe_size || "";
     $("alunoFieldJacketSize").value = student.jacket_size || "";
