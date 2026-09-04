@@ -166,6 +166,8 @@
   .lesson-info{flex:1;min-width:0;}
   .lesson-info b{display:block;font-size:13px;font-weight:600;}
   .lesson-info span{font-size:11px;color:var(--eg-text-muted);}
+  .lesson-link{flex-shrink:0;font-size:11px;font-weight:700;color:var(--eg-gold-300);text-decoration:none;white-space:nowrap;}
+  .lesson-link:hover{opacity:0.8;}
 
   .cs-card{display:flex;align-items:center;gap:13px;}
   .cs-card .av{width:48px;height:48px;border-radius:50%;background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#241705;flex-shrink:0;background-size:cover;background-position:center;}
@@ -963,11 +965,15 @@
 
   // ---------------- aulas obrigatórias (trilha) ----------------
   function loadLessons(branchIds){
-    if(!branchIds.length){ $("lessonsCard").style.display = "none"; return Promise.resolve(true); }
+    // "trilha" com branch_id nulo = obrigatória pra QUALQUER aluno novo,
+    // independente da mentoria (ex: as aulas preparatórias antes do 1x1) —
+    // por isso o "or" com "branch_id.is.null", não só as da mentoria dele.
+    var orParts = ["branch_id.is.null"];
+    if(branchIds.length){ orParts.push("branch_id.in.(" + branchIds.join(",") + ")"); }
     return sb.from("lessons")
-      .select("id,title,duration_minutes,lesson_type,branch_id")
+      .select("id,title,duration_minutes,lesson_type,branch_id,link_url")
       .eq("lesson_type", "trilha")
-      .in("branch_id", branchIds)
+      .or(orParts.join(","))
       .then(function(r){
         var lessons = r.data || [];
         if(!lessons.length){ $("lessonsCard").style.display = "none"; return true; }
@@ -985,6 +991,7 @@
               return '<div class="lesson-row">' +
                 '<div class="lesson-check ' + (done ? "done" : "pending") + '"><i class="fa-solid ' + (done ? "fa-check" : "fa-circle-notch") + '"></i></div>' +
                 '<div class="lesson-info"><b>' + l.title + '</b>' + (l.duration_minutes ? '<span>' + l.duration_minutes + ' min</span>' : '') + '</div>' +
+                (l.link_url ? '<a class="lesson-link" href="' + l.link_url + '" target="_blank" rel="noopener">Assistir <i class="fa-solid fa-arrow-up-right-from-square"></i></a>' : '') +
                 '</div>';
             }).join("");
             return doneCount === lessons.length;
@@ -1087,10 +1094,21 @@
             '</div>' +
             '<div class="calw-side">' +
               (tag ? '<span class="calw-live">' + tag + '</span>' : '') +
-              (l.link_url ? '<a class="calw-watch-btn" href="' + l.link_url + '" target="_blank" rel="noopener" title="Assistir/entrar"><i class="fa-solid fa-play"></i></a>' : '') +
+              (l.link_url ? '<a class="calw-watch-btn js-live-click" data-lesson-id="' + l.id + '" href="' + l.link_url + '" target="_blank" rel="noopener" title="Assistir/entrar"><i class="fa-solid fa-play"></i></a>' : '') +
             '</div>' +
           '</div>';
         }).join("");
+        // conta engajamento: quantos alunos clicaram pra entrar na aula ao
+        // vivo (não é presença confirmada pelo Zoom, só o clique aqui na
+        // plataforma — mas já dá um número útil pra CS e pros doutores).
+        $("calendarList").querySelectorAll(".js-live-click").forEach(function(btn){
+          btn.addEventListener("click", function(){
+            sb.from("live_click_log").insert({
+              lesson_id: btn.getAttribute("data-lesson-id"),
+              student_id: currentStudent.id
+            }).then(function(){});
+          });
+        });
       });
   }
 

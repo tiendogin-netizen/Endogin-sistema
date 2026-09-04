@@ -574,6 +574,15 @@
         </div>
         <button class="btn-primary" id="exportAlunosBtn" style="margin-top:16px;"><i class="fa-solid fa-file-excel"></i> Gerar Excel dos alunos</button>
       </div>
+      <div class="card" id="importAlunosCard" style="display:none;">
+        <div class="card-head"><h3><i class="fa-solid fa-file-import icn"></i>Importar alunos por planilha</h3></div>
+        <p class="hint" style="margin:-8px 0 10px;">Sobe um .xlsx com uma linha de cabeçalho. Casa pelo <b>E-mail</b>: se já existe aluno com aquele e-mail, atualiza os campos preenchidos; se não existe, cria um novo. Colunas aceitas (nem todas são obrigatórias — só E-mail é sempre necessário):</p>
+        <p class="hint" style="margin:0 0 14px;"><i>Nome completo, E-mail, Telefone, CPF, CS responsável, Status, Temperatura, Status de renovação, Data de entrada, Data de vencimento, Data de nascimento, Instagram, CRM (médico), Status do 1:1, Restrição alimentar, Anotações.</i> Use "Gerar Excel dos alunos" acima com essas colunas marcadas pra já baixar no formato certo.</p>
+        <p class="hint" style="margin:0 0 14px;color:var(--eg-gold-300);">Mentoria/braço e grupos de WhatsApp não entram na importação — isso ainda precisa ser feito aluno por aluno na aba Alunos depois.</p>
+        <input type="file" id="importAlunosFile" accept=".xlsx" style="display:none;">
+        <button class="btn-primary" id="importAlunosBtn"><i class="fa-solid fa-file-arrow-up"></i> Escolher planilha e importar</button>
+        <div id="importAlunosStatus" class="hint" style="margin-top:12px;"></div>
+      </div>
       <div class="card">
         <div class="card-head"><h3><i class="fa-solid fa-file-export icn"></i>Outros relatórios</h3></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -691,9 +700,14 @@
         <div><label>Status de renovação</label><input type="text" id="alunoFieldRenewalStatus" placeholder="ex: Renovado, A vencer, Vencido"></div>
         <div><label>Temperatura</label><input type="text" id="alunoFieldTemperature" placeholder="ex: Quente, Morno, Frio"></div>
         <div><label>Responsável pela renovação</label><select id="alunoFieldRenewalOwner"><option value="">Sem responsável definido</option></select></div>
+        <div>
+          <label>Pagamento</label>
+          <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-weight:400;"><input type="checkbox" id="alunoFieldDelinquent" style="width:auto;"> Inadimplente (marcado manualmente até integrar com a Guru)</label>
+        </div>
         <div style="grid-column:1/-1;"><label>Nota da renovação</label><input type="text" id="alunoFieldRenewalNote" placeholder="ex: tentando contato, mensalidade pendente..."></div>
 
         <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Sessão 1:1</label></div>
+        <div style="grid-column:1/-1;" class="hint" id="alunoPrepLessonsHint"></div>
         <div><label>Status do 1:1</label><input type="text" id="alunoFieldOneOnOneStatus" placeholder="ex: Pendente, Concluído"></div>
         <div><label>Data do 1:1</label><input type="text" id="alunoFieldOneOnOneDate" placeholder="data ou observação livre"></div>
         <div style="grid-column:1/-1;"><label>Resumo pós 1:1</label><input type="text" id="alunoFieldOneOnOneSummary"></div>
@@ -839,6 +853,7 @@
         <div><label>Capa (link da imagem, opcional)</label><input type="text" id="lessonFieldCover" placeholder="https://..."></div>
         <div style="grid-column:1/-1;"><label>Descrição curta (opcional)</label><input type="text" id="lessonFieldDescription" placeholder="Ex: Ao vivo no Zoom, com o Dr. Vinícius."></div>
         <div style="grid-column:1/-1;"><label>Link da aula/encontro (opcional)</label><input type="text" id="lessonFieldLink" placeholder="https://..."></div>
+        <div style="grid-column:1/-1;"><label>ID da reunião no Zoom (opcional)</label><input type="text" id="lessonFieldZoomId" placeholder="Ex: 812 3456 7890 — pra calcular presença na aula ao vivo"></div>
       </div>
       <div class="err-msg" id="lessonModalErr"></div>
     </div>
@@ -972,6 +987,7 @@
         if(currentStaff.isMasterLike){
           $("masterDistCard").style.display = "block";
           $("csFilterWrap").style.display = "block";
+          $("importAlunosCard").style.display = "block";
           $("alunosTitle").textContent = "Todos os alunos";
           loadDistSetting();
         }
@@ -1173,6 +1189,22 @@
     });
   }
 
+  // aulas preparatórias (trilha) que o aluno precisa assistir antes do 1x1 —
+  // completed vem do webhook da Cademi (lesson_progress), aqui é só leitura.
+  function loadAlunoPrepLessons(studentId){
+    var hint = $("alunoPrepLessonsHint");
+    hint.textContent = "Carregando aulas preparatórias...";
+    sb.from("lessons").select("id").eq("lesson_type", "trilha").then(function(lr){
+      var trilhaIds = (lr.data || []).map(function(l){ return l.id; });
+      if(!trilhaIds.length){ hint.textContent = ""; return; }
+      sb.from("lesson_progress").select("lesson_id,completed").eq("student_id", studentId).in("lesson_id", trilhaIds).then(function(pr){
+        var doneCount = (pr.data || []).filter(function(p){ return p.completed; }).length;
+        hint.innerHTML = '<i class="fa-solid fa-graduation-cap"></i> Aulas preparatórias: <b>' + doneCount + ' de ' + trilhaIds.length + '</b> assistidas' +
+          (doneCount < trilhaIds.length ? ' <span style="color:var(--eg-gold-300);">— vale confirmar antes do 1x1</span>' : ' <span style="color:var(--eg-green);">— completo</span>');
+      });
+    });
+  }
+
   function openAlunoModal(id){
     var student = allStudents.find(function(s){ return s.id === id; });
     if(!student) return;
@@ -1203,6 +1235,7 @@
     $("alunoFieldEntryDate").value = student.entry_date || "";
     $("alunoFieldRenewalDate").value = student.renewal_date || "";
     $("alunoFieldLifetime").checked = Boolean(student.is_lifetime);
+    $("alunoFieldDelinquent").checked = Boolean(student.is_delinquent);
     $("alunoFieldRenewalStatus").value = student.renewal_status || "";
     $("alunoFieldTemperature").value = student.temperature || "";
     $("alunoFieldRenewalNote").value = student.renewal_note || "";
@@ -1219,6 +1252,7 @@
     $("alunoFieldOneOnOneStatus").value = student.one_on_one_status || "";
     $("alunoFieldOneOnOneDate").value = student.one_on_one_date || "";
     $("alunoFieldOneOnOneSummary").value = student.one_on_one_summary || "";
+    loadAlunoPrepLessons(id);
     $("alunoFieldDietary").value = student.dietary_restriction || "";
     $("alunoFieldShoeSize").value = student.shoe_size || "";
     $("alunoFieldJacketSize").value = student.jacket_size || "";
@@ -1273,6 +1307,8 @@
       entry_date: $("alunoFieldEntryDate").value || null,
       renewal_date: $("alunoFieldRenewalDate").value || null,
       is_lifetime: $("alunoFieldLifetime").checked,
+      is_delinquent: $("alunoFieldDelinquent").checked,
+      delinquent_since: $("alunoFieldDelinquent").checked ? (student.is_delinquent ? student.delinquent_since : new Date().toISOString().slice(0, 10)) : null,
       renewal_status: $("alunoFieldRenewalStatus").value.trim() || null,
       temperature: $("alunoFieldTemperature").value.trim() || null,
       renewal_owner_id: $("alunoFieldRenewalOwner").value || null,
@@ -2557,6 +2593,7 @@
 
   // ---------------- Calendário (aulas semanais / encontros) ----------------
   var allLessons = [];
+  var lessonClickStats = {};
   var lessonEditingId = null;
   var LESSON_WEEKDAY_LABEL = { segunda:"Segunda", terca:"Terça", quarta:"Quarta", quinta:"Quinta", sexta:"Sexta", sabado:"Sábado", domingo:"Domingo" };
 
@@ -2595,6 +2632,7 @@
     $("lessonFieldCover").value = "";
     $("lessonFieldDescription").value = "";
     $("lessonFieldLink").value = "";
+    $("lessonFieldZoomId").value = "";
     toggleLessonTypeFields();
     $("lessonModal").classList.add("open");
   });
@@ -2615,6 +2653,7 @@
     $("lessonFieldCover").value = l.cover_url || "";
     $("lessonFieldDescription").value = l.description || "";
     $("lessonFieldLink").value = l.link_url || "";
+    $("lessonFieldZoomId").value = l.zoom_meeting_id || "";
     toggleLessonTypeFields();
     $("lessonModal").classList.add("open");
   }
@@ -2638,7 +2677,8 @@
       category: $("lessonFieldCategory").value || null,
       cover_url: $("lessonFieldCover").value.trim() || null,
       description: $("lessonFieldDescription").value.trim() || null,
-      link_url: $("lessonFieldLink").value.trim() || null
+      link_url: $("lessonFieldLink").value.trim() || null,
+      zoom_meeting_id: $("lessonFieldZoomId").value.trim() || null
     };
     $("lessonSaveBtn").disabled = true;
     var query = lessonEditingId
@@ -2655,15 +2695,29 @@
   function loadCalendarioAdmin(){
     $("calendarioLoading").style.display = "block";
     $("calendarioList").innerHTML = "";
-    sb.from("lessons")
-      .select("id,title,lesson_type,branch_id,weekday,event_date,scheduled_time,duration_minutes,category,cover_url,description,link_url")
-      .in("lesson_type", ["semanal", "evento"])
-      .then(function(r){
-        $("calendarioLoading").style.display = "none";
-        if(r.error){ $("calendarioLoading").textContent = "Erro: " + r.error.message; $("calendarioLoading").style.display = "block"; return; }
-        allLessons = r.data || [];
-        renderCalendarioList();
+    Promise.all([
+      sb.from("lessons")
+        .select("id,title,lesson_type,branch_id,weekday,event_date,scheduled_time,duration_minutes,category,cover_url,description,link_url,zoom_meeting_id")
+        .in("lesson_type", ["semanal", "evento"]),
+      // clique em "Assistir/entrar" no Portal do Aluno — não é presença
+      // confirmada pelo Zoom, é só engajamento medido pela própria
+      // plataforma, mas já dá um número útil enquanto a integração com o
+      // Zoom não existe.
+      sb.from("live_click_log").select("lesson_id,clicked_at")
+    ]).then(function(results){
+      var lr = results[0], cr = results[1];
+      $("calendarioLoading").style.display = "none";
+      if(lr.error){ $("calendarioLoading").textContent = "Erro: " + lr.error.message; $("calendarioLoading").style.display = "block"; return; }
+      allLessons = lr.data || [];
+      lessonClickStats = {};
+      var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      (cr.data || []).forEach(function(row){
+        var stat = lessonClickStats[row.lesson_id] || (lessonClickStats[row.lesson_id] = { total: 0, last7: 0 });
+        stat.total++;
+        if(new Date(row.clicked_at).getTime() >= weekAgo) stat.last7++;
       });
+      renderCalendarioList();
+    });
   }
 
   function renderCalendarioList(){
@@ -2687,6 +2741,7 @@
           '<b>' + l.title + '</b>' +
           '<div class="hint">' + (when || "sem horário definido") + (l.duration_minutes ? " · " + l.duration_minutes + " min" : "") + " · " + (branch ? branch.name : "Todas as mentorias") + '</div>' +
           (l.description ? '<div class="hint">' + l.description + '</div>' : '') +
+          (l.link_url ? '<div class="hint"><i class="fa-solid fa-users"></i> ' + (lessonClickStats[l.id] ? lessonClickStats[l.id].total + " clique(s) no total · " + lessonClickStats[l.id].last7 + " nos últimos 7 dias" : "0 cliques até agora") + '</div>' : '') +
         '</div>' +
         (currentStaff.isMasterLike ? '<div style="display:flex;gap:6px;">' +
           '<button class="btn-secondary lesson-edit-btn" data-id="' + l.id + '"><i class="fa-solid fa-pen"></i></button>' +
@@ -3360,6 +3415,157 @@
       downloadWorkbook(wb, "endogin-indicacoes.xlsx");
     });
   });
+
+  // ---------------- Importar alunos por planilha (só master) ----------------
+  // Casa por e-mail: existe -> atualiza só os campos preenchidos; não existe
+  // -> cria. Mentoria/braço e grupos de WhatsApp ficam de fora de propósito
+  // (precisam da lógica de matching de nome pra branch, que já dá trabalho
+  // even no import automático da Cademi — melhor a CS ajustar na tela dela).
+  var IMPORT_STATUS_VALUES = ["onboarding", "ativo", "inativo", "em_reonboarding", "trancado", "cancelado"];
+  function normalizeHeader(h){
+    return (h || "").toString().trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  }
+  var IMPORT_COLUMN_MAP = {
+    "nome completo": "full_name", "nome": "full_name",
+    "e-mail": "email", "email": "email",
+    "telefone": "phone", "celular": "phone",
+    "cpf": "cpf",
+    "cs responsavel": "__cs_name",
+    "status": "status",
+    "temperatura": "temperature",
+    "status de renovacao": "renewal_status",
+    "data de entrada": "entry_date",
+    "data de vencimento": "renewal_date",
+    "data de nascimento": "birth_date",
+    "instagram": "instagram",
+    "crm (medico)": "medical_license", "crm": "medical_license",
+    "status do 1:1": "one_on_one_status",
+    "restricao alimentar": "dietary_restriction",
+    "anotacoes": "notes", "observacoes": "notes"
+  };
+  function parseImportDate(val){
+    if(val === null || val === undefined || val === "") return null;
+    if(val instanceof Date && !isNaN(val)){
+      return val.getFullYear() + "-" + String(val.getMonth() + 1).padStart(2, "0") + "-" + String(val.getDate()).padStart(2, "0");
+    }
+    var s = String(val).trim();
+    var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(iso) return iso[1] + "-" + iso[2] + "-" + iso[3];
+    var br = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(br) return br[3] + "-" + br[2].padStart(2, "0") + "-" + br[1].padStart(2, "0");
+    return null;
+  }
+
+  $("importAlunosBtn").addEventListener("click", function(){ $("importAlunosFile").click(); });
+  $("importAlunosFile").addEventListener("change", function(e){
+    var file = e.target.files && e.target.files[0];
+    if(!file) return;
+    e.target.value = "";
+    if(typeof ExcelJS === "undefined"){ alert("A biblioteca de Excel ainda está carregando, tenta de novo em alguns segundos."); return; }
+    var statusEl = $("importAlunosStatus");
+    statusEl.textContent = "Lendo planilha...";
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var wb = new ExcelJS.Workbook();
+      wb.xlsx.load(ev.target.result).then(function(){
+        var sheet = wb.worksheets[0];
+        if(!sheet){ statusEl.textContent = "Não achei nenhuma aba na planilha."; return; }
+        var colFieldByIndex = {};
+        sheet.getRow(1).eachCell(function(cell, colNumber){
+          var field = IMPORT_COLUMN_MAP[normalizeHeader(cell.value)];
+          if(field) colFieldByIndex[colNumber] = field;
+        });
+        if(!Object.keys(colFieldByIndex).length){
+          statusEl.textContent = "Não reconheci nenhuma coluna no cabeçalho. Confere se a primeira linha tem os nomes das colunas.";
+          return;
+        }
+        var rows = [];
+        for(var r = 2; r <= sheet.rowCount; r++){
+          var row = sheet.getRow(r);
+          if(!row || row.cellCount === 0) continue;
+          var obj = {}; var hasData = false;
+          Object.keys(colFieldByIndex).forEach(function(colNumberStr){
+            var colNumber = parseInt(colNumberStr, 10);
+            var field = colFieldByIndex[colNumber];
+            var cell = row.getCell(colNumber);
+            var val = cell ? cell.value : null;
+            if(val && typeof val === "object" && !(val instanceof Date) && val.text !== undefined) val = val.text;
+            if(val !== null && val !== undefined && val !== "") hasData = true;
+            obj[field] = val;
+          });
+          if(hasData) rows.push(obj);
+        }
+        if(!rows.length){ statusEl.textContent = "Planilha sem nenhuma linha de dados."; return; }
+        processImportRows(rows, statusEl);
+      }).catch(function(err){
+        statusEl.textContent = "Erro ao ler o arquivo: " + err.message;
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  function processImportRows(rows, statusEl){
+    var created = 0, updated = 0, errors = [];
+    var i = 0;
+    function finish(){
+      statusEl.innerHTML = "<b>Importação concluída:</b> " + created + " criado(s), " + updated + " atualizado(s)" +
+        (errors.length ? ", " + errors.length + " com aviso (veja abaixo)" : ".") +
+        (errors.length ? '<br><span style="color:var(--eg-gold-300);">' + errors.join("<br>") + '</span>' : "");
+      loadAlunos();
+    }
+    function next(){
+      if(i >= rows.length){ finish(); return; }
+      var row = rows[i]; i++;
+      statusEl.textContent = "Processando " + i + " de " + rows.length + "...";
+      var email = (row.email || "").toString().trim().toLowerCase();
+      if(!email){ errors.push("Linha sem e-mail — ignorada (" + (row.full_name || "sem nome") + ")."); next(); return; }
+
+      var updates = { email: email };
+      if(row.full_name) updates.full_name = String(row.full_name).trim();
+      if(row.phone) updates.phone = String(row.phone).trim();
+      if(row.cpf) updates.cpf = String(row.cpf).trim();
+      if(row.status){
+        var st = String(row.status).trim().toLowerCase().replace(/\s+/g, "_");
+        if(IMPORT_STATUS_VALUES.indexOf(st) > -1) updates.status = st;
+        else errors.push(email + ': status "' + row.status + '" não reconhecido — ignorado.');
+      }
+      if(row.temperature) updates.temperature = String(row.temperature).trim();
+      if(row.renewal_status) updates.renewal_status = String(row.renewal_status).trim();
+      if(row.instagram) updates.instagram = String(row.instagram).trim();
+      if(row.medical_license) updates.medical_license = String(row.medical_license).trim();
+      if(row.one_on_one_status) updates.one_on_one_status = String(row.one_on_one_status).trim();
+      if(row.dietary_restriction) updates.dietary_restriction = String(row.dietary_restriction).trim();
+      if(row.notes) updates.notes = String(row.notes).trim();
+      var entryDate = parseImportDate(row.entry_date); if(entryDate) updates.entry_date = entryDate;
+      var renewalDate = parseImportDate(row.renewal_date); if(renewalDate) updates.renewal_date = renewalDate;
+      var birthDate = parseImportDate(row.birth_date); if(birthDate) updates.birth_date = birthDate;
+      if(row.__cs_name){
+        var csName = String(row.__cs_name).trim().toLowerCase();
+        var matchedCs = allStaff.find(function(s){ return (s.full_name || "").trim().toLowerCase() === csName; });
+        if(matchedCs) updates.cs_id = matchedCs.id;
+        else errors.push(email + ': CS "' + row.__cs_name + '" não encontrada — deixei sem CS vinculada.');
+      }
+
+      sb.from("students").select("id").ilike("email", email).limit(1).then(function(existing){
+        var found = existing.data && existing.data[0];
+        if(found){
+          sb.from("students").update(updates).eq("id", found.id).then(function(r){
+            if(r.error) errors.push(email + ": erro ao atualizar — " + r.error.message); else updated++;
+            next();
+          });
+        } else {
+          if(!updates.full_name) updates.full_name = email;
+          if(!updates.status) updates.status = "onboarding";
+          updates.source = "planilha_cs";
+          sb.from("students").insert(updates).then(function(r){
+            if(r.error) errors.push(email + ": erro ao criar — " + r.error.message); else created++;
+            next();
+          });
+        }
+      });
+    }
+    next();
+  }
 </script>
 </body>
 </html>
