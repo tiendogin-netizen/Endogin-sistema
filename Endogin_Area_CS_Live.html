@@ -3077,10 +3077,10 @@
       status.style.display = "block";
       status.textContent = "Contando alunos...";
 
-      // conta quantos alunos têm cademi_user_id — é o total que vai ser
-      // percorrido — só pra mostrar "X de Y" durante a sincronização (foi
-      // pedido explicitamente: acompanhar o andamento, não só um texto vago).
-      sb.from("students").select("id", { count: "exact", head: true }).not("cademi_user_id", "is", null).then(function(countRes){
+      // conta TODOS os alunos (a busca agora usa e-mail pra quem ainda não
+      // tem o ID da Cademí gravado) — só pra mostrar "X de Y" durante a
+      // sincronização (foi pedido explicitamente: acompanhar o andamento).
+      sb.from("students").select("id", { count: "exact", head: true }).then(function(countRes){
         var total = countRes.count || 0;
         var offset = 0;
         var totalProcessed = 0;
