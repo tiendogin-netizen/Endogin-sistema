@@ -287,6 +287,7 @@
         <button class="tab-btn" data-tab="aulas"><i class="fa-solid fa-graduation-cap"></i>Aulas</button>
         <button class="tab-btn" data-tab="calendario"><i class="fa-regular fa-calendar-days"></i>Calendário</button>
         <button class="tab-btn" data-tab="materiais"><i class="fa-solid fa-folder-open"></i>Materiais</button>
+        <button class="tab-btn" data-tab="progresso"><i class="fa-solid fa-chart-line"></i>Progresso de aulas</button>
         <button class="tab-btn" data-tab="sessoes"><i class="fa-solid fa-calendar-check"></i>Sessões 1x1</button>
         <button class="tab-btn" data-tab="trilha"><i class="fa-solid fa-route"></i>Trilha CS</button>
         <button class="tab-btn" data-tab="aniversarios"><i class="fa-solid fa-cake-candles"></i>Aniversários</button>
@@ -533,6 +534,25 @@
         <div class="card-head"><h3><i class="fa-solid fa-book"></i>Biblioteca</h3></div>
         <input type="text" class="search-input" id="matSearch" placeholder="Buscar por título ou código..." style="max-width:320px;margin-bottom:10px;">
         <div id="matList"></div>
+      </div>
+    </div>
+
+    <!-- ================= PROGRESSO DE AULAS ================= -->
+    <div class="tab-panel" id="tab-progresso">
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-chart-line icn"></i>Progresso em aulas gravadas (Cademí)</h3>
+          <button class="btn-secondary" id="progressoSyncBtn"><i class="fa-solid fa-rotate"></i> Sincronizar agora</button>
+        </div>
+        <p class="hint" style="margin:-8px 0 14px;">Puxa da Cademí quanto cada aluno já assistiu em cada curso — inclusive progresso feito antes de hoje, não só o que acontecer daqui pra frente. Pode levar alguns minutos dependendo do número de alunos; dá pra continuar usando o sistema enquanto sincroniza.</p>
+        <p class="hint" id="progressoSyncStatus" style="display:none;margin:-8px 0 14px;"></p>
+        <input type="text" class="search-input" id="progressoSearch" placeholder="Buscar por nome do aluno..." style="max-width:320px;margin-bottom:10px;">
+        <div id="progressoLoading" class="loading-note">Carregando...</div>
+        <div id="progressoList"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-video icn"></i>Presença em aula ao vivo (Zoom)</h3></div>
+        <p class="hint">Ainda não integrado — depende da liberação da API do Zoom pelo Dr. Caio (marcado para essa semana). Enquanto isso, o engajamento com aula ao vivo aparece pelo número de cliques em "Assistir" na aba <b>Calendário</b>.</p>
       </div>
     </div>
 
@@ -1082,6 +1102,9 @@
       }
       if(btn.getAttribute("data-tab") === "aulas"){
         startAulasChatIfNeeded();
+      }
+      if(btn.getAttribute("data-tab") === "progresso"){
+        startProgressoIfNeeded();
       }
     });
   });
@@ -2942,6 +2965,106 @@
           loadDocumentsAdmin();
         });
       });
+    });
+  }
+
+  // ---------------- Progresso de aulas (Cademí) ----------------
+  // course_progress vem de duas fontes: o webhook "user.progress" (só pra
+  // frente) e a edge function cademi-sync-progress (puxa da API da Cademí o
+  // que o aluno já tinha assistido antes — botão "Sincronizar agora" abaixo).
+  var progressoLoaded = false;
+  var allCourseProgress = [];
+  var progressoSyncing = false;
+
+  function startProgressoIfNeeded(){
+    if(progressoLoaded) return;
+    progressoLoaded = true;
+    loadProgressoAdmin();
+  }
+
+  function loadProgressoAdmin(){
+    var loading = $("progressoLoading");
+    var wrap = $("progressoList");
+    if(loading) loading.style.display = "block";
+    if(wrap) wrap.innerHTML = "";
+    sb.from("course_progress")
+      .select("progress_percentage,updated_at,student:student_id(full_name),course:course_id(name)")
+      .order("progress_percentage", { ascending: false })
+      .then(function(r){
+        if(loading) loading.style.display = "none";
+        if(r.error){ if(wrap) wrap.innerHTML = '<p class="hint">Erro: ' + r.error.message + '</p>'; return; }
+        allCourseProgress = r.data || [];
+        renderProgressoList();
+      });
+  }
+
+  function renderProgressoList(){
+    var wrap = $("progressoList");
+    if(!wrap) return;
+    var term = (($("progressoSearch") && $("progressoSearch").value) || "").trim().toLowerCase();
+    var list = allCourseProgress.filter(function(p){
+      if(!term) return true;
+      return ((p.student && p.student.full_name) || "").toLowerCase().indexOf(term) > -1;
+    });
+    if(!list.length){
+      wrap.innerHTML = '<p class="hint">Nenhum dado de progresso ainda. Clique em "Sincronizar agora" acima pra puxar da Cademí.</p>';
+      return;
+    }
+    wrap.innerHTML = '<div class="carteira-table-wrap"><table><thead><tr><th>Aluno</th><th>Curso</th><th>Progresso</th><th>Atualizado em</th></tr></thead><tbody>' +
+      list.map(function(p){
+        var pct = Math.max(0, Math.min(100, Math.round(Number(p.progress_percentage) || 0)));
+        return '<tr>' +
+          '<td>' + ((p.student && p.student.full_name) || "—") + '</td>' +
+          '<td>' + ((p.course && p.course.name) || "—") + '</td>' +
+          '<td style="min-width:140px;"><div class="curso-progress-item" style="padding:0;"><div class="curso-progress-top"><span></span><span class="curso-progress-pct">' + pct + '%</span></div><div class="curso-progress-track"><div class="curso-progress-fill" style="width:' + pct + '%;"></div></div></div></td>' +
+          '<td>' + (p.updated_at ? fmtEventDate(String(p.updated_at).slice(0,10)) : "—") + '</td>' +
+        '</tr>';
+      }).join("") + '</tbody></table></div>';
+  }
+
+  if($("progressoSearch")){
+    $("progressoSearch").addEventListener("input", renderProgressoList);
+  }
+
+  if($("progressoSyncBtn")){
+    $("progressoSyncBtn").addEventListener("click", function(){
+      if(progressoSyncing) return;
+      progressoSyncing = true;
+      var btn = $("progressoSyncBtn");
+      var status = $("progressoSyncStatus");
+      btn.disabled = true;
+      status.style.display = "block";
+      status.textContent = "Sincronizando com a Cademí...";
+      var offset = 0;
+      var totalProcessed = 0;
+      var allSyncErrors = [];
+      function finish(msg){
+        status.textContent = msg;
+        btn.disabled = false;
+        progressoSyncing = false;
+        loadProgressoAdmin();
+      }
+      function step(){
+        sb.functions.invoke("cademi-sync-progress", { body: { offset: offset, limit: 10 } }).then(function(r){
+          if(r.error || !r.data || r.data.ok === false){
+            finish("Erro ao sincronizar: " + (r.error ? r.error.message : (r.data && r.data.error) || "falha desconhecida"));
+            return;
+          }
+          totalProcessed += r.data.processed || 0;
+          if(r.data.errors && r.data.errors.length) allSyncErrors = allSyncErrors.concat(r.data.errors);
+          if(r.data.done){
+            if(allSyncErrors.length) console.warn("cademi-sync-progress avisos", allSyncErrors);
+            finish("Sincronização concluída: " + totalProcessed + " aluno(s) verificados" + (allSyncErrors.length ? ", " + allSyncErrors.length + " aviso(s) (veja o console)." : "."));
+            return;
+          }
+          status.textContent = "Sincronizando... " + totalProcessed + " aluno(s) verificados até agora.";
+          offset = r.data.next_offset;
+          step();
+        }).catch(function(e){
+          finish("Erro ao sincronizar: " + e.message);
+        });
+      }
+      step();
     });
   }
   $("matSearch").addEventListener("input", renderMatList);
