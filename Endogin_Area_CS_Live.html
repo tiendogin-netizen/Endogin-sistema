@@ -280,6 +280,7 @@
         <button class="tab-btn" data-tab="grupos"><i class="fa-brands fa-whatsapp"></i>Grupos WhatsApp</button>
         <button class="tab-btn" data-tab="aulas"><i class="fa-solid fa-graduation-cap"></i>Aulas</button>
         <button class="tab-btn" data-tab="calendario"><i class="fa-regular fa-calendar-days"></i>Calendário</button>
+        <button class="tab-btn" data-tab="materiais"><i class="fa-solid fa-folder-open"></i>Materiais</button>
         <button class="tab-btn" data-tab="sessoes"><i class="fa-solid fa-calendar-check"></i>Sessões 1x1</button>
         <button class="tab-btn" data-tab="trilha"><i class="fa-solid fa-route"></i>Trilha CS</button>
         <button class="tab-btn" data-tab="aniversarios"><i class="fa-solid fa-cake-candles"></i>Aniversários</button>
@@ -490,6 +491,45 @@
       </div>
     </div>
 
+    <!-- ================= MATERIAIS (protocolos, artigos, documentos) ================= -->
+    <div class="tab-panel" id="tab-materiais">
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-folder-open icn"></i>Subir material novo</h3></div>
+        <p class="hint" style="margin:-8px 0 14px;">PDF, artigo, checklist, planilha etc. Só a versão "Vigente" aparece pro aluno — arquive quando sair uma versão nova.</p>
+        <div class="form-grid">
+          <div style="grid-column:1/-1;"><label>Título</label><input type="text" id="matFieldTitle" placeholder="Ex: Protocolo educacional — Manejo de intercorrências com GLP-1"></div>
+          <div><label>Código (opcional)</label><input type="text" id="matFieldCode" placeholder="Ex: PROT-EMG-004"></div>
+          <div><label>Categoria</label>
+            <select id="matFieldCategory">
+              <option>Geral</option><option>Emagrecimento</option><option>TRH Feminina</option><option>TRH Masculina</option>
+              <option>Implantes</option><option>Lipedema</option><option>Gestão</option><option>Atualização</option>
+            </select>
+          </div>
+          <div><label>Tipo</label>
+            <select id="matFieldType">
+              <option>PDF</option><option>Checklist</option><option>Fluxograma</option><option>Planilha</option>
+              <option>Documento</option><option>Formulário</option><option>Termo</option><option>Artigo comentado</option>
+            </select>
+          </div>
+          <div><label>Versão</label><input type="text" id="matFieldVersion" placeholder="Ex: v3.1"></div>
+          <div><label>Data de revisão</label><input type="date" id="matFieldRevisionDate"></div>
+          <div><label>Responsável</label><input type="text" id="matFieldResponsible" placeholder="Ex: Dr. Caio Saraiva"></div>
+          <div><label>Mentoria (deixe em branco pra todas)</label><select id="matFieldBranch"><option value="">Todas as mentorias</option></select></div>
+          <div><label>Arquivo</label><input type="file" id="matFieldFile"></div>
+          <div style="display:flex;align-items:flex-end;">
+            <label style="display:flex;align-items:center;gap:6px;font-weight:400;"><input type="checkbox" id="matFieldViewOnly" style="width:auto;"> Só leitura (sem botão de baixar)</label>
+          </div>
+        </div>
+        <div class="err-msg" id="matUploadErr"></div>
+        <button class="btn-primary" id="matUploadBtn" style="margin-top:12px;"><i class="fa-solid fa-upload"></i> Subir material</button>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-book"></i>Biblioteca</h3></div>
+        <input type="text" class="search-input" id="matSearch" placeholder="Buscar por título ou código..." style="max-width:320px;margin-bottom:10px;">
+        <div id="matList"></div>
+      </div>
+    </div>
+
     <!-- ================= SESSÕES 1x1 ================= -->
     <div class="tab-panel" id="tab-sessoes">
       <div class="card">
@@ -661,6 +701,10 @@
       <button class="modal-close" id="alunoModalClose"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="modal-body">
+      <div id="alunoTrilhaCard" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--eg-navy-line);">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--eg-text-muted);margin-bottom:8px;">Trilha do aluno</div>
+        <div id="alunoTrilhaWrap"><p class="hint">Carregando...</p></div>
+      </div>
       <div class="form-grid">
         <div><label>Status</label>
           <select id="alunoFieldStatus">
@@ -707,7 +751,6 @@
         <div style="grid-column:1/-1;"><label>Nota da renovação</label><input type="text" id="alunoFieldRenewalNote" placeholder="ex: tentando contato, mensalidade pendente..."></div>
 
         <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Sessão 1:1</label></div>
-        <div style="grid-column:1/-1;" class="hint" id="alunoPrepLessonsHint"></div>
         <div><label>Status do 1:1</label><input type="text" id="alunoFieldOneOnOneStatus" placeholder="ex: Pendente, Concluído"></div>
         <div><label>Data do 1:1</label><input type="text" id="alunoFieldOneOnOneDate" placeholder="data ou observação livre"></div>
         <div style="grid-column:1/-1;"><label>Resumo pós 1:1</label><input type="text" id="alunoFieldOneOnOneSummary"></div>
@@ -1001,6 +1044,7 @@
         loadRecados();
         loadCalendarioAdmin();
         loadCarteiras();
+        loadDocumentsAdmin();
       });
     });
   }
@@ -1078,7 +1122,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,photo_url,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -1110,6 +1154,12 @@
   }
 
   var DISC_PROFILE_LABEL = { D:"Dominante", I:"Influente", S:"Estável", C:"Cauteloso" };
+  var DISC_COMM_TIP = {
+    D: "Vai direto ao ponto: seja objetiva, fale de resultado e não enrole na conversa.",
+    I: "Gosta de papo e reconhecimento: comece pelo relacionamento antes de entrar nos números.",
+    S: "Valoriza estabilidade: evite pressa, dê segurança e confirme cada passo com calma.",
+    C: "Analítico e detalhista: leve dados/números prontos, evite respostas vagas."
+  };
 
   // ---------------- link direto pro WhatsApp do aluno ----------------
   function waLink(phone){
@@ -1189,21 +1239,43 @@
     });
   }
 
-  // aulas preparatórias (trilha) que o aluno precisa assistir antes do 1x1 —
-  // completed vem do webhook da Cademi (lesson_progress), aqui é só leitura.
-  function loadAlunoPrepLessons(studentId){
-    var hint = $("alunoPrepLessonsHint");
-    hint.textContent = "Carregando aulas preparatórias...";
-    sb.from("lessons").select("id").eq("lesson_type", "trilha").then(function(lr){
-      var trilhaIds = (lr.data || []).map(function(l){ return l.id; });
-      if(!trilhaIds.length){ hint.textContent = ""; return; }
-      sb.from("lesson_progress").select("lesson_id,completed").eq("student_id", studentId).in("lesson_id", trilhaIds).then(function(pr){
-        var doneCount = (pr.data || []).filter(function(p){ return p.completed; }).length;
-        hint.innerHTML = '<i class="fa-solid fa-graduation-cap"></i> Aulas preparatórias: <b>' + doneCount + ' de ' + trilhaIds.length + '</b> assistidas' +
-          (doneCount < trilhaIds.length ? ' <span style="color:var(--eg-gold-300);">— vale confirmar antes do 1x1</span>' : ' <span style="color:var(--eg-green);">— completo</span>');
+  // "Trilha do aluno" — visão rápida de perfil 360 dentro do próprio
+  // cadastro: etapas do onboarding (NPS, DISC) + as aulas preparatórias
+  // (trilha) com link direto, pra CS confirmar antes do 1x1 sem precisar
+  // abrir outra tela. completed em lesson_progress vem do webhook da
+  // Cademi — aqui é só leitura.
+  function loadAlunoTrilha(student){
+    var wrap = $("alunoTrilhaWrap");
+    wrap.innerHTML = '<p class="hint">Carregando...</p>';
+    var onboardingSteps = [
+      { done: Boolean(student.onboarding_completed_at), title: "Cadastro inicial (NPS + foto/aniversário)" },
+      { done: Boolean(student.disc_completed_at), title: "Perfil comportamental (DISC)" }
+    ];
+    sb.from("lessons").select("id,title,link_url").eq("lesson_type", "trilha").then(function(lr){
+      var lessons = lr.data || [];
+      if(!lessons.length){
+        wrap.innerHTML = renderTrilhaItems(onboardingSteps.map(trilhaStepHtml)) +
+          '<p class="hint" style="margin-top:8px;">Nenhuma aula preparatória cadastrada ainda.</p>';
+        return;
+      }
+      sb.from("lesson_progress").select("lesson_id,completed").eq("student_id", student.id).in("lesson_id", lessons.map(function(l){ return l.id; })).then(function(pr){
+        var doneMap = {};
+        (pr.data || []).forEach(function(p){ doneMap[p.lesson_id] = p.completed; });
+        var lessonSteps = lessons.map(function(l){
+          return { done: Boolean(doneMap[l.id]), title: l.title, link: l.link_url };
+        });
+        wrap.innerHTML = renderTrilhaItems(onboardingSteps.concat(lessonSteps).map(trilhaStepHtml));
       });
     });
   }
+  function trilhaStepHtml(step){
+    return '<div class="trilha-item">' +
+      '<div class="trilha-check' + (step.done ? " done" : "") + '">' + (step.done ? '<i class="fa-solid fa-check"></i>' : "") + '</div>' +
+      '<div class="trilha-body' + (step.done ? " done" : "") + '"><b>' + step.title + '</b>' +
+      (step.link ? '<p><a href="' + step.link + '" target="_blank" rel="noopener" style="color:var(--eg-gold-300);">Abrir aula <i class="fa-solid fa-arrow-up-right-from-square"></i></a></p>' : "") +
+      '</div></div>';
+  }
+  function renderTrilhaItems(items){ return items.join(""); }
 
   function openAlunoModal(id){
     var student = allStudents.find(function(s){ return s.id === id; });
@@ -1223,7 +1295,8 @@
     if(discEl){
       var profile = student.disc_results && student.disc_results[0] && student.disc_results[0].primary_profile;
       discEl.innerHTML = profile
-        ? 'Perfil comportamental (DISC): <b>' + (DISC_PROFILE_LABEL[profile] || profile) + '</b>'
+        ? 'Perfil comportamental (DISC): <b>' + (DISC_PROFILE_LABEL[profile] || profile) + '</b>' +
+          (DISC_COMM_TIP[profile] ? '<br><span class="hint">' + DISC_COMM_TIP[profile] + '</span>' : '')
         : 'Perfil comportamental (DISC): <span class="hint">ainda não fez o teste</span>';
     }
     $("alunoFieldStatus").value = student.status;
@@ -1252,7 +1325,7 @@
     $("alunoFieldOneOnOneStatus").value = student.one_on_one_status || "";
     $("alunoFieldOneOnOneDate").value = student.one_on_one_date || "";
     $("alunoFieldOneOnOneSummary").value = student.one_on_one_summary || "";
-    loadAlunoPrepLessons(id);
+    loadAlunoTrilha(student);
     $("alunoFieldDietary").value = student.dietary_restriction || "";
     $("alunoFieldShoeSize").value = student.shoe_size || "";
     $("alunoFieldJacketSize").value = student.jacket_size || "";
@@ -1689,6 +1762,7 @@
       allStaff = staffRes.data || [];
       allBranches = branchRes.data || [];
       allGroups = groupsRes.data || [];
+      populateMatBranchSelect();
       staffBranchMap = {};
       (sbRes.data || []).forEach(function(row){
         var branch = allBranches.find(function(b){ return b.id === row.branch_id; });
@@ -2765,6 +2839,112 @@
       });
     });
   }
+
+  // ---------------- Materiais (protocolos, artigos, documentos) ----------------
+  var allDocuments = [];
+  function populateMatBranchSelect(){
+    var sel = $("matFieldBranch");
+    if(!sel) return;
+    sel.innerHTML = '<option value="">Todas as mentorias</option>' +
+      allBranches.map(function(b){ return '<option value="' + b.id + '">' + b.name + '</option>'; }).join("");
+  }
+
+  function loadDocumentsAdmin(){
+    var wrap = $("matList");
+    if(wrap) wrap.innerHTML = '<p class="hint">Carregando...</p>';
+    sb.from("documents").select("id,code,title,category,doc_type,version,revision_date,responsible_name,status,file_url,view_only,branch_id,is_new,branch:branch_id(name)")
+      .order("created_at", { ascending: false })
+      .then(function(r){
+        if(r.error){ if(wrap) wrap.innerHTML = '<p class="hint">Erro: ' + r.error.message + '</p>'; return; }
+        allDocuments = r.data || [];
+        renderMatList();
+      });
+  }
+
+  function renderMatList(){
+    var wrap = $("matList");
+    if(!wrap) return;
+    var term = ($("matSearch").value || "").trim().toLowerCase();
+    var list = allDocuments.filter(function(d){
+      if(!term) return true;
+      return (d.title || "").toLowerCase().indexOf(term) > -1 || (d.code || "").toLowerCase().indexOf(term) > -1;
+    });
+    if(!list.length){ wrap.innerHTML = '<p class="hint">Nenhum material encontrado.</p>'; return; }
+    wrap.innerHTML = '<div class="carteira-table-wrap"><table><thead><tr>' +
+      '<th>Documento</th><th>Categoria</th><th>Tipo</th><th>Versão</th><th>Revisão</th><th>Responsável</th><th>Mentoria</th><th>Status</th><th></th>' +
+      '</tr></thead><tbody>' +
+      list.map(function(d){
+        return '<tr>' +
+          '<td><b>' + d.title + '</b>' + (d.is_new ? ' <span class="wpp-group-tag" style="opacity:0.8;">NOVO</span>' : '') + (d.code ? '<br><span class="hint">' + d.code + '</span>' : '') + '</td>' +
+          '<td>' + (d.category || "—") + '</td>' +
+          '<td>' + (d.doc_type || "—") + '</td>' +
+          '<td>' + (d.version || "—") + '</td>' +
+          '<td>' + (d.revision_date ? fmtEventDate(d.revision_date) : "—") + '</td>' +
+          '<td>' + (d.responsible_name || "—") + '</td>' +
+          '<td>' + (d.branch ? d.branch.name : "Todas") + '</td>' +
+          '<td><span class="carteira-status-pill ' + (d.status === "vigente" ? "ativo" : "desativado") + '">' + (d.status === "vigente" ? "Vigente" : "Arquivado") + '</span></td>' +
+          '<td style="white-space:nowrap;">' +
+            '<a class="btn-secondary" href="' + d.file_url + '" target="_blank" rel="noopener" title="Abrir"><i class="fa-solid fa-eye"></i></a> ' +
+            '<button class="btn-secondary mat-toggle-btn" data-id="' + d.id + '" data-status="' + d.status + '" title="' + (d.status === "vigente" ? "Arquivar" : "Reativar") + '"><i class="fa-solid ' + (d.status === "vigente" ? "fa-box-archive" : "fa-rotate-left") + '"></i></button> ' +
+            '<button class="btn-secondary mat-del-btn" data-id="' + d.id + '" title="Excluir"><i class="fa-solid fa-trash"></i></button>' +
+          '</td>' +
+        '</tr>';
+      }).join("") + '</tbody></table></div>';
+    wrap.querySelectorAll(".mat-toggle-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var newStatus = btn.getAttribute("data-status") === "vigente" ? "arquivado" : "vigente";
+        sb.from("documents").update({ status: newStatus }).eq("id", btn.getAttribute("data-id")).then(function(r){
+          if(r.error){ alert("Erro: " + r.error.message); return; }
+          loadDocumentsAdmin();
+        });
+      });
+    });
+    wrap.querySelectorAll(".mat-del-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        if(!confirm("Excluir esse material? Isso não pode ser desfeito.")) return;
+        sb.from("documents").delete().eq("id", btn.getAttribute("data-id")).then(function(r){
+          if(r.error){ alert("Erro: " + r.error.message); return; }
+          loadDocumentsAdmin();
+        });
+      });
+    });
+  }
+  $("matSearch").addEventListener("input", renderMatList);
+
+  $("matUploadBtn").addEventListener("click", function(){
+    var title = $("matFieldTitle").value.trim();
+    var fileInput = $("matFieldFile");
+    var file = fileInput.files && fileInput.files[0];
+    $("matUploadErr").textContent = "";
+    if(!title){ $("matUploadErr").textContent = "Preenche o título."; return; }
+    if(!file){ $("matUploadErr").textContent = "Escolhe um arquivo pra subir."; return; }
+    $("matUploadBtn").disabled = true;
+    var path = Date.now() + "_" + file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    sb.storage.from("materiais").upload(path, file).then(function(up){
+      if(up.error){ $("matUploadErr").textContent = "Erro ao subir arquivo: " + up.error.message; $("matUploadBtn").disabled = false; return; }
+      var fileUrl = sb.storage.from("materiais").getPublicUrl(path).data.publicUrl;
+      sb.from("documents").insert({
+        title: title,
+        code: $("matFieldCode").value.trim() || null,
+        category: $("matFieldCategory").value,
+        doc_type: $("matFieldType").value,
+        version: $("matFieldVersion").value.trim() || null,
+        revision_date: $("matFieldRevisionDate").value || null,
+        responsible_name: $("matFieldResponsible").value.trim() || null,
+        branch_id: $("matFieldBranch").value || null,
+        view_only: $("matFieldViewOnly").checked,
+        file_url: fileUrl,
+        created_by: currentStaff.id
+      }).then(function(r){
+        $("matUploadBtn").disabled = false;
+        if(r.error){ $("matUploadErr").textContent = "Erro ao salvar: " + r.error.message; return; }
+        $("matFieldTitle").value = ""; $("matFieldCode").value = ""; $("matFieldVersion").value = "";
+        $("matFieldRevisionDate").value = ""; $("matFieldResponsible").value = ""; $("matFieldBranch").value = "";
+        $("matFieldViewOnly").checked = false; fileInput.value = "";
+        loadDocumentsAdmin();
+      });
+    });
+  });
 
   // ---------------- Carteiras CS (painel de vencimentos/renovação) ----------------
   var carteirasStudents = [];

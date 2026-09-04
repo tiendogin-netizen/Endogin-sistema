@@ -146,6 +146,15 @@
   .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;}
   .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
   .card2{background:var(--eg-bg-1);border:1px solid var(--eg-border);border-radius:14px;padding:20px 22px;margin-bottom:20px;}
+  .mat-cat-tabs{display:flex;flex-wrap:wrap;gap:8px;}
+  .mat-cat-tab{font-size:11.5px;font-weight:700;padding:6px 13px;border-radius:99px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-muted);cursor:pointer;}
+  .mat-cat-tab.active{background:var(--eg-gold-500);color:#221708;border-color:transparent;}
+  .mat-table-wrap{overflow-x:auto;}
+  .mat-table-wrap table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .mat-table-wrap th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:0.3px;color:var(--eg-text-muted);padding:8px 10px;border-bottom:1px solid var(--eg-navy-line);}
+  .mat-table-wrap td{padding:10px;border-bottom:1px solid var(--eg-navy-line);vertical-align:middle;}
+  .mat-new-badge{font-size:9.5px;font-weight:700;background:var(--eg-gold-500);color:#221708;padding:2px 7px;border-radius:99px;margin-left:6px;}
+  .mat-open-btn{font-size:11px;font-weight:700;color:var(--eg-gold-300);text-decoration:none;white-space:nowrap;}
   .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
   .card-head h3{margin:0;font-size:14.5px;font-weight:700;color:var(--eg-text-primary);}
   .card-head .icn{color:var(--eg-gold-300);font-size:14px;margin-right:8px;}
@@ -354,6 +363,7 @@
       <button class="side-link active" data-page="jornada"><i class="fa-solid fa-route"></i>Jornada</button>
       <button class="side-link" data-page="calendario"><i class="fa-regular fa-calendar-days"></i>Calendário</button>
       <button class="side-link" data-page="conteudos"><i class="fa-solid fa-book"></i>Conteúdos</button>
+      <button class="side-link" data-page="materiais"><i class="fa-solid fa-folder-open"></i>Protocolos e materiais</button>
       <button class="side-link" data-page="opiniao"><i class="fa-regular fa-comment-dots"></i>Feedback &amp; NPS</button>
     </div>
     <div class="side-cta">
@@ -495,6 +505,18 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ================= PÁGINA: PROTOCOLOS E MATERIAIS ================= -->
+      <div class="page-view" id="page-materiais">
+        <div class="section-title"><i class="fa-solid fa-folder-open"></i>PROTOCOLOS E MATERIAIS</div>
+        <p class="hint" style="margin:-6px 0 16px;">Biblioteca versionada. Só a versão vigente aparece como material recomendado.</p>
+        <div class="card2">
+          <input type="text" class="search-input" id="matStuSearch" placeholder="Buscar por título ou código..." style="max-width:320px;margin-bottom:12px;">
+          <div class="mat-cat-tabs" id="matStuCatTabs"></div>
+          <div id="matStuList" style="margin-top:14px;"></div>
+          <p class="hint" style="margin-top:16px;"><i class="fa-solid fa-circle-info"></i> Conteúdo educacional. Este material tem finalidade de educação médica continuada e não substitui o julgamento clínico individual, a avaliação do paciente, as diretrizes vigentes ou a responsabilidade profissional do médico assistente.</p>
         </div>
       </div>
 
@@ -890,6 +912,7 @@
     loadCalendar(branchIds);
     loadRecados();
     loadAulaCatalog(branchIds);
+    loadMaterialsStudent();
 
     showPage("jornada");
   }
@@ -1151,6 +1174,61 @@
       });
   }
 
+  // ---------------- Protocolos e materiais (biblioteca de documentos) ----------------
+  var allMaterials = [];
+  var matStuActiveCat = "Todos";
+  function loadMaterialsStudent(){
+    // RLS já filtra pra status='vigente' e pra mentoria do aluno — não
+    // precisa repetir esse filtro aqui.
+    sb.from("documents")
+      .select("id,code,title,category,doc_type,version,revision_date,responsible_name,view_only,file_url,is_new")
+      .order("created_at", { ascending: false })
+      .then(function(r){
+        allMaterials = r.data || [];
+        renderMatStuCatTabs();
+        renderMatStuList();
+      });
+  }
+  function renderMatStuCatTabs(){
+    var cats = ["Todos"];
+    allMaterials.forEach(function(d){ if(d.category && cats.indexOf(d.category) === -1) cats.push(d.category); });
+    $("matStuCatTabs").innerHTML = cats.map(function(c){
+      return '<span class="mat-cat-tab' + (c === matStuActiveCat ? " active" : "") + '" data-cat="' + escapeHtml(c) + '">' + escapeHtml(c) + '</span>';
+    }).join("");
+    $("matStuCatTabs").querySelectorAll(".mat-cat-tab").forEach(function(tab){
+      tab.addEventListener("click", function(){
+        matStuActiveCat = tab.getAttribute("data-cat");
+        renderMatStuCatTabs();
+        renderMatStuList();
+      });
+    });
+  }
+  function renderMatStuList(){
+    var term = ($("matStuSearch").value || "").trim().toLowerCase();
+    var list = allMaterials.filter(function(d){
+      if(matStuActiveCat !== "Todos" && d.category !== matStuActiveCat) return false;
+      if(!term) return true;
+      return (d.title || "").toLowerCase().indexOf(term) > -1 || (d.code || "").toLowerCase().indexOf(term) > -1;
+    });
+    var wrap = $("matStuList");
+    if(!list.length){ wrap.innerHTML = '<p class="empty-state">Nenhum material disponível ainda.</p>'; return; }
+    wrap.innerHTML = '<div class="mat-table-wrap"><table><thead><tr>' +
+      '<th>Documento</th><th>Tipo</th><th>Versão</th><th>Revisão</th><th>Responsável</th><th></th>' +
+      '</tr></thead><tbody>' +
+      list.map(function(d){
+        return '<tr>' +
+          '<td><b>' + escapeHtml(d.title) + '</b>' + (d.is_new ? '<span class="mat-new-badge">NOVO</span>' : "") + (d.code ? '<br><span style="color:var(--eg-text-muted);font-size:11px;">' + escapeHtml(d.code) + '</span>' : "") + '</td>' +
+          '<td>' + escapeHtml(d.doc_type || "—") + '</td>' +
+          '<td>' + escapeHtml(d.version || "—") + '</td>' +
+          '<td>' + (d.revision_date ? fmtEventDate(d.revision_date) : "—") + '</td>' +
+          '<td>' + escapeHtml(d.responsible_name || "—") + '</td>' +
+          '<td><a class="mat-open-btn" href="' + d.file_url + '" target="_blank" rel="noopener"' + (d.view_only ? "" : ' download') + '>' +
+            (d.view_only ? '<i class="fa-solid fa-eye"></i> Abrir' : '<i class="fa-solid fa-download"></i> Baixar') + '</a></td>' +
+        '</tr>';
+      }).join("") + '</tbody></table></div>';
+  }
+  $("matStuSearch").addEventListener("input", renderMatStuList);
+
   function escapeHtml(s){
     return (s || "").toString()
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -1237,6 +1315,7 @@
     jornada: $("page-jornada"),
     calendario: $("page-calendario"),
     conteudos: $("page-conteudos"),
+    materiais: $("page-materiais"),
     opiniao: $("page-opiniao")
   };
   var sideLinkBtns = document.querySelectorAll(".side-link");
