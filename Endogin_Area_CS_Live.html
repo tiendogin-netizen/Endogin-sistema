@@ -247,6 +247,13 @@
   .curso-progress-item .curso-progress-pct{font-size:11.5px;color:var(--eg-text-muted);flex-shrink:0;}
   .curso-progress-track{height:6px;border-radius:4px;background:var(--eg-navy-line);overflow:hidden;}
   .curso-progress-fill{height:100%;background:var(--eg-gold-500);border-radius:4px;}
+  .progresso-student-row{border-bottom:1px solid var(--eg-navy-line);}
+  .progresso-student-row:last-child{border-bottom:none;}
+  .progresso-student-head{display:flex;justify-content:space-between;align-items:center;padding:12px 4px;cursor:pointer;}
+  .progresso-student-head:hover{background:rgba(255,255,255,0.03);}
+  .progresso-student-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;}
+  .progresso-student-name .fa-chevron-right, .progresso-student-name .fa-chevron-down{width:10px;font-size:11px;color:var(--eg-text-muted);}
+  .progresso-student-body{padding:2px 4px 14px 26px;}
   .metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
   .metric-card{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:12px;padding:14px 16px;}
   .metric-card .lbl{font-size:10.5px;color:var(--eg-text-muted);margin-bottom:6px;}
@@ -2972,9 +2979,14 @@
   // course_progress vem de duas fontes: o webhook "user.progress" (só pra
   // frente) e a edge function cademi-sync-progress (puxa da API da Cademí o
   // que o aluno já tinha assistido antes — botão "Sincronizar agora" abaixo).
+  //
+  // A lista é agrupada por ALUNO (uma linha por pessoa) — clica no nome pra
+  // abrir/fechar e ver o progresso curso a curso dela. Evita repetir o nome
+  // do aluno uma vez por curso, que é confuso quando alguém tem vários.
   var progressoLoaded = false;
   var allCourseProgress = [];
   var progressoSyncing = false;
+  var progressoExpanded = {};
 
   function startProgressoIfNeeded(){
     if(progressoLoaded) return;
@@ -2988,8 +3000,7 @@
     if(loading) loading.style.display = "block";
     if(wrap) wrap.innerHTML = "";
     sb.from("course_progress")
-      .select("progress_percentage,updated_at,student:student_id(full_name),course:course_id(name)")
-      .order("progress_percentage", { ascending: false })
+      .select("student_id,course_id,progress_percentage,updated_at,student:student_id(full_name),course:course_id(name)")
       .then(function(r){
         if(loading) loading.style.display = "none";
         if(r.error){ if(wrap) wrap.innerHTML = '<p class="hint">Erro: ' + r.error.message + '</p>'; return; }
@@ -3002,24 +3013,54 @@
     var wrap = $("progressoList");
     if(!wrap) return;
     var term = (($("progressoSearch") && $("progressoSearch").value) || "").trim().toLowerCase();
-    var list = allCourseProgress.filter(function(p){
-      if(!term) return true;
-      return ((p.student && p.student.full_name) || "").toLowerCase().indexOf(term) > -1;
+
+    var groups = {};
+    allCourseProgress.forEach(function(p){
+      var sid = p.student_id;
+      if(!sid) return;
+      if(!groups[sid]) groups[sid] = { name: (p.student && p.student.full_name) || "Aluno(a)", items: [] };
+      groups[sid].items.push({
+        course: (p.course && p.course.name) || "Curso",
+        pct: Math.max(0, Math.min(100, Math.round(Number(p.progress_percentage) || 0))),
+        updated_at: p.updated_at
+      });
     });
-    if(!list.length){
+
+    var studentIds = Object.keys(groups).filter(function(sid){
+      if(!term) return true;
+      return groups[sid].name.toLowerCase().indexOf(term) > -1;
+    }).sort(function(a, b){ return groups[a].name.localeCompare(groups[b].name); });
+
+    if(!studentIds.length){
       wrap.innerHTML = '<p class="hint">Nenhum dado de progresso ainda. Clique em "Sincronizar agora" acima pra puxar da Cademí.</p>';
       return;
     }
-    wrap.innerHTML = '<div class="carteira-table-wrap"><table><thead><tr><th>Aluno</th><th>Curso</th><th>Progresso</th><th>Atualizado em</th></tr></thead><tbody>' +
-      list.map(function(p){
-        var pct = Math.max(0, Math.min(100, Math.round(Number(p.progress_percentage) || 0)));
-        return '<tr>' +
-          '<td>' + ((p.student && p.student.full_name) || "—") + '</td>' +
-          '<td>' + ((p.course && p.course.name) || "—") + '</td>' +
-          '<td style="min-width:140px;"><div class="curso-progress-item" style="padding:0;"><div class="curso-progress-top"><span></span><span class="curso-progress-pct">' + pct + '%</span></div><div class="curso-progress-track"><div class="curso-progress-fill" style="width:' + pct + '%;"></div></div></div></td>' +
-          '<td>' + (p.updated_at ? fmtEventDate(String(p.updated_at).slice(0,10)) : "—") + '</td>' +
-        '</tr>';
-      }).join("") + '</tbody></table></div>';
+
+    wrap.innerHTML = studentIds.map(function(sid){
+      var g = groups[sid];
+      var expanded = Boolean(progressoExpanded[sid]);
+      var avgPct = Math.round(g.items.reduce(function(sum, it){ return sum + it.pct; }, 0) / g.items.length);
+      return '<div class="progresso-student-row">' +
+        '<div class="progresso-student-head" data-sid="' + sid + '">' +
+          '<span class="progresso-student-name"><i class="fa-solid fa-chevron-' + (expanded ? "down" : "right") + '"></i>' + g.name + '</span>' +
+          '<span class="hint">' + g.items.length + ' curso(s) · ' + avgPct + '% em média</span>' +
+        '</div>' +
+        (expanded ? '<div class="progresso-student-body">' +
+          g.items.map(function(it){
+            return '<div class="curso-progress-item"><div class="curso-progress-top"><span class="curso-progress-name">' + it.course + '</span><span class="curso-progress-pct">' + it.pct + '%</span></div>' +
+              '<div class="curso-progress-track"><div class="curso-progress-fill" style="width:' + it.pct + '%;"></div></div></div>';
+          }).join("") +
+        '</div>' : "") +
+      '</div>';
+    }).join("");
+
+    wrap.querySelectorAll(".progresso-student-head").forEach(function(el){
+      el.addEventListener("click", function(){
+        var sid = el.getAttribute("data-sid");
+        progressoExpanded[sid] = !progressoExpanded[sid];
+        renderProgressoList();
+      });
+    });
   }
 
   if($("progressoSearch")){
@@ -3034,37 +3075,50 @@
       var status = $("progressoSyncStatus");
       btn.disabled = true;
       status.style.display = "block";
-      status.textContent = "Sincronizando com a Cademí...";
-      var offset = 0;
-      var totalProcessed = 0;
-      var allSyncErrors = [];
-      function finish(msg){
-        status.textContent = msg;
-        btn.disabled = false;
-        progressoSyncing = false;
-        loadProgressoAdmin();
-      }
-      function step(){
-        sb.functions.invoke("cademi-sync-progress", { body: { offset: offset, limit: 10 } }).then(function(r){
-          if(r.error || !r.data || r.data.ok === false){
-            finish("Erro ao sincronizar: " + (r.error ? r.error.message : (r.data && r.data.error) || "falha desconhecida"));
-            return;
-          }
-          totalProcessed += r.data.processed || 0;
-          if(r.data.errors && r.data.errors.length) allSyncErrors = allSyncErrors.concat(r.data.errors);
-          if(r.data.done){
-            if(allSyncErrors.length) console.warn("cademi-sync-progress avisos", allSyncErrors);
-            finish("Sincronização concluída: " + totalProcessed + " aluno(s) verificados" + (allSyncErrors.length ? ", " + allSyncErrors.length + " aviso(s) (veja o console)." : "."));
-            return;
-          }
-          status.textContent = "Sincronizando... " + totalProcessed + " aluno(s) verificados até agora.";
-          offset = r.data.next_offset;
-          step();
-        }).catch(function(e){
-          finish("Erro ao sincronizar: " + e.message);
-        });
-      }
-      step();
+      status.textContent = "Contando alunos...";
+
+      // conta quantos alunos têm cademi_user_id — é o total que vai ser
+      // percorrido — só pra mostrar "X de Y" durante a sincronização (foi
+      // pedido explicitamente: acompanhar o andamento, não só um texto vago).
+      sb.from("students").select("id", { count: "exact", head: true }).not("cademi_user_id", "is", null).then(function(countRes){
+        var total = countRes.count || 0;
+        var offset = 0;
+        var totalProcessed = 0;
+        var allSyncErrors = [];
+
+        function finish(msg){
+          status.textContent = msg;
+          btn.disabled = false;
+          progressoSyncing = false;
+          loadProgressoAdmin();
+        }
+
+        function step(){
+          sb.functions.invoke("cademi-sync-progress", { body: { offset: offset, limit: 10 } }).then(function(r){
+            if(r.error || !r.data || r.data.ok === false){
+              var errMsg = r.error ? r.error.message : ((r.data && r.data.error) || "falha desconhecida");
+              finish("Erro ao sincronizar (parou em " + totalProcessed + "/" + total + "): " + errMsg);
+              return;
+            }
+            totalProcessed += r.data.processed || 0;
+            if(r.data.errors && r.data.errors.length) allSyncErrors = allSyncErrors.concat(r.data.errors);
+            if(r.data.done){
+              console.warn("cademi-sync-progress avisos", allSyncErrors);
+              var extra = allSyncErrors.length
+                ? " " + allSyncErrors.length + " aviso(s) — ex.: \"" + allSyncErrors[0].error + "\" (veja mais no console, F12)."
+                : "";
+              finish("Sincronização concluída: " + totalProcessed + "/" + total + " aluno(s) verificados." + extra);
+              return;
+            }
+            status.textContent = "Sincronizando... " + totalProcessed + " de " + total + " aluno(s).";
+            offset = r.data.next_offset;
+            step();
+          }).catch(function(e){
+            finish("Erro ao sincronizar (parou em " + totalProcessed + "/" + total + "): " + e.message);
+          });
+        }
+        step();
+      });
     });
   }
   $("matSearch").addEventListener("input", renderMatList);
