@@ -187,6 +187,13 @@
   .trilha-complete-banner{display:flex;align-items:center;gap:10px;background:rgba(201,151,75,0.1);border:1px solid var(--eg-border-strong);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:var(--eg-gold-100);}
   .trilha-complete-banner i{color:var(--eg-gold-300);font-size:16px;}
 
+  .course-progress-item{padding:9px 0;}
+  .course-progress-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px;}
+  .course-progress-name{font-size:12px;font-weight:600;}
+  .course-progress-pct{font-size:11px;color:var(--eg-text-muted);flex-shrink:0;}
+  .course-progress-track{height:6px;border-radius:99px;background:var(--eg-navy-line);overflow:hidden;}
+  .course-progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg, var(--eg-gold-500), var(--eg-gold-300));}
+
   .cs-card{display:flex;align-items:center;gap:13px;}
   .cs-card .av{width:48px;height:48px;border-radius:50%;background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#241705;flex-shrink:0;background-size:cover;background-position:center;}
   .cs-card b{display:block;font-size:14px;}
@@ -466,6 +473,11 @@
               <div><b id="csCardName"></b><span id="csCardSub"></span></div>
             </div>
             <a class="cs-btn" id="csCardWhatsBtn" href="#" target="_blank" rel="noopener" style="display:none;margin-top:-8px;margin-bottom:20px;"><i class="fa-brands fa-whatsapp"></i> Falar com minha CS</a>
+
+            <div class="card2" id="courseProgressCard" style="display:none;">
+              <div class="card-head"><h3><i class="fa-solid fa-chart-line icn"></i>Suas trilhas</h3></div>
+              <div id="courseProgressList"></div>
+            </div>
           </div>
         </div>
 
@@ -914,20 +926,17 @@
     currentBranchIds = branchIds;
     currentMentoriaLabels = mentoriaLabels;
 
-    var isMentoriaMae = mentoriaLabels.indexOf("Mentoria Mãe") > -1;
-    if(isMentoriaMae && currentStudent.is_new_member){
-      refreshJourney();
-    } else {
-      $("journeyPending").style.display = "none";
-      $("heroEyebrow").textContent = "MENTORIA ATIVA";
-      $("heroSub").textContent = mentoriaLabels.length
-        ? "Acompanhe o calendário de aulas e novidades da " + mentoriaLabels.join(" / ") + " por aqui."
-        : "Assim que sua CS vincular você a uma mentoria, seu conteúdo aparece aqui.";
-    }
+    // antes só mostrava a trilha pra quem era da "Mentoria Mãe" E estava
+    // marcado como novo — isso escondia a trilha (e as 5 aulas obrigatórias
+    // universais) pra todo mundo de outra mentoria. A trilha em si já sabe
+    // se esconder sozinha quando não há nada pendente (ver applyJourneyState/
+    // loadLessons), então libera pra qualquer aluno.
+    refreshJourney();
     loadCalendar(branchIds);
     loadRecados();
     loadAulaCatalog(branchIds);
     loadMaterialsStudent();
+    loadCourseProgressStudent();
 
     showPage("jornada");
   }
@@ -1039,6 +1048,25 @@
             return doneCount === lessons.length;
           });
       });
+  }
+
+  // ---------------- suas trilhas (progresso real vindo da Cademí) ----------------
+  function loadCourseProgressStudent(){
+    var card = $("courseProgressCard");
+    var wrap = $("courseProgressList");
+    if(!card || !wrap) return;
+    sb.from("course_progress").select("progress_percentage,course:course_id(name)").eq("student_id", currentStudent.id).order("progress_percentage", { ascending: false }).then(function(r){
+      var rows = (r.data || []).filter(function(row){ return row.course; });
+      if(r.error || !rows.length){ card.style.display = "none"; return; }
+      card.style.display = "block";
+      wrap.innerHTML = rows.map(function(row){
+        var pct = Math.max(0, Math.min(100, Math.round(Number(row.progress_percentage) || 0)));
+        return '<div class="course-progress-item">' +
+          '<div class="course-progress-top"><span class="course-progress-name">' + row.course.name + '</span><span class="course-progress-pct">' + pct + '%</span></div>' +
+          '<div class="course-progress-track"><div class="course-progress-fill" style="width:' + pct + '%;"></div></div>' +
+        '</div>';
+      }).join("");
+    });
   }
 
   // ---------------- jornada: mostra as pendências ou some quando tudo concluído ----------------
