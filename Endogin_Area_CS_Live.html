@@ -254,6 +254,10 @@
   .progresso-student-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;}
   .progresso-student-name .fa-chevron-right, .progresso-student-name .fa-chevron-down{width:10px;font-size:11px;color:var(--eg-text-muted);}
   .progresso-student-body{padding:2px 4px 14px 26px;}
+  .student-picker-results{position:absolute;z-index:60;left:0;right:0;background:var(--eg-navy-800, #0f1a2e);border:1px solid var(--eg-navy-line);border-radius:8px;margin-top:4px;max-height:230px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,0.35);}
+  .student-picker-results .spr-item{padding:9px 12px;font-size:12.5px;cursor:pointer;}
+  .student-picker-results .spr-item:hover{background:rgba(255,255,255,0.06);}
+  .student-picker-results .spr-empty{padding:9px 12px;font-size:12px;color:var(--eg-text-muted);}
   .metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
   .metric-card{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:12px;padding:14px 16px;}
   .metric-card .lbl{font-size:10.5px;color:var(--eg-text-muted);margin-bottom:6px;}
@@ -867,7 +871,12 @@
     <div class="modal-head"><b>Agendar sessão 1x1</b><button class="modal-close" id="sessionModalClose"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
       <div class="form-grid">
-        <div style="grid-column:1/-1;"><label>Aluno</label><select id="sessionFieldStudent"></select></div>
+        <div style="grid-column:1/-1;position:relative;">
+          <label>Aluno</label>
+          <input type="text" id="sessionFieldStudentSearch" placeholder="Digite pra buscar o aluno..." autocomplete="off">
+          <input type="hidden" id="sessionFieldStudent">
+          <div id="sessionFieldStudentResults" class="student-picker-results" style="display:none;"></div>
+        </div>
         <div><label>Data e hora</label><input type="datetime-local" id="sessionFieldDate"></div>
         <div><label>Status</label>
           <select id="sessionFieldStatus">
@@ -1197,7 +1206,7 @@
 
   function populateStudentSelects(){
     var sorted = allStudents.slice().sort(function(a,b){ return a.full_name.localeCompare(b.full_name); });
-    ["referralFieldStudent","sessionFieldStudent","feedbackFieldStudent","npsFieldStudent"].forEach(function(id){
+    ["referralFieldStudent","feedbackFieldStudent","npsFieldStudent"].forEach(function(id){
       var sel = $(id);
       if(!sel) return;
       var prevValue = sel.value;
@@ -1210,6 +1219,41 @@
       if(prevValue) sel.value = prevValue;
     });
   }
+
+  // Busca de aluno por texto — usado na Sessão 1x1, porque um <select> comum
+  // fica inviável de rolar com 400+ alunos. Guarda o ID escolhido num campo
+  // escondido (hiddenInputId) e mostra o nome no campo de texto visível.
+  function wireStudentPicker(searchInputId, hiddenInputId, resultsId){
+    var searchEl = $(searchInputId), hiddenEl = $(hiddenInputId), resultsEl = $(resultsId);
+    if(!searchEl || !hiddenEl || !resultsEl) return;
+    function render(term){
+      var t = term.trim().toLowerCase();
+      if(!t){ resultsEl.style.display = "none"; return; }
+      var list = allStudents.filter(function(s){ return s.full_name.toLowerCase().indexOf(t) > -1; }).slice(0, 30);
+      if(!list.length){
+        resultsEl.innerHTML = '<div class="spr-empty">Nenhum aluno encontrado.</div>';
+        resultsEl.style.display = "block";
+        return;
+      }
+      resultsEl.innerHTML = list.map(function(s){
+        return '<div class="spr-item" data-id="' + s.id + '">' + s.full_name + ' <span class="hint">' + (s.email || "") + '</span></div>';
+      }).join("");
+      resultsEl.style.display = "block";
+      resultsEl.querySelectorAll(".spr-item").forEach(function(el){
+        el.addEventListener("click", function(){
+          hiddenEl.value = el.getAttribute("data-id");
+          searchEl.value = el.textContent.trim();
+          resultsEl.style.display = "none";
+        });
+      });
+    }
+    searchEl.addEventListener("input", function(){ hiddenEl.value = ""; render(searchEl.value); });
+    searchEl.addEventListener("focus", function(){ if(searchEl.value) render(searchEl.value); });
+    document.addEventListener("click", function(e){
+      if(e.target !== searchEl && !resultsEl.contains(e.target)) resultsEl.style.display = "none";
+    });
+  }
+  wireStudentPicker("sessionFieldStudentSearch", "sessionFieldStudent", "sessionFieldStudentResults");
 
   var DISC_PROFILE_LABEL = { D:"Dominante", I:"Influente", S:"Estável", C:"Cauteloso" };
   var DISC_COMM_TIP = {
@@ -2282,6 +2326,7 @@
   $("newSessionBtn").addEventListener("click", function(){
     $("sessionModalErr").textContent = "";
     $("sessionFieldDate").value = ""; $("sessionFieldStatus").value = "a_agendar"; $("sessionFieldNotes").value = "";
+    $("sessionFieldStudentSearch").value = ""; $("sessionFieldStudent").value = "";
     $("sessionModal").classList.add("open");
   });
   $("sessionModalClose").addEventListener("click", function(){ $("sessionModal").classList.remove("open"); });
@@ -3205,11 +3250,25 @@
           loadProgressoAdmin();
         }
 
+        // quando a função responde com status de erro (não-2xx), o
+        // supabase-js só dá uma mensagem genérica ("Edge Function returned a
+        // non-2xx status code") — o motivo de verdade fica no CORPO da
+        // resposta (r.error.context), que a gente lê aqui manualmente.
+        function describeInvokeError(r){
+          if(r.error && r.error.context && typeof r.error.context.text === "function"){
+            return r.error.context.text().then(function(txt){
+              try { return JSON.parse(txt).error || txt; } catch(e){ return txt || r.error.message; }
+            }).catch(function(){ return r.error.message; });
+          }
+          return Promise.resolve(r.error ? r.error.message : ((r.data && r.data.error) || "falha desconhecida"));
+        }
+
         function step(){
           sb.functions.invoke("cademi-sync-progress", { body: { offset: offset, limit: 10 } }).then(function(r){
             if(r.error || !r.data || r.data.ok === false){
-              var errMsg = r.error ? r.error.message : ((r.data && r.data.error) || "falha desconhecida");
-              finish("Erro ao sincronizar (parou em " + totalProcessed + "/" + total + "): " + errMsg);
+              describeInvokeError(r).then(function(errMsg){
+                finish("Erro ao sincronizar (parou em " + totalProcessed + "/" + total + "): " + errMsg);
+              });
               return;
             }
             totalProcessed += r.data.processed || 0;
