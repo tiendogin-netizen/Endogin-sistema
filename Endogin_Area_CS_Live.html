@@ -22,7 +22,7 @@
   *{box-sizing:border-box;}
   body{
     margin:0;font-family:'Montserrat',sans-serif;color:var(--eg-text-primary);min-height:100vh;
-    background:radial-gradient(1200px 700px at 15% -10%, #16273c 0%, #0b1420 55%), #0b1420;
+    background:#0b1420;
   }
   .wrap{max-width:1100px;margin:0 auto;padding:0 24px 60px;}
   .page{display:flex;align-items:flex-start;max-width:1500px;margin:0 auto;}
@@ -32,10 +32,10 @@
   .brand-mark{height:36px;width:auto;display:flex;align-items:center;}
   .brand-mark img{height:36px;width:auto;display:block;}
   .brand-word .cs{display:block;font-size:9px;letter-spacing:3px;color:var(--eg-text-muted);font-weight:600;}
-  .brand-word .name{display:block;font-family:'Sora',sans-serif;font-weight:600;font-size:17px;background:linear-gradient(180deg,var(--eg-gold-100),var(--eg-gold-500));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .brand-word .name{display:block;font-family:'Sora',sans-serif;font-weight:600;font-size:17px;color:var(--eg-gold-300);}
   .topbar-right{display:flex;align-items:center;gap:14px;}
   .user-chip{display:flex;align-items:center;gap:10px;font-size:12.5px;}
-  .user-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#241705;background-size:cover;background-position:center;}
+  .user-av{width:36px;height:36px;border-radius:50%;background:var(--eg-gold-500);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#241705;background-size:cover;background-position:center;}
   .logout-btn{font-size:11.5px;font-weight:700;background:var(--eg-bg-2);border:1px solid var(--eg-border);color:var(--eg-gold-100);padding:8px 13px;border-radius:8px;cursor:pointer;}
 
   .side-nav{
@@ -86,7 +86,7 @@
   .aula-chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
   .chat-bubble{max-width:88%;padding:9px 12px;border-radius:12px;font-size:12.5px;line-height:1.45;}
   .chat-bubble.chat-bot{align-self:flex-start;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-bottom-left-radius:3px;}
-  .chat-bubble.chat-user{align-self:flex-end;background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));color:#221708;font-weight:600;border-bottom-right-radius:3px;}
+  .chat-bubble.chat-user{align-self:flex-end;background:var(--eg-gold-500);color:#221708;font-weight:600;border-bottom-right-radius:3px;}
   .chat-lessons{margin-top:8px;display:flex;flex-direction:column;gap:8px;}
   .chat-lesson-card{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:9px;padding:8px 10px;}
   .chat-lesson-card b{display:block;font-size:12px;}
@@ -94,7 +94,7 @@
   .chat-lesson-card a{display:inline-block;margin-top:5px;font-size:11px;color:var(--eg-gold-300);text-decoration:none;}
   .aula-chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--eg-navy-line);flex-shrink:0;}
   .aula-chat-input-row input{flex:1;margin:0;}
-  .aula-chat-input-row button{width:38px;height:38px;flex-shrink:0;border:none;border-radius:9px;background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));color:#221708;cursor:pointer;font-size:13px;}
+  .aula-chat-input-row button{width:38px;height:38px;flex-shrink:0;border:none;border-radius:9px;background:var(--eg-gold-500);color:#221708;cursor:pointer;font-size:13px;}
   select, input[type=text], input[type=email], input[type=password]{
     background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:8px;color:var(--eg-text-primary);
     padding:8px 10px;font-family:inherit;font-size:12.5px;
@@ -102,8 +102,9 @@
   label{display:block;font-size:10.5px;color:var(--eg-text-muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;}
   .btn-primary{
     font-family:inherit;font-size:12.5px;font-weight:700;padding:10px 18px;border-radius:8px;border:none;
-    background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));color:#221708;cursor:pointer;
+    background:var(--eg-gold-500);color:#221708;cursor:pointer;transition:background 0.15s ease;
   }
+  .btn-primary:hover{background:var(--eg-gold-300);}
   .btn-primary:disabled{opacity:0.55;cursor:default;}
   .btn-secondary{font-size:11.5px;font-weight:700;background:var(--eg-bg-2);border:1px solid var(--eg-border);color:var(--eg-gold-100);padding:8px 13px;border-radius:8px;cursor:pointer;}
   .err-msg{color:var(--eg-red);font-size:12px;margin-top:10px;min-height:16px;}
@@ -121,7 +122,7 @@
   .team-card{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:12px;padding:18px 14px;text-align:center;position:relative;}
   .team-card.inactive{opacity:0.5;}
   .team-inactive-tag{position:absolute;top:10px;right:10px;font-size:9px;font-weight:700;background:rgba(255,255,255,0.06);color:var(--eg-text-muted);padding:3px 8px;border-radius:99px;}
-  .team-av{width:60px;height:60px;border-radius:50%;margin:0 auto 12px;background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#241705;background-size:cover;background-position:center;}
+  .team-av{width:60px;height:60px;border-radius:50%;margin:0 auto 12px;background:var(--eg-gold-500);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#241705;background-size:cover;background-position:center;}
   .team-name{font-size:13px;font-weight:700;margin-bottom:2px;}
   .team-role{font-size:10px;color:var(--eg-text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;}
   .team-branch-tags{margin-bottom:8px;}
@@ -169,6 +170,13 @@
   .crm-stat-card.accent-gold{border-color:#c9974b;}
   .crm-stat-card.accent-purple{border-color:#8f7fd6;}
   .crm-stat-chevron{position:absolute;top:12px;right:14px;color:var(--eg-text-muted);font-size:10px;}
+  /* ---------- dashboard (cards de KPI com tendência, no estilo do bloco dashboard-01 do shadcn/ui) ---------- */
+  .dash-trend-badge{position:absolute;top:12px;right:14px;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:99px;display:inline-flex;align-items:center;gap:4px;}
+  .dash-trend-badge.up{background:var(--eg-green-bg);color:var(--eg-green);}
+  .dash-trend-badge.down{background:var(--eg-red-bg);color:var(--eg-red);}
+  .dash-trend-line{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;margin-top:12px;color:var(--eg-text-primary);}
+  .dash-trend-line i{color:var(--eg-green);font-size:11px;}
+  .dash-trend-line.down i{color:var(--eg-red);}
   .carteira-status-pill{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:99px;display:inline-block;white-space:nowrap;}
   .carteira-status-pill.ativo{background:var(--eg-green-bg);color:var(--eg-green);}
   .carteira-status-pill.desativado{background:var(--eg-red-bg);color:var(--eg-red);}
@@ -209,7 +217,7 @@
   .dist-row{display:flex;align-items:center;gap:12px;padding:9px 0;}
   .switch-track{width:42px;height:24px;border-radius:99px;background:rgba(255,255,255,0.12);position:relative;cursor:pointer;flex-shrink:0;}
   .switch-track .knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s;}
-  .switch-track.on{background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-500));}
+  .switch-track.on{background:var(--eg-gold-500);}
   .switch-track.on .knob{left:20px;}
 
   #appScreen{display:none;}
@@ -291,6 +299,7 @@
         <div class="brand-word"><span class="cs">ÁREA DA CS</span><span class="name">ENDOGIN</span></div>
       </div>
       <div class="side-links">
+        <button class="tab-btn" data-tab="dashboard"><i class="fa-solid fa-gauge-high"></i>Dashboard</button>
         <button class="tab-btn active" data-tab="alunos"><i class="fa-solid fa-users"></i>Alunos</button>
         <button class="tab-btn" data-tab="carteiras"><i class="fa-solid fa-chart-pie"></i>Carteiras CS</button>
         <button class="tab-btn" data-tab="crm"><i class="fa-solid fa-bullseye"></i>CRM</button>
@@ -319,6 +328,77 @@
           <span id="userName"></span>
         </div>
         <button class="logout-btn" id="logoutBtn">Sair</button>
+      </div>
+    </div>
+
+    <!-- ================= DASHBOARD ================= -->
+    <div class="tab-panel" id="tab-dashboard">
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-gauge-high icn"></i>Visão geral</h3></div>
+        <p class="hint" style="margin:-8px 0 0;">Resumo rápido da operação da CS. Números de exemplo por enquanto — dá pra ligar aos dados reais quando você quiser.</p>
+      </div>
+
+      <div class="crm-stats-row" id="dashKpiRow" style="margin-bottom:18px;">
+        <div class="crm-stat-card">
+          <span class="dash-trend-badge up"><i class="fa-solid fa-arrow-trend-up"></i>+12.5%</span>
+          <div class="crm-stat-label"><span class="crm-stat-dot gold"></span>Alunos ativos</div>
+          <div class="crm-stat-num">1.234</div>
+          <div class="dash-trend-line"><i class="fa-solid fa-arrow-trend-up"></i>Crescendo esse mês</div>
+          <p class="hint" style="margin:2px 0 0;">Comparado aos últimos 6 meses</p>
+        </div>
+        <div class="crm-stat-card">
+          <span class="dash-trend-badge down"><i class="fa-solid fa-arrow-trend-down"></i>-4%</span>
+          <div class="crm-stat-label"><span class="crm-stat-dot blue"></span>Novos alunos (mês)</div>
+          <div class="crm-stat-num">86</div>
+          <div class="dash-trend-line down"><i class="fa-solid fa-arrow-trend-down"></i>Abaixo da meta do mês</div>
+          <p class="hint" style="margin:2px 0 0;">Meta mensal: 100 novos alunos</p>
+        </div>
+        <div class="crm-stat-card">
+          <span class="dash-trend-badge up"><i class="fa-solid fa-arrow-trend-up"></i>+3.1%</span>
+          <div class="crm-stat-label"><span class="crm-stat-dot green"></span>Taxa de renovação</div>
+          <div class="crm-stat-num">78%</div>
+          <div class="dash-trend-line"><i class="fa-solid fa-arrow-trend-up"></i>Melhor taxa dos últimos 3 meses</div>
+          <p class="hint" style="margin:2px 0 0;">Sobre contratos vencidos no período</p>
+        </div>
+        <div class="crm-stat-card">
+          <span class="dash-trend-badge up"><i class="fa-solid fa-arrow-trend-up"></i>+0.4</span>
+          <div class="crm-stat-label"><span class="crm-stat-dot purple"></span>NPS médio</div>
+          <div class="crm-stat-num">9.2</div>
+          <div class="dash-trend-line"><i class="fa-solid fa-arrow-trend-up"></i>Satisfação em alta</div>
+          <p class="hint" style="margin:2px 0 0;">Média das respostas dos últimos 90 dias</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Novos alunos e renovações</h3>
+          <div class="toggle-group" id="dashPeriodToggle">
+            <button class="toggle-btn active" data-period="90">Últimos 3 meses</button>
+            <button class="toggle-btn" data-period="30">Últimos 30 dias</button>
+            <button class="toggle-btn" data-period="7">Últimos 7 dias</button>
+          </div>
+        </div>
+        <p class="hint" style="margin:-8px 0 12px;">Comparativo entre novas entradas e renovações no período selecionado.</p>
+        <div class="crm-chart-wrap" style="max-width:none;">
+          <canvas id="dashTrendChart" height="90"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Movimentações recentes</h3></div>
+        <div class="filter-row" style="margin:-8px 0 14px;">
+          <span class="filter-chip selected" data-dash-filter="todos">Todos</span>
+          <span class="filter-chip" data-dash-filter="onboarding">Onboarding</span>
+          <span class="filter-chip" data-dash-filter="renovacao">Renovações</span>
+          <span class="filter-chip" data-dash-filter="risco">Em risco</span>
+        </div>
+        <div class="carteira-table-wrap">
+          <table>
+            <thead><tr><th>Aluna</th><th>Mentoria</th><th>Status</th><th>Data</th><th>CS responsável</th><th></th></tr></thead>
+            <tbody id="dashMovTableBody"></tbody>
+          </table>
+        </div>
+        <p class="hint" style="text-align:center;margin-top:14px;font-style:italic;">Dados de exemplo — posso ligar essa lista às movimentações reais dos alunos quando você quiser.</p>
       </div>
     </div>
 
@@ -1140,6 +1220,99 @@
       if(btn.getAttribute("data-tab") === "progresso"){
         startProgressoIfNeeded();
       }
+      if(btn.getAttribute("data-tab") === "dashboard"){
+        setTimeout(renderDashboard, 30);
+      }
+    });
+  });
+
+  // ---------------- dashboard (visão geral) ----------------
+  // Layout inspirado no bloco "dashboard-01" do shadcn/ui (cards de KPI com
+  // tendência + gráfico de área + tabela com filtros), reescrito em HTML/CSS
+  // puro reaproveitando as classes já existentes (card, card-head, hint,
+  // crm-stat-card, filter-chip, toggle-btn, crm-chart-wrap). Os números do
+  // KPI e as linhas da tabela abaixo são dados de EXEMPLO — ainda não estão
+  // ligados às tabelas reais do Supabase.
+  var dashChartInstance = null;
+  var dashLoaded = false;
+  var DASH_MOV_EXEMPLO = [
+    { nome:"Karine Ribeiro Antunes", mentoria:"Endogin Mãe", status:"ativo", data:"04/09/2026", cs:"Thais", tipo:"onboarding" },
+    { nome:"Laura Esther", mentoria:"Mentores Masters", status:"onboarding", data:"03/09/2026", cs:"Thais", tipo:"onboarding" },
+    { nome:"Alicia Fernandes", mentoria:"Endogin Scale", status:"ativo", data:"01/09/2026", cs:"Bruna", tipo:"renovacao" },
+    { nome:"Patrícia Gomes", mentoria:"Endogin Ativação", status:"inativo", data:"29/08/2026", cs:"Bruna", tipo:"risco" },
+    { nome:"Fernanda Lima", mentoria:"Endogin Mãe", status:"ativo", data:"27/08/2026", cs:"Thais", tipo:"renovacao" }
+  ];
+  function dashPeriodData(days){
+    if(days === 7) return { labels:["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"], novos:[2,3,1,4,2,0,1], renov:[1,0,2,1,1,0,0] };
+    if(days === 30) return { labels:["Sem 1","Sem 2","Sem 3","Sem 4"], novos:[18,22,15,31], renov:[9,11,8,14] };
+    return { labels:["Abr","Mai","Jun","Jul","Ago","Set"], novos:[62,71,58,80,74,86], renov:[30,34,29,38,41,44] };
+  }
+  function renderDashboard(){
+    var ctx = document.getElementById("dashTrendChart");
+    if(ctx && typeof Chart !== "undefined"){
+      var d = dashPeriodData(90);
+      var gCtx = ctx.getContext("2d");
+      var goldFill = gCtx.createLinearGradient(0, 0, 0, 220);
+      goldFill.addColorStop(0, "rgba(201,151,75,0.35)");
+      goldFill.addColorStop(1, "rgba(201,151,75,0)");
+      if(dashChartInstance){ dashChartInstance.destroy(); }
+      dashChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: d.labels,
+          datasets: [
+            { label:"Novos alunos", data:d.novos, borderColor:"#c9974b", backgroundColor:goldFill, fill:true, tension:0.35, pointRadius:0, borderWidth:2 },
+            { label:"Renovações", data:d.renov, borderColor:"#5b8def", backgroundColor:"transparent", fill:false, tension:0.35, pointRadius:0, borderWidth:2, borderDash:[4,3] }
+          ]
+        },
+        options: {
+          plugins: { legend: { position:"bottom", labels:{ color:"#c9c9d4", font:{ size:11 } } } },
+          scales: {
+            x: { grid:{ color:"rgba(255,255,255,0.06)" }, ticks:{ color:"#6d7994", font:{ size:11 } } },
+            y: { grid:{ color:"rgba(255,255,255,0.06)" }, ticks:{ color:"#6d7994", font:{ size:11 } } }
+          }
+        }
+      });
+    }
+    if(!dashLoaded){
+      renderDashMovTable("todos");
+      dashLoaded = true;
+    }
+  }
+  function renderDashMovTable(filter){
+    var rows = DASH_MOV_EXEMPLO.filter(function(r){ return filter === "todos" || r.tipo === filter; });
+    var body = $("dashMovTableBody");
+    if(!body) return;
+    if(!rows.length){ body.innerHTML = '<tr><td colspan="6" class="empty-note">Nenhuma movimentação nessa categoria.</td></tr>'; return; }
+    body.innerHTML = rows.map(function(r){
+      return "<tr>" +
+        "<td><b>" + r.nome + "</b></td>" +
+        "<td><span class=\"branch-tag\">" + r.mentoria + "</span></td>" +
+        "<td><span class=\"status-pill " + r.status + "\">" + r.status + "</span></td>" +
+        "<td>" + r.data + "</td>" +
+        "<td>" + r.cs + "</td>" +
+        "<td style=\"text-align:right;\"><i class=\"fa-solid fa-ellipsis\" style=\"color:var(--eg-text-muted);cursor:pointer;\"></i></td>" +
+      "</tr>";
+    }).join("");
+  }
+  document.querySelectorAll("#dashPeriodToggle .toggle-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll("#dashPeriodToggle .toggle-btn").forEach(function(b){ b.classList.remove("active"); });
+      btn.classList.add("active");
+      var ctx = document.getElementById("dashTrendChart");
+      if(!ctx || typeof Chart === "undefined") return;
+      var d = dashPeriodData(Number(btn.getAttribute("data-period")));
+      dashChartInstance.data.labels = d.labels;
+      dashChartInstance.data.datasets[0].data = d.novos;
+      dashChartInstance.data.datasets[1].data = d.renov;
+      dashChartInstance.update();
+    });
+  });
+  document.querySelectorAll("[data-dash-filter]").forEach(function(chip){
+    chip.addEventListener("click", function(){
+      document.querySelectorAll("[data-dash-filter]").forEach(function(c){ c.classList.remove("selected"); });
+      chip.classList.add("selected");
+      renderDashMovTable(chip.getAttribute("data-dash-filter"));
     });
   });
 
