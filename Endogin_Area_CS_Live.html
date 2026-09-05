@@ -339,6 +339,7 @@
             <div id="csFilterWrap" style="display:none;">
               <select id="csFilterSelect"><option value="">Todas as CS</option></select>
             </div>
+            <button class="btn-secondary" id="novoAlunoBtn"><i class="fa-solid fa-user-plus"></i> Novo aluno</button>
           </div>
         </div>
         <div id="alunosLoading" class="loading-note">Carregando alunos...</div>
@@ -823,6 +824,23 @@
       <span></span>
       <button class="btn-primary" id="alunoSaveBtn">Salvar</button>
     </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: NOVO ALUNO ================= -->
+<div class="modal-overlay" id="novoAlunoModal">
+  <div class="modal-card">
+    <div class="modal-head"><b>Novo aluno</b><button class="modal-close" id="novoAlunoModalClose"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <p class="hint" style="margin-top:0;">Pra aluno teste, ou pra cadastrar alguém que ainda não chegou pela Cademí. Depois de salvar, abre a ficha completa pra você marcar mentoria, status etc.</p>
+      <div class="form-grid">
+        <div style="grid-column:1/-1;"><label>Nome completo</label><input type="text" id="novoAlunoFieldName" placeholder="Ex: Aluno Teste"></div>
+        <div><label>E-mail</label><input type="email" id="novoAlunoFieldEmail" placeholder="email@exemplo.com"></div>
+        <div><label>Telefone (opcional)</label><input type="text" id="novoAlunoFieldPhone" placeholder="(00) 00000-0000"></div>
+      </div>
+      <div class="err-msg" id="novoAlunoModalErr"></div>
+    </div>
+    <div class="modal-foot"><span></span><button class="btn-primary" id="novoAlunoSaveBtn">Criar e continuar</button></div>
   </div>
 </div>
 
@@ -1476,6 +1494,43 @@
           loadAlunos();
         });
       });
+    });
+  });
+
+  // ---------------- Novo aluno (manual/teste) ----------------
+  // Antes só existia aluno vindo do webhook da Cademí ou de importação por
+  // planilha — não tinha como criar um do zero (nem um "aluno teste"). Cria
+  // com o mínimo (nome + e-mail) e já abre a ficha completa em seguida, pra
+  // marcar mentoria/status/CS na hora, sem precisar de uma segunda tela.
+  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)";
+
+  $("novoAlunoBtn").addEventListener("click", function(){
+    $("novoAlunoFieldName").value = "";
+    $("novoAlunoFieldEmail").value = "";
+    $("novoAlunoFieldPhone").value = "";
+    $("novoAlunoModalErr").textContent = "";
+    $("novoAlunoModal").classList.add("open");
+  });
+  $("novoAlunoModalClose").addEventListener("click", function(){ $("novoAlunoModal").classList.remove("open"); });
+
+  $("novoAlunoSaveBtn").addEventListener("click", function(){
+    var name = $("novoAlunoFieldName").value.trim();
+    var email = $("novoAlunoFieldEmail").value.trim();
+    var phone = $("novoAlunoFieldPhone").value.trim();
+    $("novoAlunoModalErr").textContent = "";
+    if(!name || !email){ $("novoAlunoModalErr").textContent = "Preencha nome e e-mail."; return; }
+
+    $("novoAlunoSaveBtn").disabled = true;
+    sb.from("students").insert({
+      full_name: name, email: email, phone: phone || null,
+      status: "onboarding", source: "manual", cs_id: (!currentStaff.isMasterLike ? currentStaff.id : null)
+    }).select(ALUNOS_SELECT_STRING).single().then(function(r){
+      $("novoAlunoSaveBtn").disabled = false;
+      if(r.error){ $("novoAlunoModalErr").textContent = "Erro ao criar: " + r.error.message; return; }
+      $("novoAlunoModal").classList.remove("open");
+      allStudents.push(r.data);
+      loadAlunos();
+      openAlunoModal(r.data.id);
     });
   });
 
