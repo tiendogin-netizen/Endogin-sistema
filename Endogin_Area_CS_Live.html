@@ -1265,6 +1265,19 @@
   }
 
   // ---------------- editar aluno (status, mentorias, CS) ----------------
+  // `allBranches` só era preenchida quando a aba "Equipe CS" era aberta ao
+  // menos uma vez na sessão (loadStaffAndBranches) — se a CS abre a ficha de
+  // um aluno antes disso, a lista de mentorias aparecia vazia, sem nenhum
+  // aviso. Mesmo conserto que já existia pro seletor de mentoria dos
+  // recados (openRecadoBranchPickerFresh), aplicado aqui também.
+  function ensureBranchesLoaded(cb){
+    if(allBranches && allBranches.length){ cb(); return; }
+    sb.from("branches").select("id,name").order("name").then(function(r){
+      allBranches = r.data || [];
+      cb();
+    });
+  }
+
   function renderAlunoBranchChecks(){
     var wrap = $("alunoBranchChecks");
     wrap.innerHTML = "";
@@ -1403,7 +1416,7 @@
     alunoEditingId = id;
     var activeDeliveries = (student.deliveries || []).filter(function(d){ return d.status === "ativo"; });
     alunoSelectedBranches = activeDeliveries.map(function(d){ return d.label; });
-    renderAlunoBranchChecks();
+    ensureBranchesLoaded(renderAlunoBranchChecks);
     var activeGroups = (student.student_whatsapp_groups || []).filter(function(g){ return g.status === "ativo"; });
     alunoSelectedGroups = activeGroups.map(function(g){ return g.label; });
     renderAlunoGroupChecks();
