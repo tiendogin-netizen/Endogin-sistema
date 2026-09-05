@@ -1306,34 +1306,72 @@
     var wrap = $("alunoTrilhaWrap");
     wrap.innerHTML = '<p class="hint">Carregando...</p>';
     var onboardingSteps = [
-      { done: Boolean(student.onboarding_completed_at), title: "Cadastro inicial (NPS + foto/aniversário)" },
-      { done: Boolean(student.disc_completed_at), title: "Perfil comportamental (DISC)" }
+      { done: Boolean(student.onboarding_completed_at), title: "Cadastro inicial (NPS + foto/aniversário)", kind: "onboarding" },
+      { done: Boolean(student.disc_completed_at), title: "Perfil comportamental (DISC)", kind: "disc" }
     ];
     sb.from("lessons").select("id,title,link_url").eq("lesson_type", "trilha").then(function(lr){
       var lessons = lr.data || [];
       if(!lessons.length){
         wrap.innerHTML = renderTrilhaItems(onboardingSteps.map(trilhaStepHtml)) +
-          '<p class="hint" style="margin-top:8px;">Nenhuma aula preparatória cadastrada ainda.</p>';
+          '<p class="hint" style="margin-top:8px;">Nenhuma aula preparatória cadastrada ainda (confere se rodou a migration v29).</p>';
+        wireTrilhaChecks(student);
         return;
       }
       sb.from("lesson_progress").select("lesson_id,completed").eq("student_id", student.id).in("lesson_id", lessons.map(function(l){ return l.id; })).then(function(pr){
         var doneMap = {};
         (pr.data || []).forEach(function(p){ doneMap[p.lesson_id] = p.completed; });
         var lessonSteps = lessons.map(function(l){
-          return { done: Boolean(doneMap[l.id]), title: l.title, link: l.link_url };
+          return { done: Boolean(doneMap[l.id]), title: l.title, link: l.link_url, kind: "lesson", lessonId: l.id };
         });
         wrap.innerHTML = renderTrilhaItems(onboardingSteps.concat(lessonSteps).map(trilhaStepHtml));
+        wireTrilhaChecks(student);
       });
     });
   }
   function trilhaStepHtml(step){
     return '<div class="trilha-item">' +
-      '<div class="trilha-check' + (step.done ? " done" : "") + '">' + (step.done ? '<i class="fa-solid fa-check"></i>' : "") + '</div>' +
+      '<div class="trilha-check' + (step.done ? " done" : "") + '" data-kind="' + step.kind + '" data-done="' + (step.done ? "1" : "0") + '"' +
+        (step.lessonId ? ' data-lesson-id="' + step.lessonId + '"' : '') +
+        ' title="Clique pra marcar/desmarcar como concluído">' + (step.done ? '<i class="fa-solid fa-check"></i>' : "") + '</div>' +
       '<div class="trilha-body' + (step.done ? " done" : "") + '"><b>' + step.title + '</b>' +
       (step.link ? '<p><a href="' + step.link + '" target="_blank" rel="noopener" style="color:var(--eg-gold-300);">Abrir aula <i class="fa-solid fa-arrow-up-right-from-square"></i></a></p>' : "") +
       '</div></div>';
   }
   function renderTrilhaItems(items){ return items.join(""); }
+
+  // Deixa a CS marcar/desmarcar cada etapa na mão (o aluno confirmou por
+  // telefone que assistiu, por exemplo) — antes esses círculos só mostravam
+  // o status, sem jeito de mudar. Onboarding/DISC gravam direto em
+  // `students`; aulas gravam em `lesson_progress` (upsert).
+  function wireTrilhaChecks(student){
+    var wrap = $("alunoTrilhaWrap");
+    if(!wrap) return;
+    wrap.querySelectorAll(".trilha-check").forEach(function(el){
+      el.addEventListener("click", function(){
+        var kind = el.getAttribute("data-kind");
+        var newDone = el.getAttribute("data-done") !== "1";
+        var nowIso = new Date().toISOString();
+
+        if(kind === "onboarding" || kind === "disc"){
+          var field = kind === "onboarding" ? "onboarding_completed_at" : "disc_completed_at";
+          var updates = {}; updates[field] = newDone ? nowIso : null;
+          sb.from("students").update(updates).eq("id", student.id).then(function(r){
+            if(r.error){ alert("Erro: " + r.error.message); return; }
+            student[field] = updates[field];
+            loadAlunoTrilha(student);
+          });
+        } else if(kind === "lesson"){
+          var lessonId = el.getAttribute("data-lesson-id");
+          sb.from("lesson_progress").upsert({
+            student_id: student.id, lesson_id: lessonId, completed: newDone, last_synced_at: nowIso
+          }, { onConflict: "student_id,lesson_id" }).then(function(r){
+            if(r.error){ alert("Erro: " + r.error.message); return; }
+            loadAlunoTrilha(student);
+          });
+        }
+      });
+    });
+  }
 
   // % assistido em cada produto/curso da Cademi, alimentado pelo webhook
   // "user.progress" (course_progress) — é progresso no PRODUTO inteiro
