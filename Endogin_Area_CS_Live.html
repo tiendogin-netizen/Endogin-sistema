@@ -636,7 +636,8 @@
           <h3><i class="fa-solid fa-chart-line icn"></i>Progresso em aulas gravadas (Cademí)</h3>
           <button class="btn-secondary" id="progressoSyncBtn"><i class="fa-solid fa-rotate"></i> Sincronizar agora</button>
         </div>
-        <p class="hint" style="margin:-8px 0 14px;">Puxa da Cademí quanto cada aluno já assistiu em cada curso — inclusive progresso feito antes de hoje, não só o que acontecer daqui pra frente. Pode levar alguns minutos dependendo do número de alunos; dá pra continuar usando o sistema enquanto sincroniza.</p>
+        <p class="hint" style="margin:-8px 0 4px;">Puxa da Cademí quanto cada aluno já assistiu em cada curso. Só processa quem ainda não foi sincronizado — uma vez feito, o aluno não entra de novo na fila sozinho, então clicar aqui só demora de verdade na primeira vez (ou quando entrar aluno novo). O dia a dia (aluno assistindo aula) já é atualizado sozinho pelo webhook da Cademí, sem precisar desse botão.</p>
+        <p class="hint" style="margin:0 0 14px;"><a href="#" id="progressoForceSyncLink" style="color:var(--eg-gold-300);text-decoration:underline;">Forçar re-sincronização completa (ignora quem já foi feito)</a></p>
         <p class="hint" id="progressoSyncStatus" style="display:none;margin:-8px 0 14px;"></p>
         <input type="text" class="search-input" id="progressoSearch" placeholder="Buscar por nome do aluno..." style="max-width:320px;margin-bottom:10px;">
         <div id="progressoLoading" class="loading-note">Carregando...</div>
@@ -3397,72 +3398,104 @@
     $("progressoSearch").addEventListener("input", renderProgressoList);
   }
 
-  if($("progressoSyncBtn")){
-    $("progressoSyncBtn").addEventListener("click", function(){
-      if(progressoSyncing) return;
-      progressoSyncing = true;
-      var btn = $("progressoSyncBtn");
-      var status = $("progressoSyncStatus");
-      btn.disabled = true;
-      status.style.display = "block";
-      status.textContent = "Contando alunos...";
+  function runProgressoSync(force){
+    if(progressoSyncing) return;
+    progressoSyncing = true;
+    var btn = $("progressoSyncBtn");
+    var status = $("progressoSyncStatus");
+    btn.disabled = true;
+    status.style.display = "block";
+    status.textContent = "Contando alunos pendentes...";
 
-      // conta TODOS os alunos (a busca agora usa e-mail pra quem ainda não
-      // tem o ID da Cademí gravado) — só pra mostrar "X de Y" durante a
-      // sincronização (foi pedido explicitamente: acompanhar o andamento).
-      sb.from("students").select("id", { count: "exact", head: true }).then(function(countRes){
-        var total = countRes.count || 0;
-        var offset = 0;
-        var totalProcessed = 0;
-        var allSyncErrors = [];
+    // com checkpoint (v38), "pendente" = quem ainda não tem
+    // cademi_progress_synced_at gravado (aluno novo, nunca sincronizado).
+    // Em "force", mostra o total geral, já que todo mundo volta pra fila.
+    var countQuery = sb.from("students").select("id", { count: "exact", head: true });
+    if(!force) countQuery = countQuery.is("cademi_progress_synced_at", null);
 
-        function finish(msg){
-          status.textContent = msg;
-          btn.disabled = false;
-          progressoSyncing = false;
-          loadProgressoAdmin();
+    countQuery.then(function(countRes){
+      var total = countRes.count || 0;
+      var totalProcessed = 0;
+      var allSyncErrors = [];
+      var consecutiveErrors = 0;
+
+      function finish(msg){
+        status.textContent = msg;
+        btn.disabled = false;
+        progressoSyncing = false;
+        loadProgressoAdmin();
+      }
+
+      if(total === 0 && !force){
+        finish("Nenhum aluno novo pra sincronizar — todo mundo já está em dia. O progresso de quem já assistiu aula continua chegando sozinho pelo webhook da Cademí.");
+        return;
+      }
+
+      // quando a função responde com status de erro (não-2xx), o
+      // supabase-js só dá uma mensagem genérica ("Edge Function returned a
+      // non-2xx status code") — o motivo de verdade fica no CORPO da
+      // resposta (r.error.context), que a gente lê aqui manualmente.
+      function describeInvokeError(r){
+        if(r.error && r.error.context && typeof r.error.context.text === "function"){
+          return r.error.context.text().then(function(txt){
+            try { return JSON.parse(txt).error || txt; } catch(e){ return txt || r.error.message; }
+          }).catch(function(){ return r.error.message; });
         }
+        return Promise.resolve(r.error ? r.error.message : ((r.data && r.data.error) || "falha desconhecida"));
+      }
 
-        // quando a função responde com status de erro (não-2xx), o
-        // supabase-js só dá uma mensagem genérica ("Edge Function returned a
-        // non-2xx status code") — o motivo de verdade fica no CORPO da
-        // resposta (r.error.context), que a gente lê aqui manualmente.
-        function describeInvokeError(r){
-          if(r.error && r.error.context && typeof r.error.context.text === "function"){
-            return r.error.context.text().then(function(txt){
-              try { return JSON.parse(txt).error || txt; } catch(e){ return txt || r.error.message; }
-            }).catch(function(){ return r.error.message; });
+      function step(){
+        sb.functions.invoke("cademi-sync-progress", { body: { limit: 10, force: !!force } }).then(function(r){
+          if(r.error || !r.data || r.data.ok === false){
+            consecutiveErrors++;
+            describeInvokeError(r).then(function(errMsg){
+              // com checkpoint, quem já foi processado nessa rodada FICA
+              // marcado como sincronizado — então repetir a chamada depois
+              // de um erro é seguro (não redoa quem já deu certo). Só desiste
+              // depois de 5 falhas seguidas, pra não ficar tentando pra sempre.
+              if(consecutiveErrors < 5){
+                status.textContent = "Tropeçou (" + errMsg + ") — tentando de novo... " + totalProcessed + " de " + total + " aluno(s).";
+                setTimeout(step, 2000);
+              } else {
+                finish("Erro ao sincronizar (parou em " + totalProcessed + "/" + total + " depois de várias tentativas): " + errMsg);
+              }
+            });
+            return;
           }
-          return Promise.resolve(r.error ? r.error.message : ((r.data && r.data.error) || "falha desconhecida"));
-        }
-
-        function step(){
-          sb.functions.invoke("cademi-sync-progress", { body: { offset: offset, limit: 10 } }).then(function(r){
-            if(r.error || !r.data || r.data.ok === false){
-              describeInvokeError(r).then(function(errMsg){
-                finish("Erro ao sincronizar (parou em " + totalProcessed + "/" + total + "): " + errMsg);
-              });
-              return;
-            }
-            totalProcessed += r.data.processed || 0;
-            if(r.data.errors && r.data.errors.length) allSyncErrors = allSyncErrors.concat(r.data.errors);
-            if(r.data.done){
-              console.warn("cademi-sync-progress avisos", allSyncErrors);
-              var extra = allSyncErrors.length
-                ? " " + allSyncErrors.length + " aviso(s) — ex.: \"" + allSyncErrors[0].error + "\" (veja mais no console, F12)."
-                : "";
-              finish("Sincronização concluída: " + totalProcessed + "/" + total + " aluno(s) verificados." + extra);
-              return;
-            }
-            status.textContent = "Sincronizando... " + totalProcessed + " de " + total + " aluno(s).";
-            offset = r.data.next_offset;
-            step();
-          }).catch(function(e){
-            finish("Erro ao sincronizar (parou em " + totalProcessed + "/" + total + "): " + e.message);
-          });
-        }
-        step();
-      });
+          consecutiveErrors = 0;
+          totalProcessed += r.data.processed || 0;
+          if(r.data.errors && r.data.errors.length) allSyncErrors = allSyncErrors.concat(r.data.errors);
+          if(r.data.done){
+            console.warn("cademi-sync-progress avisos", allSyncErrors);
+            var extra = allSyncErrors.length
+              ? " " + allSyncErrors.length + " aviso(s) — ex.: \"" + allSyncErrors[0].error + "\" (veja mais no console, F12)."
+              : "";
+            finish("Sincronização concluída: " + totalProcessed + "/" + total + " aluno(s) verificados." + extra);
+            return;
+          }
+          status.textContent = "Sincronizando... " + totalProcessed + " de " + total + " aluno(s) pendente(s).";
+          step();
+        }).catch(function(e){
+          consecutiveErrors++;
+          if(consecutiveErrors < 5){
+            status.textContent = "Tropeçou (" + e.message + ") — tentando de novo... " + totalProcessed + " de " + total + " aluno(s).";
+            setTimeout(step, 2000);
+          } else {
+            finish("Erro ao sincronizar (parou em " + totalProcessed + "/" + total + " depois de várias tentativas): " + e.message);
+          }
+        });
+      }
+      step();
+    });
+  }
+  if($("progressoSyncBtn")){
+    $("progressoSyncBtn").addEventListener("click", function(){ runProgressoSync(false); });
+  }
+  if($("progressoForceSyncLink")){
+    $("progressoForceSyncLink").addEventListener("click", function(e){
+      e.preventDefault();
+      if(!confirm("Isso vai reprocessar TODOS os alunos de novo (não só os pendentes) e demora bem mais. Só use se desconfiar que algum progresso ficou desatualizado. Continuar?")) return;
+      runProgressoSync(true);
     });
   }
   $("matSearch").addEventListener("input", renderMatList);
