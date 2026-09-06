@@ -212,6 +212,12 @@ Deno.serve(async (req: Request) => {
 
   const results: Array<{ student_id: string; produtos_encontrados: number; cursos_atualizados: number; cursos_pulados: number }> = [];
   const errors: Array<{ student_id: string; error: string }> = [];
+  // Parar no meio de um aluno por causa do orçamento de tempo é o
+  // funcionamento normal, não uma falha. Enquanto essa mensagem ficava junto
+  // dos erros ela era sempre a última da lista — e, como a tela mostra o
+  // último aviso, escondia justamente o erro de verdade que a gente precisava
+  // ver. Agora ela viaja num campo separado.
+  let pausadoEm: string | null = null;
   const studentList = students ?? [];
   let stoppedEarlyAt = studentList.length;
 
@@ -307,10 +313,9 @@ Deno.serve(async (req: Request) => {
           // estourasse o orçamento sairia sem nada feito, voltaria pra fila com
           // o carimbo ainda NULL e seria escolhido de novo pra sempre.
           if (timeUp() && cursosBuscados > 0) {
-            errors.push({
-              student_id: student.id,
-              error: `tempo esgotado no meio dos cursos deste aluno — ${cursosAtualizados + cursosPulados} de ${acessos.length} processados, continua na próxima`,
-            });
+            pausadoEm =
+              `${student.full_name ?? student.id}: ${cursosBuscados + cursosPulados} de ${acessos.length} curso(s) nesta leva ` +
+              `(${cursosAtualizados} salvo(s)), continua na próxima`;
             timedOutMidStudent = true;
             break;
           }
@@ -427,6 +432,7 @@ Deno.serve(async (req: Request) => {
       processed: stoppedEarlyAt,
       cursos_atualizados: cursosAtualizadosTotal,
       cursos_pulados: cursosPuladosTotal,
+      pausado_em: pausadoEm,
       done,
       results,
       errors,

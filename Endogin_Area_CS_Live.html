@@ -3495,9 +3495,13 @@
             ? " ⚠ Último aviso: \"" + allSyncErrors[allSyncErrors.length - 1].error
               + "\" (" + allSyncErrors.length + " no total; abra o console com F12 pra ver todos)."
             : "";
+          // pausar no meio de um aluno é normal, não é aviso — mas ver em quem
+          // a leva parou ajuda a entender por que o contador de alunos anda
+          // devagar quando alguém tem 40+ cursos.
+          var pausa = r.data.pausado_em ? " Parou em " + r.data.pausado_em + "." : "";
           status.textContent = "Sincronizando... " + totalProcessed + " de " + total + " aluno(s) — "
             + totalCursos + " curso(s) atualizados. Quem tem muitos cursos leva algumas levas pra fechar, "
-            + "então o número de alunos demora mais a subir que o de cursos." + ultimoAviso;
+            + "então o número de alunos demora mais a subir que o de cursos." + pausa + ultimoAviso;
           step();
         }).catch(function(e){
           consecutiveErrors++;
