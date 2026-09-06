@@ -4679,11 +4679,20 @@
       totalPlanilha: 0, npsNovos: 0, feedbacksNovos: 0
     };
 
-    // quem já tem NPS/feedback vindo de planilha não recebe de novo — sem isso,
-    // aplicar duas vezes duplicaria a nota e o depoimento de todo mundo.
-    var npsPorAluno = {};
+    // `nps_responses` é histórico, não cadastro: cada nota é uma resposta com
+    // data. Então a regra não é "já tem NPS, pula" — isso congelaria a nota da
+    // primeira importação e o NPS nunca cairia nem subiria. A regra é comparar
+    // com a ÚLTIMA nota importada da planilha: se mudou, entra uma resposta
+    // nova (a anterior fica no histórico); se é igual, não faz nada. Assim
+    // reimportar a mesma planilha não duplica, e reimportar uma planilha
+    // atualizada registra a mudança.
+    var ultimoNpsPlanilha = {};
     (npsBanco || []).forEach(function(n){
-      if(String(n.source || "").indexOf("planilha_cs") === 0) npsPorAluno[n.student_id] = true;
+      if(String(n.source || "").indexOf("planilha_cs") !== 0) return;
+      var anterior = ultimoNpsPlanilha[n.student_id];
+      if(!anterior || String(n.created_at || "") > String(anterior.created_at || "")){
+        ultimoNpsPlanilha[n.student_id] = n;
+      }
     });
     var fbPorAluno = {};
     (fbBanco || []).forEach(function(f){
@@ -4709,8 +4718,13 @@
       q.id = atual.id;
       if(!temColunasNovas){ delete q.campos.endereco; delete q.campos.contrato_status; delete q.campos.respondeu_icp; }
 
-      // NPS e feedback só entram se ainda não existirem pra esse aluno
-      if(q.nps && npsPorAluno[atual.id]) q.nps = null;
+      // NPS: só ignora quando a nota é idêntica à última importada.
+      if(q.nps){
+        var ult = ultimoNpsPlanilha[atual.id];
+        if(ult && Number(ult.score) === Number(q.nps.score)) q.nps = null;
+      }
+      // Feedback: o texto é a identidade. Depoimento novo ou reescrito entra
+      // como registro novo; idêntico ao que já está lá é ignorado.
       q.feedbacks = q.feedbacks.filter(function(f){
         return !fbPorAluno[atual.id + "||" + f.comment.slice(0, 120)];
       });
@@ -4804,7 +4818,7 @@
     h.push('<tr><td><b>' + plano.trocaStatus.length + '</b></td><td>mudariam de <b>status</b></td></tr>');
     h.push('<tr><td><b>' + plano.trocaMentoria.length + '</b></td><td>mudariam de <b>mentoria</b></td></tr>');
     h.push('<tr><td><b>' + plano.trocaGrupos.length + '</b></td><td>teriam os <b>grupos de WhatsApp</b> ajustados</td></tr>');
-    h.push('<tr><td><b>' + plano.npsNovos + '</b></td><td>nota(s) de <b>NPS</b> a registrar na aba NPS</td></tr>');
+    h.push('<tr><td><b>' + plano.npsNovos + '</b></td><td>nota(s) de <b>NPS</b> novas ou <b>alteradas</b> a registrar na aba NPS</td></tr>');
     h.push('<tr><td><b>' + plano.feedbacksNovos + '</b></td><td><b>feedback(s)</b> a registrar na aba Feedbacks</td></tr>');
     h.push('<tr><td><b>' + plano.foraDaPlanilha.length + '</b></td><td>estão no sistema e <b>não</b> na planilha — <i>não serão tocados</i></td></tr>');
     h.push('</tbody></table>');
@@ -4992,7 +5006,7 @@
     // NPS e feedbacks vêm junto pra não duplicar registro de quem já foi
     // importado numa rodada anterior.
     Promise.all([
-      sb.from("nps_responses").select("student_id,score,source"),
+      sb.from("nps_responses").select("student_id,score,source,created_at"),
       sb.from("feedback_entries").select("student_id,comment"),
       sb.from("students").select(campos)
     ]).then(function(res){
