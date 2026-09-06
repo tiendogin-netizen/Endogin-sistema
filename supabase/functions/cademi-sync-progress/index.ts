@@ -27,6 +27,17 @@
 // em dia, só avança na fila de quem falta. Pra forçar uma re-sincronização
 // completa (ignorando o carimbo), manda { force: true } no corpo.
 //
+// RETOMADA POR CURSO (correção do "trava em 0 de N"): o checkpoint do v38 é
+// por ALUNO, e o aluno só recebe o carimbo quando termina TODOS os cursos
+// dele. Como cada curso custa ~600ms (limite da Cademí) e a função para aos
+// 20s, um aluno com mais de ~15 cursos nunca chegava ao fim: voltava pra fila
+// sem carimbo, era escolhido de novo na chamada seguinte, recomeçava do
+// primeiro curso e travava a fila inteira pra sempre — o front ficava
+// eternamente em "Sincronizando... 0 de N", porque `processed` era mesmo 0.
+// Agora o progresso salvo há menos de RECENT_WINDOW_MS é pulado sem gastar
+// chamada de API, então cada invocação avança de onde a anterior parou, e todo
+// aluno busca pelo menos um curso por chamada (fila nunca fica parada).
+//
 // Autenticação: exige o token de login de um staff (qualquer um, não só
 // master) — mesma ideia do admin-tools, mas sem exigir master, já que aqui
 // só se lê e atualiza progresso, não se mexe em login de ninguém.
@@ -43,6 +54,14 @@ const CADEMI_API_BASE_URL = (Deno.env.get("CADEMI_API_BASE_URL") ?? "").replace(
 const CADEMI_API_KEY = Deno.env.get("CADEMI_API_KEY") ?? "";
 
 const RATE_LIMIT_DELAY_MS = 600; // Cademí permite 2/s — margem de segurança
+
+// Janela de "isso já foi buscado agora há pouco". Um curso cujo progresso foi
+// salvo dentro dessa janela não é buscado de novo na Cademí — é o que permite
+// um aluno com dezenas de cursos avançar de chamada em chamada em vez de
+// recomeçar do zero e nunca terminar (ver RETOMADA POR CURSO no cabeçalho).
+// 30min é folgado pra uma rodada inteira do botão e curto o bastante pra uma
+// re-sincronização amanhã buscar tudo de novo.
+const RECENT_WINDOW_MS = 30 * 60 * 1000;
 
 const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -177,7 +196,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ ok: false, error: studentsErr.message }, 500);
   }
 
-  const results: Array<{ student_id: string; produtos_encontrados: number; cursos_atualizados: number }> = [];
+  const results: Array<{ student_id: string; produtos_encontrados: number; cursos_atualizados: number; cursos_pulados: number }> = [];
   const errors: Array<{ student_id: string; error: string }> = [];
   const studentList = students ?? [];
   let stoppedEarlyAt = studentList.length;
@@ -223,16 +242,57 @@ Deno.serve(async (req: Request) => {
         }
         const progressoIdentifier = cademiUsuarioId !== undefined && cademiUsuarioId !== null ? String(cademiUsuarioId) : identifier;
 
+        // Descobre, numa consulta só, quais desses cursos já têm progresso
+        // salvo recentemente — esses não precisam de chamada na Cademí de novo.
+        const produtoIds = acessos
+          .map((item) => item?.produto?.id)
+          .filter((id): id is number | string => id !== undefined && id !== null)
+          .map((id) => String(id));
+
+        const cursoIdPorProduto = new Map<string, string>();
+        const cursoJaFresco = new Set<string>();
+
+        if (produtoIds.length) {
+          const { data: cursosConhecidos } = await admin
+            .from("courses")
+            .select("id, cademi_product_id")
+            .in("cademi_product_id", produtoIds);
+          for (const c of cursosConhecidos ?? []) {
+            cursoIdPorProduto.set(String(c.cademi_product_id), c.id as string);
+          }
+
+          const idsConhecidos = [...cursoIdPorProduto.values()];
+          if (idsConhecidos.length) {
+            const { data: progressoSalvo } = await admin
+              .from("course_progress")
+              .select("course_id, updated_at")
+              .eq("student_id", student.id)
+              .in("course_id", idsConhecidos);
+            for (const pr of progressoSalvo ?? []) {
+              const quando = pr.updated_at ? new Date(pr.updated_at as string).getTime() : 0;
+              if (quando && Date.now() - quando < RECENT_WINDOW_MS) {
+                cursoJaFresco.add(pr.course_id as string);
+              }
+            }
+          }
+        }
+
         let cursosAtualizados = 0;
+        let cursosPulados = 0;
+        let cursosBuscados = 0; // quantos custaram chamada de API nesta invocação
 
         for (const item of acessos) {
           // checagem de tempo também DENTRO do loop de cursos — sem isso, um
           // único aluno com muitos cursos (ex: 23) podia sozinho estourar
           // bem além dos 20s, arriscando a função inteira dar timeout.
-          if (timeUp()) {
+          // O `cursosBuscados > 0` garante que todo aluno avança pelo menos um
+          // curso por chamada. Sem isso, um aluno cujo primeiro curso já
+          // estourasse o orçamento sairia sem nada feito, voltaria pra fila com
+          // o carimbo ainda NULL e seria escolhido de novo pra sempre.
+          if (timeUp() && cursosBuscados > 0) {
             errors.push({
               student_id: student.id,
-              error: `tempo esgotado no meio dos cursos deste aluno — ${cursosAtualizados} de ${acessos.length} processados, continua na próxima`,
+              error: `tempo esgotado no meio dos cursos deste aluno — ${cursosAtualizados + cursosPulados} de ${acessos.length} processados, continua na próxima`,
             });
             timedOutMidStudent = true;
             break;
@@ -240,6 +300,14 @@ Deno.serve(async (req: Request) => {
           const produtoId = item?.produto?.id;
           const produtoNome = item?.produto?.nome;
           if (produtoId === undefined || produtoId === null) continue;
+
+          // já buscado agora há pouco (nesta mesma rodada, provavelmente numa
+          // chamada anterior que parou no tempo) — pula sem gastar API
+          const cursoConhecidoId = cursoIdPorProduto.get(String(produtoId));
+          if (cursoConhecidoId && cursoJaFresco.has(cursoConhecidoId)) {
+            cursosPulados++;
+            continue;
+          }
 
           // garante que o curso existe (mesmo comportamento do cademi-webhook)
           const { data: course, error: courseErr } = await admin
@@ -256,6 +324,7 @@ Deno.serve(async (req: Request) => {
             continue;
           }
 
+          cursosBuscados++;
           const progressoRes = await cademiGet(
             `/usuario/progresso_por_produto/${encodeURIComponent(progressoIdentifier)}/${encodeURIComponent(String(produtoId))}`,
           );
@@ -286,7 +355,12 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        results.push({ student_id: student.id, produtos_encontrados: acessos.length, cursos_atualizados: cursosAtualizados });
+        results.push({
+          student_id: student.id,
+          produtos_encontrados: acessos.length,
+          cursos_atualizados: cursosAtualizados,
+          cursos_pulados: cursosPulados,
+        });
 
         if (timedOutMidStudent) {
           // não marca como sincronizado — fica pendente pra continuar (ou
@@ -315,10 +389,18 @@ Deno.serve(async (req: Request) => {
   // tinha mais ninguém pra pegar) E não parou no meio por causa do tempo.
   const done = stoppedEarlyAt === studentList.length && studentList.length < limit;
 
+  // O front mostra `cursos_atualizados` junto com `processed`: quando um aluno
+  // pesado leva várias chamadas, `processed` fica em 0 por um tempo, mas os
+  // cursos continuam subindo — sem isso a tela parece travada mesmo andando.
+  const cursosAtualizadosTotal = results.reduce((soma, r) => soma + r.cursos_atualizados, 0);
+  const cursosPuladosTotal = results.reduce((soma, r) => soma + r.cursos_pulados, 0);
+
   return jsonResponse(
     {
       ok: true,
       processed: stoppedEarlyAt,
+      cursos_atualizados: cursosAtualizadosTotal,
+      cursos_pulados: cursosPuladosTotal,
       done,
       results,
       errors,

@@ -3415,6 +3415,7 @@
 
     countQuery.then(function(countRes){
       var totalProcessed = 0;
+      var totalCursos = 0;
       var allSyncErrors = [];
       var consecutiveErrors = 0;
 
@@ -3474,16 +3475,20 @@
           }
           consecutiveErrors = 0;
           totalProcessed += r.data.processed || 0;
+          totalCursos += r.data.cursos_atualizados || 0;
           if(r.data.errors && r.data.errors.length) allSyncErrors = allSyncErrors.concat(r.data.errors);
           if(r.data.done){
             console.warn("cademi-sync-progress avisos", allSyncErrors);
             var extra = allSyncErrors.length
               ? " " + allSyncErrors.length + " aviso(s) — ex.: \"" + allSyncErrors[0].error + "\" (veja mais no console, F12)."
               : "";
-            finish("Sincronização concluída: " + totalProcessed + "/" + total + " aluno(s) verificados." + extra);
+            finish("Sincronização concluída: " + totalProcessed + "/" + total + " aluno(s) verificados, "
+              + totalCursos + " curso(s) atualizados." + extra);
             return;
           }
-          status.textContent = "Sincronizando... " + totalProcessed + " de " + total + " aluno(s) pendente(s).";
+          status.textContent = "Sincronizando... " + totalProcessed + " de " + total + " aluno(s) — "
+            + totalCursos + " curso(s) atualizados. Quem tem muitos cursos leva algumas levas pra fechar, "
+            + "então o número de alunos demora mais a subir que o de cursos.";
           step();
         }).catch(function(e){
           consecutiveErrors++;
