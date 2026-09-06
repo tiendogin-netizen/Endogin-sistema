@@ -4327,6 +4327,16 @@
     "restricao alimentar": "dietary_restriction",
     "anotacoes": "notes", "observacoes": "notes"
   };
+  // Casar com o formato não basta: "31/11" casa e não existe. Sem esta
+  // checagem o Postgres recusa a linha toda ("date/time field value out of
+  // range") e o aluno fica sem NENHUMA atualização por causa de uma data.
+  function dataValida(ano, mes, dia){
+    var a = parseInt(ano, 10), m = parseInt(mes, 10), d = parseInt(dia, 10);
+    if(!a || !m || !d) return null;
+    var dt = new Date(a, m - 1, d);
+    if(dt.getFullYear() !== a || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null;
+    return a + "-" + String(m).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+  }
   function parseImportDate(val){
     if(val === null || val === undefined || val === "") return null;
     if(val instanceof Date && !isNaN(val)){
@@ -4334,9 +4344,9 @@
     }
     var s = String(val).trim();
     var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if(iso) return iso[1] + "-" + iso[2] + "-" + iso[3];
+    if(iso) return dataValida(iso[1], iso[2], iso[3]);
     var br = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if(br) return br[3] + "-" + br[2].padStart(2, "0") + "-" + br[1].padStart(2, "0");
+    if(br) return dataValida(br[3], br[2], br[1]);
     return null;
   }
 
@@ -4626,16 +4636,25 @@
           reg.feedbacks.push({ category: "Grupo de reonboarding (planilha)", comment: String(bruto.__feedbackGrupo).trim() });
         }
 
-        var dEnt = parseImportDate(bruto.entry_date); if(dEnt) reg.campos.entry_date = dEnt;
-        var dNasc = parseImportDate(bruto.birth_date); if(dNasc) reg.campos.birth_date = dNasc;
-        var d11 = parseImportDate(bruto.one_on_one_date); if(d11) reg.campos.one_on_one_date = d11;
+        // data que não existe no calendário vira aviso — o resto do cadastro
+        // do aluno entra normalmente em vez de a linha toda ser recusada
+        function dataOuAviso(valor, rotulo){
+          var txt = String(valor == null ? "" : valor).trim();
+          if(!txt) return null;
+          var d = parseImportDate(valor);
+          if(!d) avisos.push(email + ': ' + rotulo + ' "' + txt + '" não é uma data válida — ignorei esse campo (o resto do cadastro entrou).');
+          return d;
+        }
+        var dEnt = dataOuAviso(bruto.entry_date, "data de entrada"); if(dEnt) reg.campos.entry_date = dEnt;
+        var dNasc = dataOuAviso(bruto.birth_date, "data de nascimento"); if(dNasc) reg.campos.birth_date = dNasc;
+        var d11 = dataOuAviso(bruto.one_on_one_date, "data do 1:1"); if(d11) reg.campos.one_on_one_date = d11;
 
         // "Vitalicio" na coluna de vencimento não é data — é o campo is_lifetime
         var venc = String(bruto.renewal_date == null ? "" : bruto.renewal_date);
         if(impChave(venc).indexOf("vitalic") > -1){
           reg.campos.is_lifetime = true;
         } else {
-          var dVenc = parseImportDate(bruto.renewal_date);
+          var dVenc = dataOuAviso(bruto.renewal_date, "data de vencimento");
           if(dVenc) reg.campos.renewal_date = dVenc;
         }
 
