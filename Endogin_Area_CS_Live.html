@@ -4492,6 +4492,16 @@
     "tamanhojaqueta": "jacket_size",
     "tamanhocamiseta": "shirt_size",
     "ndeindicacoes": "referral_count", "ndeindicacao": "referral_count",
+    "endereco": "endereco",
+    "contrato": "contrato_status",
+    "respondeuicp": "__icp",
+    "obs": "__obs",
+    // NPS e feedback não são campo de cadastro: têm tabela própria
+    // (nps_responses / feedback_entries) e viram registro lá, não coluna aqui.
+    "nps05": "__nps5",
+    "nps010": "__nps10",
+    "feedbackdoaluno": "__feedback",
+    "feedbackemrelacaoaogruporeonboarding": "__feedbackGrupo",
     "mentoria": "__mentoria"
   };
 
@@ -4555,7 +4565,7 @@
         }
         lidos++;
 
-        var reg = porEmail[email] || (porEmail[email] = { email: email, campos: {}, grupos: null, abas: [], csId: null, csNome: null, branch: null, mentoriaRaw: "" });
+        var reg = porEmail[email] || (porEmail[email] = { email: email, campos: {}, grupos: null, abas: [], csId: null, csNome: null, branch: null, mentoriaRaw: "", nps: null, feedbacks: [] });
         reg.abas.push(ws.name);
 
         if(ehBaseDeClientes){
@@ -4584,6 +4594,37 @@
         if(bruto.one_on_one_summary) reg.campos.one_on_one_summary = String(bruto.one_on_one_summary).trim();
         var ind = parseInt(impDigitos(bruto.referral_count), 10);
         if(!isNaN(ind)) reg.campos.referral_count = ind;
+
+        if(bruto.endereco) reg.campos.endereco = String(bruto.endereco).trim();
+        if(bruto.contrato_status) reg.campos.contrato_status = String(bruto.contrato_status).trim();
+        // a planilha traz False em todo mundo hoje; só gravamos o TRUE, pra não
+        // encher o relatório de mudança que não muda nada.
+        if(String(bruto.__icp || "").trim().toUpperCase() === "TRUE") reg.campos.respondeu_icp = true;
+        // OBS tem 1 valor preenchido no arquivo inteiro — não merece coluna
+        // própria, entra junto das anotações.
+        if(bruto.__obs){
+          var obs = String(bruto.__obs).trim();
+          reg.campos.notes = reg.campos.notes ? (reg.campos.notes + " · " + obs) : obs;
+        }
+
+        // NPS: as abas usam DUAS escalas. A área de NPS do sistema é 0-10
+        // (9-10 promotor, 7-8 neutro), então a coluna 0-5 é convertida ×2 —
+        // 5/5 vira 10, 4/5 vira 8. A origem fica gravada no campo `source`
+        // pra dar pra auditar depois de onde veio cada nota.
+        var nps10 = parseFloat(String(bruto.__nps10 || "").replace(",", "."));
+        var nps5 = parseFloat(String(bruto.__nps5 || "").replace(",", "."));
+        if(!isNaN(nps10) && nps10 >= 0 && nps10 <= 10){
+          reg.nps = { score: Math.round(nps10), source: "planilha_cs_0a10" };
+        } else if(!isNaN(nps5) && nps5 >= 0 && nps5 <= 5){
+          reg.nps = { score: Math.round(nps5 * 2), source: "planilha_cs_0a5", original: nps5 };
+        }
+
+        if(bruto.__feedback){
+          reg.feedbacks.push({ category: "Feedback do aluno (planilha)", comment: String(bruto.__feedback).trim() });
+        }
+        if(bruto.__feedbackGrupo){
+          reg.feedbacks.push({ category: "Grupo de reonboarding (planilha)", comment: String(bruto.__feedbackGrupo).trim() });
+        }
 
         var dEnt = parseImportDate(bruto.entry_date); if(dEnt) reg.campos.entry_date = dEnt;
         var dNasc = parseImportDate(bruto.birth_date); if(dNasc) reg.campos.birth_date = dNasc;
@@ -4624,7 +4665,7 @@
   }
 
   // Compara o que a planilha pede com o que está no banco.
-  function impMontarPlano(lido, alunosBanco){
+  function impMontarPlano(lido, alunosBanco, npsBanco, fbBanco, temColunasNovas){
     var porEmailBanco = {};
     alunosBanco.forEach(function(a){
       var e = String(a.email || "").trim().toLowerCase();
@@ -4635,8 +4676,23 @@
       criar: [], atualizar: [], semMudanca: 0,
       trocaCs: [], trocaStatus: [], trocaMentoria: [], trocaGrupos: [],
       foraDaPlanilha: [], avisos: lido.avisos.slice(), abasLidas: lido.abasLidas,
-      totalPlanilha: 0
+      totalPlanilha: 0, npsNovos: 0, feedbacksNovos: 0
     };
+
+    // quem já tem NPS/feedback vindo de planilha não recebe de novo — sem isso,
+    // aplicar duas vezes duplicaria a nota e o depoimento de todo mundo.
+    var npsPorAluno = {};
+    (npsBanco || []).forEach(function(n){
+      if(String(n.source || "").indexOf("planilha_cs") === 0) npsPorAluno[n.student_id] = true;
+    });
+    var fbPorAluno = {};
+    (fbBanco || []).forEach(function(f){
+      var k = f.student_id + "||" + String(f.comment || "").trim().slice(0, 120);
+      fbPorAluno[k] = true;
+    });
+    if(!temColunasNovas){
+      plano.avisos.push("As colunas Endereço, Contrato e Respondeu ICP ainda não existem no banco — rode a migration v39 no SQL Editor do Supabase pra elas serem importadas. O resto funciona normalmente.");
+    }
 
     Object.keys(lido.porEmail).forEach(function(email){
       var q = lido.porEmail[email];
@@ -4644,10 +4700,22 @@
       var atual = porEmailBanco[email];
 
       if(!atual){
+        if(!temColunasNovas){ delete q.campos.endereco; delete q.campos.contrato_status; delete q.campos.respondeu_icp; }
+        if(q.nps) plano.npsNovos++;
+        plano.feedbacksNovos += q.feedbacks.length;
         plano.criar.push(q);
         return;
       }
       q.id = atual.id;
+      if(!temColunasNovas){ delete q.campos.endereco; delete q.campos.contrato_status; delete q.campos.respondeu_icp; }
+
+      // NPS e feedback só entram se ainda não existirem pra esse aluno
+      if(q.nps && npsPorAluno[atual.id]) q.nps = null;
+      q.feedbacks = q.feedbacks.filter(function(f){
+        return !fbPorAluno[atual.id + "||" + f.comment.slice(0, 120)];
+      });
+      if(q.nps) plano.npsNovos++;
+      plano.feedbacksNovos += q.feedbacks.length;
 
       var mudancas = {};
       Object.keys(q.campos).forEach(function(campo){
@@ -4696,7 +4764,7 @@
         }
       }
 
-      if(Object.keys(mudancas).length || precisaMentoria || precisaGrupos){
+      if(Object.keys(mudancas).length || precisaMentoria || precisaGrupos || q.nps || q.feedbacks.length){
         plano.atualizar.push({ q: q, id: atual.id, mudancas: mudancas, mentoria: precisaMentoria, grupos: precisaGrupos, deliveriesAtivas: deliveriesAtivas, atual: atual });
       } else {
         plano.semMudanca++;
@@ -4736,6 +4804,8 @@
     h.push('<tr><td><b>' + plano.trocaStatus.length + '</b></td><td>mudariam de <b>status</b></td></tr>');
     h.push('<tr><td><b>' + plano.trocaMentoria.length + '</b></td><td>mudariam de <b>mentoria</b></td></tr>');
     h.push('<tr><td><b>' + plano.trocaGrupos.length + '</b></td><td>teriam os <b>grupos de WhatsApp</b> ajustados</td></tr>');
+    h.push('<tr><td><b>' + plano.npsNovos + '</b></td><td>nota(s) de <b>NPS</b> a registrar na aba NPS</td></tr>');
+    h.push('<tr><td><b>' + plano.feedbacksNovos + '</b></td><td><b>feedback(s)</b> a registrar na aba Feedbacks</td></tr>');
     h.push('<tr><td><b>' + plano.foraDaPlanilha.length + '</b></td><td>estão no sistema e <b>não</b> na planilha — <i>não serão tocados</i></td></tr>');
     h.push('</tbody></table>');
 
@@ -4858,6 +4928,18 @@
       );
     }
 
+    if(q.nps){
+      tarefas.push(sb.from("nps_responses").insert({
+        student_id: studentId, score: q.nps.score, source: q.nps.source,
+        comment: q.nps.original !== undefined ? ("Importado da planilha: " + q.nps.original + "/5") : "Importado da planilha"
+      }));
+    }
+    (q.feedbacks || []).forEach(function(f){
+      tarefas.push(sb.from("feedback_entries").insert({
+        student_id: studentId, category: f.category, rating: 5, comment: f.comment
+      }));
+    });
+
     if(!tarefas.length){ pronto(); return; }
     Promise.all(tarefas).then(function(rs){
       rs.forEach(function(r){ if(r && r.error) erros.push(q.email + " (vínculos): " + r.error.message); });
@@ -4886,20 +4968,41 @@
           return;
         }
         st.textContent = "Comparando com o sistema...";
-        // busca os alunos com os vínculos, pra saber o que muda de verdade
-        sb.from("students")
-          .select("id,full_name,email,phone,cpf,status,cs_id,birth_date,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,group_id,status),staff:cs_id(full_name)")
-          .then(function(r){
-            if(r.error){ st.textContent = "Erro ao ler os alunos do sistema: " + r.error.message; return; }
-            impPlano = impMontarPlano(lido, r.data || []);
-            st.innerHTML = "<b>Simulação — nada foi gravado.</b> Confere abaixo e, se estiver certo, clica em aplicar.";
-            impRenderRelatorio(impPlano);
-          });
+        // as colunas do v39 podem ainda não existir: testa antes em vez de
+        // deixar a importação inteira quebrar linha a linha.
+        sb.from("students").select("endereco,contrato_status,respondeu_icp").limit(1).then(function(probe){
+          var temColunasNovas = !probe.error;
+          impComparar(lido, st, temColunasNovas);
+        });
       }).catch(function(err){
         st.textContent = "Erro ao ler o arquivo: " + err.message;
       });
     };
     reader.readAsArrayBuffer(file);
+  }
+
+  var IMP_CAMPOS_ALUNO = "id,full_name,email,phone,cpf,status,cs_id,birth_date,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,group_id,status),staff:cs_id(full_name)";
+
+  function impComparar(lido, st, temColunasNovas){
+    // As colunas do v39 só entram no select se existirem; senão o PostgREST
+    // recusa a consulta inteira. E sem elas no select, o comparador acharia
+    // que endereço/contrato mudaram em toda rodada.
+    var campos = IMP_CAMPOS_ALUNO + (temColunasNovas ? ",endereco,contrato_status,respondeu_icp" : "");
+
+    // NPS e feedbacks vêm junto pra não duplicar registro de quem já foi
+    // importado numa rodada anterior.
+    Promise.all([
+      sb.from("nps_responses").select("student_id,score,source"),
+      sb.from("feedback_entries").select("student_id,comment"),
+      sb.from("students").select(campos)
+    ]).then(function(res){
+      var r = res[2];
+      if(r.error){ st.textContent = "Erro ao ler os alunos do sistema: " + r.error.message; return; }
+      impPlano = impMontarPlano(lido, r.data || [],
+        (res[0] && res[0].data) || [], (res[1] && res[1].data) || [], temColunasNovas);
+      st.innerHTML = "<b>Simulação — nada foi gravado.</b> Confere abaixo e, se estiver certo, clica em aplicar.";
+      impRenderRelatorio(impPlano);
+    });
   }
 
   if($("impPlanilhaBtn")){
