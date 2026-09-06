@@ -3414,7 +3414,6 @@
     if(!force) countQuery = countQuery.is("cademi_progress_synced_at", null);
 
     countQuery.then(function(countRes){
-      var total = countRes.count || 0;
       var totalProcessed = 0;
       var allSyncErrors = [];
       var consecutiveErrors = 0;
@@ -3425,6 +3424,17 @@
         progressoSyncing = false;
         loadProgressoAdmin();
       }
+
+      // sem isso, um erro aqui (ex.: coluna cademi_progress_synced_at ainda
+      // não existe porque a migration v38 não rodou) deixava o botão travado
+      // pra sempre em "Contando alunos pendentes...", sem nenhuma mensagem —
+      // e como progressoSyncing nunca voltava a false, cliques seguintes no
+      // botão não faziam nada (o guard do topo da função barrava tudo).
+      if(countRes.error){
+        finish("Erro ao contar alunos pendentes: " + countRes.error.message + ". Se a mensagem falar da coluna cademi_progress_synced_at, é porque a migration v38 ainda não foi rodada no Supabase.");
+        return;
+      }
+      var total = countRes.count || 0;
 
       if(total === 0 && !force){
         finish("Nenhum aluno novo pra sincronizar — todo mundo já está em dia. O progresso de quem já assistiu aula continua chegando sozinho pelo webhook da Cademí.");
@@ -3486,6 +3496,10 @@
         });
       }
       step();
+    }).catch(function(e){
+      status.textContent = "Erro ao contar alunos pendentes: " + e.message;
+      btn.disabled = false;
+      progressoSyncing = false;
     });
   }
   if($("progressoSyncBtn")){
