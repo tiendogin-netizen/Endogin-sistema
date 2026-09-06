@@ -4580,8 +4580,13 @@
 
         if(ehBaseDeClientes){
           // Base de Clientes: SÓ os grupos. Cadastro e CS vêm da outra planilha.
+          // O nome fica guardado FORA de `campos` de propósito: serve só como
+          // último recurso se um aluno existir apenas aqui e precisar ser
+          // criado. Se entrasse em `campos`, esta planilha sobrescreveria o
+          // nome que a planilha por CS — que é a autoridade do cadastro —
+          // acabou de gravar.
           reg.grupos = gruposDaLinha;
-          if(!reg.campos.full_name) reg.campos.full_name = nome;
+          if(!reg.nomeFallback) reg.nomeFallback = nome;
           continue;
         }
 
@@ -4889,7 +4894,7 @@
         var novo = {};
         Object.keys(q.campos).forEach(function(k){ novo[k] = q.campos[k]; });
         novo.email = q.email;
-        if(!novo.full_name) novo.full_name = q.email;
+        if(!novo.full_name) novo.full_name = q.nomeFallback || q.email;
         if(!novo.status) novo.status = "onboarding";
         if(q.csId) novo.cs_id = q.csId;
         novo.source = "planilha_cs";
