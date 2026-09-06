@@ -355,7 +355,16 @@ Deno.serve(async (req: Request) => {
           );
           await sleep(RATE_LIMIT_DELAY_MS);
 
-          if (!progressoRes.ok) {
+          // A Cademí responde 409 ("Usuário não possui nenhum progresso nesse
+          // produto") quando o aluno TEM o produto mas nunca assistiu nada
+          // nele. Isso não é falha: é um progresso legítimo de 0%, e precisa
+          // ser gravado. Enquanto era tratado como erro, o curso nunca ficava
+          // em dia, a leva seguinte buscava ele de novo, e um aluno assim
+          // (Henrique tem 43 produtos e progresso em nenhum) prendia a fila
+          // pra sempre sem salvar um único curso.
+          const semProgressoAinda = progressoRes.status === 409;
+
+          if (!progressoRes.ok && !semProgressoAinda) {
             errors.push({
               student_id: student.id,
               error: `${student.full_name ?? student.id} — progresso do produto ${produtoId} (usuario ${progressoIdentifier}): HTTP ${progressoRes.status} · ${resumoDoCorpo(progressoRes.data)}`,
@@ -364,7 +373,7 @@ Deno.serve(async (req: Request) => {
           }
 
           const progressoData = progressoRes.data as { data?: { progresso?: { total?: unknown } } } | null;
-          const pct = parsePercent(progressoData?.data?.progresso?.total);
+          const pct = semProgressoAinda ? 0 : parsePercent(progressoData?.data?.progresso?.total);
 
           const { error: progressErr } = await admin.from("course_progress").upsert(
             {
