@@ -123,6 +123,20 @@ async function cademiGet(path: string): Promise<{ ok: boolean; data: unknown; st
   return { ok: res.ok, data: body, status: res.status };
 }
 
+// Um "HTTP 404" pelado nao diz se o problema e o aluno, o produto ou a chave
+// da API. O corpo da resposta quase sempre diz — entao vai junto no aviso,
+// truncado pra nao inundar a tela.
+function resumoDoCorpo(data: unknown): string {
+  if (data === null || data === undefined) return "sem corpo";
+  let txt: string;
+  try {
+    txt = typeof data === "string" ? data : JSON.stringify(data);
+  } catch {
+    return "corpo ilegivel";
+  }
+  return txt.length > 200 ? txt.slice(0, 200) + "..." : txt;
+}
+
 function parsePercent(total: unknown): number {
   if (typeof total === "number") return total;
   if (typeof total === "string") {
@@ -225,7 +239,10 @@ Deno.serve(async (req: Request) => {
         await sleep(RATE_LIMIT_DELAY_MS);
 
         if (!acessoRes.ok) {
-          errors.push({ student_id: student.id, error: `acesso (${identifier}): HTTP ${acessoRes.status}` });
+          errors.push({
+            student_id: student.id,
+            error: `${student.full_name ?? student.id} — acesso (${identifier}): HTTP ${acessoRes.status} · ${resumoDoCorpo(acessoRes.data)}`,
+          });
           await markSynced(student.id); // marca mesmo assim: um 404 não vira 200 sozinho, evita loop eterno
           continue;
         }
@@ -320,7 +337,10 @@ Deno.serve(async (req: Request) => {
             .single();
 
           if (courseErr || !course) {
-            errors.push({ student_id: student.id, error: `curso ${produtoId}: ${courseErr?.message ?? "falha"}` });
+            errors.push({
+              student_id: student.id,
+              error: `${student.full_name ?? student.id} — gravar curso ${produtoId} no banco: ${courseErr?.message ?? "falha"}`,
+            });
             continue;
           }
 
@@ -331,7 +351,10 @@ Deno.serve(async (req: Request) => {
           await sleep(RATE_LIMIT_DELAY_MS);
 
           if (!progressoRes.ok) {
-            errors.push({ student_id: student.id, error: `progresso ${produtoId}: HTTP ${progressoRes.status}` });
+            errors.push({
+              student_id: student.id,
+              error: `${student.full_name ?? student.id} — progresso do produto ${produtoId} (usuario ${progressoIdentifier}): HTTP ${progressoRes.status} · ${resumoDoCorpo(progressoRes.data)}`,
+            });
             continue;
           }
 
@@ -349,7 +372,10 @@ Deno.serve(async (req: Request) => {
           );
 
           if (progressErr) {
-            errors.push({ student_id: student.id, error: `salvar progresso ${produtoId}: ${progressErr.message}` });
+            errors.push({
+              student_id: student.id,
+              error: `${student.full_name ?? student.id} — salvar progresso do produto ${produtoId} no banco: ${progressErr.message}`,
+            });
           } else {
             cursosAtualizados++;
           }

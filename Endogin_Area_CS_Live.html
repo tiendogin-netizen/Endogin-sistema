@@ -3474,6 +3474,7 @@
             return;
           }
           consecutiveErrors = 0;
+          console.log("cademi-sync-progress — leva:", r.data);
           totalProcessed += r.data.processed || 0;
           totalCursos += r.data.cursos_atualizados || 0;
           if(r.data.errors && r.data.errors.length) allSyncErrors = allSyncErrors.concat(r.data.errors);
@@ -3486,9 +3487,17 @@
               + totalCursos + " curso(s) atualizados." + extra);
             return;
           }
+          // Uma rodada completa passa de uma hora. Esconder os avisos até o
+          // fim significa esperar tudo isso pra só então descobrir, por
+          // exemplo, que nenhum curso estava sendo salvo — então o último
+          // aviso aparece na hora, junto com os contadores.
+          var ultimoAviso = allSyncErrors.length
+            ? " ⚠ Último aviso: \"" + allSyncErrors[allSyncErrors.length - 1].error
+              + "\" (" + allSyncErrors.length + " no total; abra o console com F12 pra ver todos)."
+            : "";
           status.textContent = "Sincronizando... " + totalProcessed + " de " + total + " aluno(s) — "
             + totalCursos + " curso(s) atualizados. Quem tem muitos cursos leva algumas levas pra fechar, "
-            + "então o número de alunos demora mais a subir que o de cursos.";
+            + "então o número de alunos demora mais a subir que o de cursos." + ultimoAviso;
           step();
         }).catch(function(e){
           consecutiveErrors++;
