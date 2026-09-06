@@ -735,6 +735,22 @@
         <button class="btn-primary" id="importAlunosBtn"><i class="fa-solid fa-file-arrow-up"></i> Escolher planilha e importar</button>
         <div id="importAlunosStatus" class="hint" style="margin-top:12px;"></div>
       </div>
+
+      <div class="card" id="impPlanilhaCard" style="display:none;">
+        <div class="card-head"><h3><i class="fa-solid fa-file-arrow-up icn"></i>Importar as planilhas da CS</h3></div>
+        <p class="hint" style="margin:-8px 0 10px;">Lê o <b>.xlsx inteiro</b>, todas as abas visíveis — não só a primeira. Casa os alunos pelo <b>e-mail</b>.</p>
+        <p class="hint" style="margin:0 0 10px;">Suba <b>uma planilha de cada vez</b>:<br>
+          • <b>Planilha por CS</b> (uma aba por CS) → cadastro, datas, status, mentoria e <b>CS responsável — quem manda é o nome da aba</b>.<br>
+          • <b>Base de Clientes</b> (a que tem as colunas de grupo) → <b>só</b> os grupos de WhatsApp. O CS e o status dela são ignorados de propósito: quando as duas discordam, vale a planilha por CS.</p>
+        <p class="hint" style="margin:0 0 14px;color:var(--eg-gold-300);">Escolher o arquivo apenas <b>simula</b>: mostra tudo que mudaria sem gravar nada. Só o segundo botão grava. Trocar o CS de um aluno muda quem enxerga ele no sistema — por isso a simulação lista essas mudanças separadas.</p>
+        <input type="file" id="impPlanilhaFile" accept=".xlsx" style="display:none;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-primary" id="impPlanilhaBtn"><i class="fa-solid fa-magnifying-glass-chart"></i> Escolher planilha e simular</button>
+          <button class="btn-secondary" id="impPlanilhaAplicarBtn" style="display:none;"><i class="fa-solid fa-check"></i> Aplicar de verdade</button>
+        </div>
+        <div id="impPlanilhaStatus" class="hint" style="margin-top:12px;"></div>
+        <div id="impPlanilhaRelatorio" style="margin-top:10px;"></div>
+      </div>
       <div class="card">
         <div class="card-head"><h3><i class="fa-solid fa-file-export icn"></i>Outros relatórios</h3></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -1169,6 +1185,7 @@
           $("masterDistCard").style.display = "block";
           $("csFilterWrap").style.display = "block";
           $("importAlunosCard").style.display = "block";
+          $("impPlanilhaCard").style.display = "block";
           $("alunosTitle").textContent = "Todos os alunos";
           loadDistSetting();
         }
@@ -4370,6 +4387,530 @@
     };
     reader.readAsArrayBuffer(file);
   });
+
+
+  // ============ Importação das planilhas da CS (simular / aplicar) ============
+  //
+  // Lê o .xlsx INTEIRO, não só a primeira aba: a planilha da operação tem uma
+  // aba por CS, e é a aba que define de quem é o aluno — decisão do Luiz em
+  // 06/09/2026, quando a "Base de Clientes" e a planilha por CS discordavam
+  // do CS responsável de 66 alunos.
+  //
+  // Por que o cs_id é o campo mais perigoso daqui: a RLS de `students` é
+  // `cs_id = current_staff_id() OR is_current_staff_master()`. Ele não é um
+  // rótulo — é o que decide QUEM ENXERGA o aluno. Escrever o cs_id errado
+  // some com o aluno da tela da CS certa. Por isso: nunca escrevemos cs_id
+  // por adivinhação (aba que não casa com ninguém do staff não mexe no CS),
+  // e o botão de aplicar só existe depois de simular.
+  //
+  // Divisão do trabalho entre as duas planilhas:
+  //   - planilha por CS  -> cadastro (nome, contato, datas, status, mentoria) + CS
+  //   - "Base de Clientes" -> SÓ os grupos de WhatsApp (o CS e o status dela
+  //     ficam de fora de propósito: quando discordam, quem vale é a outra)
+
+  var impPlano = null;
+
+  function impChave(v){
+    return (v == null ? "" : String(v))
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+  // "Grupo Black Belt" (planilha) x "Black Belt" (banco): a palavra "grupo" só
+  // existe na planilha, então sai da chave dos dois lados.
+  function impChaveGrupo(v){ return impChave(String(v == null ? "" : v).replace(/grupo/ig, "")); }
+
+  function impTexto(v){
+    if(v === null || v === undefined) return "";
+    if(typeof v === "object"){
+      if(v instanceof Date) return v;
+      if(v.text !== undefined) return String(v.text);
+      if(v.result !== undefined) return String(v.result);
+      if(v.richText) return v.richText.map(function(p){ return p.text; }).join("");
+      if(v.hyperlink) return String(v.hyperlink);
+      return "";
+    }
+    return String(v);
+  }
+
+  // só dígitos, pra comparar telefone sem falso positivo de formatação
+  // ("https://wa.me/5511999500287" e "(11) 99950-0287" são a mesma pessoa)
+  function impDigitos(v){ return String(v == null ? "" : v).replace(/\D/g, ""); }
+
+  var IMP_ALIAS_MENTORIA = { "endoginmae": "mentoriamae" };
+  // valores que aparecem na coluna MENTORIA mas NÃO são mentoria — são
+  // situação do aluno. Viram anotação, não vínculo de mentoria.
+  var IMP_NAO_MENTORIA = ["encerroumentoria", "encerradanabiomeds", "trancado", "resolvendo"];
+  var IMP_ALIAS_STATUS = {
+    "ativo": "ativo", "inativo": "inativo", "desativado": "inativo",
+    "trancado": "trancado", "cancelado": "cancelado",
+    "onboarding": "onboarding", "emreonboarding": "em_reonboarding"
+  };
+
+  function impAchaBranch(nome){
+    var k = impChave(nome);
+    if(!k) return null;
+    if(IMP_ALIAS_MENTORIA[k]) k = IMP_ALIAS_MENTORIA[k];
+    return allBranches.find(function(b){ return impChave(b.name) === k; }) || null;
+  }
+  function impAchaGrupo(coluna){
+    var k = impChaveGrupo(coluna);
+    if(!k) return null;
+    return allGroups.find(function(g){ return impChaveGrupo(g.name) === k; }) || null;
+  }
+  // "ARI | THAIS" -> Thais Souza · "VIVIANE E ADRIELLY" -> Viviane ...
+  // Casa o PRIMEIRO nome de cada pessoa do staff com as palavras do nome da
+  // aba. Se não casar com ninguém, devolve null — e aí o CS não é tocado.
+  function impAchaCsPelaAba(nomeAba){
+    var palavras = String(nomeAba || "").split(/[^0-9A-Za-zÀ-ÿ]+/).map(impChave).filter(Boolean);
+    if(!palavras.length) return null;
+    var achados = allStaff.filter(function(s){
+      var primeiro = impChave(String(s.full_name || "").split(/\s+/)[0]);
+      return primeiro && palavras.indexOf(primeiro) > -1;
+    });
+    return achados.length ? achados[0] : null;
+  }
+
+  var IMP_MAP_B = {
+    "nome": "full_name", "nomecompleto": "full_name",
+    "email": "email",
+    "contato": "phone", "telefone": "phone",
+    "entrada": "entry_date", "datadeentrada": "entry_date",
+    "vencimento": "renewal_date", "datadevencimento": "renewal_date",
+    "crm": "medical_license", "crmmedico": "medical_license",
+    "cpf": "cpf",
+    "datanascimento": "birth_date", "dataaniversario": "birth_date", "datadenascimento": "birth_date",
+    "instagram": "instagram",
+    "statusoneonone": "one_on_one_status", "statusdo11": "one_on_one_status",
+    "dataoneonone": "one_on_one_date",
+    "resumopos11": "one_on_one_summary",
+    "status": "status",
+    "temperatura": "temperature",
+    "statusderenovacao": "renewal_status",
+    "anotacoes": "notes", "observacoes": "notes",
+    "restricaoalimentar": "dietary_restriction",
+    "numerocalcado": "shoe_size",
+    "tamanhojaqueta": "jacket_size",
+    "tamanhocamiseta": "shirt_size",
+    "ndeindicacoes": "referral_count", "ndeindicacao": "referral_count",
+    "mentoria": "__mentoria"
+  };
+
+  // Lê o workbook inteiro e devolve o que a planilha PEDE (ainda sem olhar o banco).
+  function impLerWorkbook(wb){
+    var porEmail = {};        // email -> { campos, csId, branch, grupos, abas }
+    var avisos = [];
+    var abasLidas = [];
+
+    wb.worksheets.forEach(function(ws){
+      if(ws.state === "hidden" || ws.state === "veryHidden") return;
+
+      var headers = [];
+      var linha1 = ws.getRow(1);
+      linha1.eachCell({ includeEmpty: true }, function(cell, col){
+        headers[col] = impChave(impTexto(cell.value));
+      });
+      var temNomeCompleto = headers.indexOf("nomecompleto") > -1;
+      var temEmail = headers.indexOf("email") > -1;
+      var temNome = headers.indexOf("nome") > -1 || temNomeCompleto;
+      if(!temEmail || !temNome){ return; }
+
+      // colunas de grupo de WhatsApp presentes nesta aba
+      var colunasGrupo = {};
+      headers.forEach(function(h, col){
+        if(!h) return;
+        if(IMP_MAP_B[h]) return;
+        var g = impAchaGrupo(h);
+        if(g) colunasGrupo[col] = g;
+      });
+      var ehBaseDeClientes = Object.keys(colunasGrupo).length > 0;
+
+      var cs = ehBaseDeClientes ? null : impAchaCsPelaAba(ws.name);
+      if(!ehBaseDeClientes && !cs){
+        avisos.push('Aba "' + ws.name + '": não achei ninguém no time com esse nome — os alunos dela entram, mas o CS responsável fica como está.');
+      }
+
+      var lidos = 0;
+      for(var r = 2; r <= ws.rowCount; r++){
+        var row = ws.getRow(r);
+        if(!row) continue;
+
+        var bruto = {};
+        var gruposDaLinha = ehBaseDeClientes ? [] : null;
+        headers.forEach(function(h, col){
+          var val = impTexto(row.getCell(col).value);
+          if(colunasGrupo[col]){
+            if(String(val).trim().toUpperCase() === "TRUE") gruposDaLinha.push(colunasGrupo[col]);
+            return;
+          }
+          var campo = IMP_MAP_B[h];
+          if(campo) bruto[campo] = val;
+        });
+
+        var nome = String(bruto.full_name || "").trim();
+        if(!nome || impChave(nome) === "nome" || nome.indexOf("#REF!") > -1) continue;
+        var email = String(bruto.email || "").trim().toLowerCase();
+        if(!email){
+          avisos.push('Aba "' + ws.name + '", linha ' + r + ': "' + nome + '" está sem e-mail — pulei (o e-mail é a chave que casa com o cadastro).');
+          continue;
+        }
+        lidos++;
+
+        var reg = porEmail[email] || (porEmail[email] = { email: email, campos: {}, grupos: null, abas: [], csId: null, csNome: null, branch: null, mentoriaRaw: "" });
+        reg.abas.push(ws.name);
+
+        if(ehBaseDeClientes){
+          // Base de Clientes: SÓ os grupos. Cadastro e CS vêm da outra planilha.
+          reg.grupos = gruposDaLinha;
+          if(!reg.campos.full_name) reg.campos.full_name = nome;
+          continue;
+        }
+
+        if(cs){ reg.csId = cs.id; reg.csNome = cs.full_name; }
+        reg.campos.full_name = nome;
+
+        var fone = impDigitos(bruto.phone);
+        if(fone.length >= 10) reg.campos.phone = fone;
+        if(bruto.cpf) reg.campos.cpf = String(bruto.cpf).trim();
+        if(bruto.medical_license) reg.campos.medical_license = String(bruto.medical_license).trim();
+        if(bruto.instagram) reg.campos.instagram = String(bruto.instagram).trim();
+        if(bruto.temperature) reg.campos.temperature = String(bruto.temperature).trim();
+        if(bruto.renewal_status) reg.campos.renewal_status = String(bruto.renewal_status).trim();
+        if(bruto.notes) reg.campos.notes = String(bruto.notes).trim();
+        if(bruto.dietary_restriction) reg.campos.dietary_restriction = String(bruto.dietary_restriction).trim();
+        if(bruto.shoe_size) reg.campos.shoe_size = String(bruto.shoe_size).trim();
+        if(bruto.jacket_size) reg.campos.jacket_size = String(bruto.jacket_size).trim();
+        if(bruto.shirt_size) reg.campos.shirt_size = String(bruto.shirt_size).trim();
+        if(bruto.one_on_one_status) reg.campos.one_on_one_status = String(bruto.one_on_one_status).trim();
+        if(bruto.one_on_one_summary) reg.campos.one_on_one_summary = String(bruto.one_on_one_summary).trim();
+        var ind = parseInt(impDigitos(bruto.referral_count), 10);
+        if(!isNaN(ind)) reg.campos.referral_count = ind;
+
+        var dEnt = parseImportDate(bruto.entry_date); if(dEnt) reg.campos.entry_date = dEnt;
+        var dNasc = parseImportDate(bruto.birth_date); if(dNasc) reg.campos.birth_date = dNasc;
+        var d11 = parseImportDate(bruto.one_on_one_date); if(d11) reg.campos.one_on_one_date = d11;
+
+        // "Vitalicio" na coluna de vencimento não é data — é o campo is_lifetime
+        var venc = String(bruto.renewal_date == null ? "" : bruto.renewal_date);
+        if(impChave(venc).indexOf("vitalic") > -1){
+          reg.campos.is_lifetime = true;
+        } else {
+          var dVenc = parseImportDate(bruto.renewal_date);
+          if(dVenc) reg.campos.renewal_date = dVenc;
+        }
+
+        if(bruto.status){
+          var st = IMP_ALIAS_STATUS[impChave(bruto.status)];
+          if(st) reg.campos.status = st;
+          else avisos.push(email + ': status "' + String(bruto.status).trim() + '" não é um status do sistema — deixei o status como está.');
+        }
+
+        var ment = String(bruto.__mentoria || "").trim();
+        if(ment){
+          reg.mentoriaRaw = ment;
+          if(IMP_NAO_MENTORIA.indexOf(impChave(ment)) > -1){
+            // "ENCERROU MENTORIA", "TRANCADO"... — situação, não mentoria
+            reg.campos.mentoria_raw_import = ment;
+          } else {
+            var b = impAchaBranch(ment);
+            if(b) reg.branch = b;
+            else avisos.push(email + ': mentoria "' + ment + '" não existe em Mentorias — não vinculei.');
+          }
+        }
+      }
+      abasLidas.push(ws.name + " (" + lidos + ")");
+    });
+
+    return { porEmail: porEmail, avisos: avisos, abasLidas: abasLidas };
+  }
+
+  // Compara o que a planilha pede com o que está no banco.
+  function impMontarPlano(lido, alunosBanco){
+    var porEmailBanco = {};
+    alunosBanco.forEach(function(a){
+      var e = String(a.email || "").trim().toLowerCase();
+      if(e) porEmailBanco[e] = a;
+    });
+
+    var plano = {
+      criar: [], atualizar: [], semMudanca: 0,
+      trocaCs: [], trocaStatus: [], trocaMentoria: [], trocaGrupos: [],
+      foraDaPlanilha: [], avisos: lido.avisos.slice(), abasLidas: lido.abasLidas,
+      totalPlanilha: 0
+    };
+
+    Object.keys(lido.porEmail).forEach(function(email){
+      var q = lido.porEmail[email];
+      plano.totalPlanilha++;
+      var atual = porEmailBanco[email];
+
+      if(!atual){
+        plano.criar.push(q);
+        return;
+      }
+      q.id = atual.id;
+
+      var mudancas = {};
+      Object.keys(q.campos).forEach(function(campo){
+        var novo = q.campos[campo];
+        var velho = atual[campo];
+        if(campo === "phone"){
+          if(impDigitos(velho) === impDigitos(novo)) return;
+        } else if(String(velho == null ? "" : velho) === String(novo)){
+          return;
+        }
+        mudancas[campo] = novo;
+      });
+
+      if(q.csId && atual.cs_id !== q.csId){
+        mudancas.cs_id = q.csId;
+        plano.trocaCs.push({
+          nome: atual.full_name, de: (atual.staff && atual.staff.full_name) || "(sem CS)", para: q.csNome
+        });
+      }
+      if(mudancas.status){
+        plano.trocaStatus.push({ nome: atual.full_name, de: atual.status, para: mudancas.status });
+      }
+
+      // mentoria: a planilha manda UMA mentoria por aluno
+      var deliveriesAtivas = (atual.deliveries || []).filter(function(d){ return d.status === "ativo"; });
+      var jaTem = q.branch && deliveriesAtivas.some(function(d){ return d.branch_id === q.branch.id; });
+      var precisaMentoria = Boolean(q.branch) && !jaTem;
+      if(precisaMentoria){
+        plano.trocaMentoria.push({
+          nome: atual.full_name,
+          de: deliveriesAtivas.map(function(d){ return d.label; }).join(", ") || "(nenhuma)",
+          para: q.branch.name
+        });
+      }
+
+      // grupos de WhatsApp (só pra quem apareceu na Base de Clientes)
+      var precisaGrupos = false;
+      if(q.grupos){
+        var atuais = (atual.student_whatsapp_groups || [])
+          .filter(function(g){ return g.status === "ativo"; })
+          .map(function(g){ return g.group_id; }).sort().join("|");
+        var desejados = q.grupos.map(function(g){ return g.id; }).sort().join("|");
+        if(atuais !== desejados){
+          precisaGrupos = true;
+          plano.trocaGrupos.push({ nome: atual.full_name, qtd: q.grupos.length });
+        }
+      }
+
+      if(Object.keys(mudancas).length || precisaMentoria || precisaGrupos){
+        plano.atualizar.push({ q: q, id: atual.id, mudancas: mudancas, mentoria: precisaMentoria, grupos: precisaGrupos, deliveriesAtivas: deliveriesAtivas, atual: atual });
+      } else {
+        plano.semMudanca++;
+      }
+    });
+
+    alunosBanco.forEach(function(a){
+      var e = String(a.email || "").trim().toLowerCase();
+      if(!e || !lido.porEmail[e]){
+        plano.foraDaPlanilha.push({
+          nome: a.full_name, email: a.email || "(sem e-mail)", status: a.status,
+          cs: (a.staff && a.staff.full_name) || "(sem CS)"
+        });
+      }
+    });
+
+    return plano;
+  }
+
+  function impLista(arr, formata, limite){
+    var l = limite || 12;
+    var linhas = arr.slice(0, l).map(formata);
+    if(arr.length > l) linhas.push("… e mais " + (arr.length - l) + ".");
+    return linhas.join("<br>");
+  }
+
+  function impRenderRelatorio(plano){
+    var el = $("impPlanilhaRelatorio");
+    var h = [];
+    h.push('<div class="hint" style="margin-bottom:10px;">Abas lidas: <b>' + (plano.abasLidas.join(" · ") || "nenhuma") + '</b></div>');
+    h.push('<table style="margin-bottom:14px;"><tbody>');
+    h.push('<tr><td><b>' + plano.totalPlanilha + '</b></td><td>aluno(s) na planilha</td></tr>');
+    h.push('<tr><td><b>' + plano.criar.length + '</b></td><td>seriam <b>criados</b> (não existem no sistema)</td></tr>');
+    h.push('<tr><td><b>' + plano.atualizar.length + '</b></td><td>seriam <b>atualizados</b></td></tr>');
+    h.push('<tr><td><b>' + plano.semMudanca + '</b></td><td>já estão iguais — nada a fazer</td></tr>');
+    h.push('<tr><td><b>' + plano.trocaCs.length + '</b></td><td>mudariam de <b>CS responsável</b></td></tr>');
+    h.push('<tr><td><b>' + plano.trocaStatus.length + '</b></td><td>mudariam de <b>status</b></td></tr>');
+    h.push('<tr><td><b>' + plano.trocaMentoria.length + '</b></td><td>mudariam de <b>mentoria</b></td></tr>');
+    h.push('<tr><td><b>' + plano.trocaGrupos.length + '</b></td><td>teriam os <b>grupos de WhatsApp</b> ajustados</td></tr>');
+    h.push('<tr><td><b>' + plano.foraDaPlanilha.length + '</b></td><td>estão no sistema e <b>não</b> na planilha — <i>não serão tocados</i></td></tr>');
+    h.push('</tbody></table>');
+
+    if(plano.trocaCs.length){
+      h.push('<p class="hint" style="color:var(--eg-gold-300);margin:12px 0 4px;"><b>Mudanças de CS</b> (isto muda quem enxerga o aluno):</p>');
+      h.push('<div class="hint">' + impLista(plano.trocaCs, function(t){ return "• " + t.nome + ": " + t.de + " → <b>" + t.para + "</b>"; }) + "</div>");
+    }
+    if(plano.trocaStatus.length){
+      h.push('<p class="hint" style="margin:12px 0 4px;"><b>Mudanças de status:</b></p>');
+      h.push('<div class="hint">' + impLista(plano.trocaStatus, function(t){ return "• " + t.nome + ": " + t.de + " → <b>" + t.para + "</b>"; }) + "</div>");
+    }
+    if(plano.trocaMentoria.length){
+      h.push('<p class="hint" style="margin:12px 0 4px;"><b>Mudanças de mentoria:</b></p>');
+      h.push('<div class="hint">' + impLista(plano.trocaMentoria, function(t){ return "• " + t.nome + ": " + t.de + " → <b>" + t.para + "</b>"; }) + "</div>");
+    }
+    if(plano.criar.length){
+      h.push('<p class="hint" style="margin:12px 0 4px;"><b>Seriam criados:</b></p>');
+      h.push('<div class="hint">' + impLista(plano.criar, function(c){ return "• " + (c.campos.full_name || c.email) + " (" + c.email + ")"; }) + "</div>");
+    }
+    if(plano.foraDaPlanilha.length){
+      h.push('<p class="hint" style="margin:12px 0 4px;"><b>No sistema mas fora da planilha</b> (ficam intocados):</p>');
+      h.push('<div class="hint">' + impLista(plano.foraDaPlanilha, function(f){ return "• " + f.nome + " — " + f.status + ", CS " + f.cs; }) + "</div>");
+    }
+    if(plano.avisos.length){
+      h.push('<p class="hint" style="color:var(--eg-gold-300);margin:12px 0 4px;"><b>Avisos (' + plano.avisos.length + '):</b></p>');
+      h.push('<div class="hint">' + impLista(plano.avisos, function(a){ return "• " + a; }, 20) + "</div>");
+    }
+    el.innerHTML = h.join("");
+    $("impPlanilhaAplicarBtn").style.display = (plano.criar.length + plano.atualizar.length) ? "inline-flex" : "none";
+  }
+
+  function impAplicarPlano(){
+    var plano = impPlano;
+    if(!plano) return;
+    var total = plano.criar.length + plano.atualizar.length;
+    if(!confirm("Isto vai gravar de verdade: " + plano.atualizar.length + " aluno(s) atualizados e "
+      + plano.criar.length + " criado(s), sendo " + plano.trocaCs.length
+      + " mudança(s) de CS responsável (muda quem enxerga o aluno). Continuar?")) return;
+
+    var st = $("impPlanilhaStatus");
+    var btn = $("impPlanilhaAplicarBtn");
+    btn.disabled = true;
+    var feitos = 0, erros = [];
+    var fila = [];
+
+    plano.criar.forEach(function(q){
+      fila.push(function(pronto){
+        var novo = {};
+        Object.keys(q.campos).forEach(function(k){ novo[k] = q.campos[k]; });
+        novo.email = q.email;
+        if(!novo.full_name) novo.full_name = q.email;
+        if(!novo.status) novo.status = "onboarding";
+        if(q.csId) novo.cs_id = q.csId;
+        novo.source = "planilha_cs";
+        sb.from("students").insert(novo).select("id").single().then(function(r){
+          if(r.error){ erros.push(q.email + ": " + r.error.message); pronto(); return; }
+          impSincronizaVinculos(r.data.id, q, [], erros, pronto);
+        });
+      });
+    });
+
+    plano.atualizar.forEach(function(u){
+      fila.push(function(pronto){
+        var passo2 = function(){
+          impSincronizaVinculos(u.id, u.q, u.deliveriesAtivas, erros, pronto);
+        };
+        if(Object.keys(u.mudancas).length){
+          sb.from("students").update(u.mudancas).eq("id", u.id).then(function(r){
+            if(r.error) erros.push(u.q.email + ": " + r.error.message);
+            passo2();
+          });
+        } else { passo2(); }
+      });
+    });
+
+    function proximo(){
+      if(!fila.length){
+        st.innerHTML = "<b>Importação concluída:</b> " + feitos + " de " + total + " processado(s)"
+          + (erros.length ? ', <span style="color:var(--eg-gold-300);">' + erros.length + " com erro:<br>" + erros.slice(0, 15).join("<br>") + "</span>" : ".");
+        btn.disabled = false;
+        loadAlunos();
+        return;
+      }
+      var tarefa = fila.shift();
+      feitos++;
+      st.textContent = "Gravando " + feitos + " de " + total + "...";
+      tarefa(proximo);
+    }
+    proximo();
+  }
+
+  // mentoria (deliveries) + grupos de WhatsApp de um aluno
+  function impSincronizaVinculos(studentId, q, deliveriesAtivas, erros, pronto){
+    var tarefas = [];
+
+    if(q.branch){
+      var jaTem = (deliveriesAtivas || []).some(function(d){ return d.branch_id === q.branch.id; });
+      (deliveriesAtivas || []).forEach(function(d){
+        if(d.branch_id !== q.branch.id){
+          tarefas.push(sb.from("deliveries").update({ status: "inativo" }).eq("id", d.id));
+        }
+      });
+      if(!jaTem){
+        tarefas.push(sb.from("deliveries").insert({
+          student_id: studentId, branch_id: q.branch.id, label: q.branch.name,
+          status: "ativo", source: "planilha_cs"
+        }));
+      }
+    }
+
+    if(q.grupos){
+      var desejados = q.grupos.map(function(g){ return g.id; });
+      tarefas.push(
+        sb.from("student_whatsapp_groups").delete().eq("student_id", studentId).then(function(){
+          if(!desejados.length) return { error: null };
+          return sb.from("student_whatsapp_groups").insert(q.grupos.map(function(g){
+            return { student_id: studentId, group_id: g.id, label: g.name, status: "ativo", source: "planilha_cs" };
+          }));
+        })
+      );
+    }
+
+    if(!tarefas.length){ pronto(); return; }
+    Promise.all(tarefas).then(function(rs){
+      rs.forEach(function(r){ if(r && r.error) erros.push(q.email + " (vínculos): " + r.error.message); });
+      pronto();
+    }).catch(function(e){
+      erros.push(q.email + " (vínculos): " + e.message);
+      pronto();
+    });
+  }
+
+  function impProcessarArquivo(file){
+    var st = $("impPlanilhaStatus");
+    $("impPlanilhaRelatorio").innerHTML = "";
+    $("impPlanilhaAplicarBtn").style.display = "none";
+    impPlano = null;
+    if(typeof ExcelJS === "undefined"){ st.textContent = "A biblioteca de Excel ainda está carregando, tenta de novo em alguns segundos."; return; }
+    st.textContent = "Lendo a planilha...";
+
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var wb = new ExcelJS.Workbook();
+      wb.xlsx.load(ev.target.result).then(function(){
+        var lido = impLerWorkbook(wb);
+        if(!Object.keys(lido.porEmail).length){
+          st.textContent = "Não achei nenhuma aba com colunas de aluno (preciso de NOME e E-MAIL no cabeçalho).";
+          return;
+        }
+        st.textContent = "Comparando com o sistema...";
+        // busca os alunos com os vínculos, pra saber o que muda de verdade
+        sb.from("students")
+          .select("id,full_name,email,phone,cpf,status,cs_id,birth_date,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,group_id,status),staff:cs_id(full_name)")
+          .then(function(r){
+            if(r.error){ st.textContent = "Erro ao ler os alunos do sistema: " + r.error.message; return; }
+            impPlano = impMontarPlano(lido, r.data || []);
+            st.innerHTML = "<b>Simulação — nada foi gravado.</b> Confere abaixo e, se estiver certo, clica em aplicar.";
+            impRenderRelatorio(impPlano);
+          });
+      }).catch(function(err){
+        st.textContent = "Erro ao ler o arquivo: " + err.message;
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  if($("impPlanilhaBtn")){
+    $("impPlanilhaBtn").addEventListener("click", function(){ $("impPlanilhaFile").click(); });
+    $("impPlanilhaFile").addEventListener("change", function(e){
+      var file = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if(file) impProcessarArquivo(file);
+    });
+    $("impPlanilhaAplicarBtn").addEventListener("click", impAplicarPlano);
+  }
 
   function processImportRows(rows, statusEl){
     var created = 0, updated = 0, errors = [];
