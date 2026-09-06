@@ -335,37 +335,29 @@
     <div class="tab-panel" id="tab-dashboard">
       <div class="card">
         <div class="card-head"><h3><i class="fa-solid fa-gauge-high icn"></i>Visão geral</h3></div>
-        <p class="hint" style="margin:-8px 0 0;">Resumo rápido da operação da CS. Números de exemplo por enquanto — dá pra ligar aos dados reais quando você quiser.</p>
+        <p class="hint" style="margin:-8px 0 0;">Resumo rápido da operação da CS. Os quatro números abaixo vêm do banco de verdade; o gráfico e a tabela de movimentações ainda são de exemplo (estão marcados como tal).</p>
       </div>
 
       <div class="crm-stats-row" id="dashKpiRow" style="margin-bottom:18px;">
         <div class="crm-stat-card">
-          <span class="dash-trend-badge up"><i class="fa-solid fa-arrow-trend-up"></i>+12.5%</span>
           <div class="crm-stat-label"><span class="crm-stat-dot gold"></span>Alunos ativos</div>
-          <div class="crm-stat-num">1.234</div>
-          <div class="dash-trend-line"><i class="fa-solid fa-arrow-trend-up"></i>Crescendo esse mês</div>
-          <p class="hint" style="margin:2px 0 0;">Comparado aos últimos 6 meses</p>
+          <div class="crm-stat-num" id="dashKpiAtivos">—</div>
+          <p class="hint" style="margin:2px 0 0;" id="dashKpiAtivosHint">Carregando...</p>
         </div>
         <div class="crm-stat-card">
-          <span class="dash-trend-badge down"><i class="fa-solid fa-arrow-trend-down"></i>-4%</span>
           <div class="crm-stat-label"><span class="crm-stat-dot blue"></span>Novos alunos (mês)</div>
-          <div class="crm-stat-num">86</div>
-          <div class="dash-trend-line down"><i class="fa-solid fa-arrow-trend-down"></i>Abaixo da meta do mês</div>
-          <p class="hint" style="margin:2px 0 0;">Meta mensal: 100 novos alunos</p>
+          <div class="crm-stat-num" id="dashKpiNovos">—</div>
+          <p class="hint" style="margin:2px 0 0;" id="dashKpiNovosHint">Carregando...</p>
         </div>
         <div class="crm-stat-card">
-          <span class="dash-trend-badge up"><i class="fa-solid fa-arrow-trend-up"></i>+3.1%</span>
           <div class="crm-stat-label"><span class="crm-stat-dot green"></span>Taxa de renovação</div>
-          <div class="crm-stat-num">78%</div>
-          <div class="dash-trend-line"><i class="fa-solid fa-arrow-trend-up"></i>Melhor taxa dos últimos 3 meses</div>
-          <p class="hint" style="margin:2px 0 0;">Sobre contratos vencidos no período</p>
+          <div class="crm-stat-num" id="dashKpiRenov">—</div>
+          <p class="hint" style="margin:2px 0 0;">Ainda não ligada — falta combinar como a Endogin conta uma renovação (sobre quem venceu no mês? sobre quem foi contatado?).</p>
         </div>
         <div class="crm-stat-card">
-          <span class="dash-trend-badge up"><i class="fa-solid fa-arrow-trend-up"></i>+0.4</span>
           <div class="crm-stat-label"><span class="crm-stat-dot purple"></span>NPS médio</div>
-          <div class="crm-stat-num">9.2</div>
-          <div class="dash-trend-line"><i class="fa-solid fa-arrow-trend-up"></i>Satisfação em alta</div>
-          <p class="hint" style="margin:2px 0 0;">Média das respostas dos últimos 90 dias</p>
+          <div class="crm-stat-num" id="dashKpiNps">—</div>
+          <p class="hint" style="margin:2px 0 0;" id="dashKpiNpsHint">Carregando...</p>
         </div>
       </div>
 
@@ -378,7 +370,7 @@
             <button class="toggle-btn" data-period="7">Últimos 7 dias</button>
           </div>
         </div>
-        <p class="hint" style="margin:-8px 0 12px;">Comparativo entre novas entradas e renovações no período selecionado.</p>
+        <p class="hint" style="margin:-8px 0 12px;">⚠ Dados de exemplo — este gráfico ainda não está ligado ao banco. Comparativo entre novas entradas e renovações no período selecionado.</p>
         <div class="crm-chart-wrap" style="max-width:none;">
           <canvas id="dashTrendChart" height="90"></canvas>
         </div>
@@ -386,6 +378,7 @@
 
       <div class="card">
         <div class="card-head"><h3>Movimentações recentes</h3></div>
+        <p class="hint" style="margin:-8px 0 6px;">⚠ Dados de exemplo — os nomes abaixo são fictícios e não vêm do banco.</p>
         <div class="filter-row" style="margin:-8px 0 14px;">
           <span class="filter-chip selected" data-dash-filter="todos">Todos</span>
           <span class="filter-chip" data-dash-filter="onboarding">Onboarding</span>
@@ -1231,9 +1224,12 @@
   // Layout inspirado no bloco "dashboard-01" do shadcn/ui (cards de KPI com
   // tendência + gráfico de área + tabela com filtros), reescrito em HTML/CSS
   // puro reaproveitando as classes já existentes (card, card-head, hint,
-  // crm-stat-card, filter-chip, toggle-btn, crm-chart-wrap). Os números do
-  // KPI e as linhas da tabela abaixo são dados de EXEMPLO — ainda não estão
-  // ligados às tabelas reais do Supabase.
+  // crm-stat-card, filter-chip, toggle-btn, crm-chart-wrap).
+  //
+  // Os KPIs do topo vêm do banco (loadDashKpis). O gráfico e a tabela de
+  // movimentações ainda são dados de EXEMPLO e estão marcados como tal na
+  // tela — misturar número real com número inventado sem avisar é como a
+  // aba passou a mostrar "1.234 alunos ativos" pra uma operação de ~479.
   var dashChartInstance = null;
   var dashLoaded = false;
   var DASH_MOV_EXEMPLO = [
@@ -1248,7 +1244,77 @@
     if(days === 30) return { labels:["Sem 1","Sem 2","Sem 3","Sem 4"], novos:[18,22,15,31], renov:[9,11,8,14] };
     return { labels:["Abr","Mai","Jun","Jul","Ago","Set"], novos:[62,71,58,80,74,86], renov:[30,34,29,38,41,44] };
   }
+  // KPIs do topo, do banco de verdade.
+  //
+  // "Ativo" segue exatamente a mesma regra da aba Carteiras CS
+  // (carteiraStatusBucket): trancado, inativo e cancelado ficam de fora;
+  // ativo, onboarding e em_reonboarding contam. Duas telas do mesmo sistema
+  // contando "aluno ativo" de jeitos diferentes é o tipo de divergência que
+  // faz a CS parar de confiar no número.
+  //
+  // A contagem é feita aqui, e não reaproveitando `allStudents`, porque
+  // aquela lista é filtrada por CS quando quem está logado não é master — o
+  // KPI ficaria mostrando só a carteira de quem abriu a tela.
+  var dashKpisLoaded = false;
+
+  function loadDashKpis(){
+    if(dashKpisLoaded) return;
+    dashKpisLoaded = true;
+
+    sb.from("students").select("status,entry_date").then(function(r){
+      if(r.error){
+        $("dashKpiAtivosHint").textContent = "Erro ao carregar: " + r.error.message;
+        $("dashKpiNovosHint").textContent = "";
+        return;
+      }
+      var alunos = r.data || [];
+
+      var porStatus = {};
+      alunos.forEach(function(a){
+        var st = a.status || "sem status";
+        porStatus[st] = (porStatus[st] || 0) + 1;
+      });
+
+      var ativos = alunos.filter(function(a){ return carteiraStatusBucket(a.status) === "ativo"; }).length;
+      $("dashKpiAtivos").textContent = ativos;
+
+      // A quebra por status fica à vista de propósito: se o número não bater
+      // com o que a operação tem na cabeça, dá pra ver na hora qual status
+      // está entrando ou faltando, em vez de discutir no escuro.
+      $("dashKpiAtivosHint").textContent = "de " + alunos.length + " cadastrados · "
+        + Object.keys(porStatus).sort().map(function(k){ return porStatus[k] + " " + k; }).join(" · ");
+
+      var agora = new Date();
+      var inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+      var novos = alunos.filter(function(a){
+        var d = parseDateOnly(a.entry_date);
+        return d && d >= inicioMes;
+      }).length;
+      var semData = alunos.filter(function(a){ return !a.entry_date; }).length;
+      $("dashKpiNovos").textContent = novos;
+      $("dashKpiNovosHint").textContent = "Entradas neste mês (por data de entrada)."
+        + (semData ? " " + semData + " aluno(s) sem data de entrada não entram nessa conta." : "");
+    });
+
+    var limite = new Date();
+    limite.setDate(limite.getDate() - 90);
+    sb.from("nps_responses").select("score,created_at").then(function(r){
+      if(r.error){ $("dashKpiNpsHint").textContent = "Erro ao carregar: " + r.error.message; return; }
+      var recentes = (r.data || []).filter(function(n){
+        return n.created_at && new Date(n.created_at) >= limite && isFinite(Number(n.score));
+      });
+      if(!recentes.length){
+        $("dashKpiNpsHint").textContent = "Nenhuma resposta nos últimos 90 dias.";
+        return;
+      }
+      var media = recentes.reduce(function(soma, n){ return soma + Number(n.score); }, 0) / recentes.length;
+      $("dashKpiNps").textContent = media.toFixed(1).replace(".", ",");
+      $("dashKpiNpsHint").textContent = recentes.length + " resposta(s) nos últimos 90 dias.";
+    });
+  }
+
   function renderDashboard(){
+    loadDashKpis();
     var ctx = document.getElementById("dashTrendChart");
     if(ctx && typeof Chart !== "undefined"){
       var d = dashPeriodData(90);
