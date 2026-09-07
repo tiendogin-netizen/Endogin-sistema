@@ -3408,13 +3408,39 @@
     loadProgressoAdmin();
   }
 
+  // O PostgREST corta toda consulta em 1000 linhas e NÃO avisa: vem menos
+  // dado, sem erro nenhum. Onde a tabela cresce com o número de alunos isso
+  // vira bug silencioso — foi o que aconteceu com o progresso de aulas, que
+  // tem ~10 linhas por aluno (479 alunos ≈ 4.700 linhas) e só mostrava a
+  // parte dos alunos que caiu nas primeiras mil. Esta função busca de mil em
+  // mil até a página vir incompleta.
+  function buscarTudo(tabela, select, filtros){
+    var PAGINA = 1000;
+    return new Promise(function(resolve){
+      var todos = [], de = 0;
+      function proxima(){
+        var q = sb.from(tabela).select(select);
+        if(filtros) q = filtros(q);
+        q.range(de, de + PAGINA - 1).then(function(r){
+          if(r.error){ resolve({ error: r.error, data: todos }); return; }
+          var lote = r.data || [];
+          todos = todos.concat(lote);
+          if(lote.length < PAGINA){ resolve({ error: null, data: todos }); return; }
+          de += PAGINA;
+          proxima();
+        });
+      }
+      proxima();
+    });
+  }
+
   function loadProgressoAdmin(){
     var loading = $("progressoLoading");
     var wrap = $("progressoList");
     if(loading) loading.style.display = "block";
     if(wrap) wrap.innerHTML = "";
-    sb.from("course_progress")
-      .select("student_id,course_id,progress_percentage,updated_at,student:student_id(full_name),course:course_id(name)")
+    buscarTudo("course_progress",
+      "student_id,course_id,progress_percentage,updated_at,student:student_id(full_name),course:course_id(name)")
       .then(function(r){
         if(loading) loading.style.display = "none";
         if(r.error){ if(wrap) wrap.innerHTML = '<p class="hint">Erro: ' + r.error.message + '</p>'; return; }
@@ -5029,10 +5055,13 @@
 
     // NPS e feedbacks vêm junto pra não duplicar registro de quem já foi
     // importado numa rodada anterior.
+    // Aqui a paginação não é cosmética: com a base passando de 1000 alunos, uma
+    // lista parcial faria o importador concluir que os que faltam não existem
+    // e CRIAR duplicata de cada um deles.
     Promise.all([
-      sb.from("nps_responses").select("student_id,score,source,created_at"),
-      sb.from("feedback_entries").select("student_id,comment"),
-      sb.from("students").select(campos)
+      buscarTudo("nps_responses", "student_id,score,source,created_at"),
+      buscarTudo("feedback_entries", "student_id,comment"),
+      buscarTudo("students", campos)
     ]).then(function(res){
       var r = res[2];
       if(r.error){ st.textContent = "Erro ao ler os alunos do sistema: " + r.error.message; return; }
