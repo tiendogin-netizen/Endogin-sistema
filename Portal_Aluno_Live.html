@@ -5,7 +5,7 @@
 <title>Portal do Aluno — Endogin</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Montserrat:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
@@ -15,6 +15,9 @@
     --eg-text-primary:#f3f0e8; --eg-text-secondary:#aab4c9; --eg-text-muted:#6d7994; --eg-navy-line:rgba(255,255,255,0.06);
     --eg-border:rgba(201,151,75,0.22); --eg-border-strong:rgba(201,151,75,0.35);
     --eg-red:#d98a8a; --eg-green:#8fc79f;
+    --eg-mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+    --eg-ease:cubic-bezier(.22,.75,.28,1);
+    --amb-a:201,151,75; --amb-b:120,150,200;
   }
   *{box-sizing:border-box;}
   a{color:inherit;text-decoration:none;}
@@ -131,31 +134,23 @@
   @keyframes checkPop{ 0%{ transform:scale(0.55); } 65%{ transform:scale(1.18); } 100%{ transform:scale(1); } }
   @keyframes softPulse{ 0%, 100%{ opacity:1; } 50%{ opacity:0.55; } }
 
-  .hero{
-    background:linear-gradient(120deg, var(--eg-bg-1), var(--eg-bg-2) 60%, var(--eg-bg-1));
-    background-size:200% 200%;
-    animation:fadeSlideUp 0.6s ease both, heroGradientShift 10s ease infinite;
-    border:1px solid var(--eg-border);border-radius:16px;padding:28px 30px;margin-bottom:20px;
+  /* Identificacao do aluno. Substituiu o antigo bloco .hero + os tres cartoes
+     de indicador: "Mentoria(s) ativa(s)", "CS responsavel" e "Status" nao eram
+     metricas, eram campos do cadastro num quadro com icone. Viraram uma linha
+     de contexto, e o topo da tela passou a ser o proximo passo do aluno. */
+  .who{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:6px;}
+  .who h1{font-family:'Sora',sans-serif;font-weight:600;font-size:25px;margin:0 0 5px;letter-spacing:-0.012em;color:var(--eg-text-primary);}
+  .facts{display:flex;flex-wrap:wrap;gap:6px 13px;font-size:12.5px;color:var(--eg-text-muted);margin:0;padding:0;list-style:none;}
+  .facts li{display:flex;align-items:center;gap:13px;}
+  .facts li::after{content:"";width:3px;height:3px;border-radius:50%;background:currentColor;opacity:0.5;}
+  .facts li:last-child::after{display:none;}
+  .facts b{color:var(--eg-text-secondary);font-weight:600;}
+  .stamp{
+    font-family:var(--eg-mono);font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--eg-gold-300);border:1px solid var(--eg-border);border-radius:4px;padding:5px 9px;white-space:nowrap;
   }
-  .hero-eyebrow{font-size:11px;letter-spacing:2.5px;color:var(--eg-gold-300);font-weight:700;margin-bottom:8px;}
-  .hero h1{font-family:'Sora',sans-serif;font-weight:600;font-size:24px;margin:0 0 8px;color:var(--eg-text-primary);}
-  .hero p{margin:0;color:var(--eg-text-secondary);font-size:13.5px;max-width:560px;line-height:1.6;}
+  .who-sub{margin:0 0 24px;color:var(--eg-text-secondary);font-size:13px;max-width:62ch;line-height:1.6;}
 
-  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:26px;}
-  .stat-card{
-    background:var(--eg-bg-1);border:1px solid var(--eg-border);border-radius:12px;padding:13px 14px;
-    display:flex;align-items:center;gap:11px;
-    animation:fadeSlideUp 0.55s ease both;
-    transition:transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  }
-  .stat-card:hover{transform:translateY(-3px);box-shadow:0 10px 22px rgba(0,0,0,0.3);border-color:var(--eg-border-strong);}
-  .stat-card:nth-child(1){animation-delay:0.05s;}
-  .stat-card:nth-child(2){animation-delay:0.12s;}
-  .stat-card:nth-child(3){animation-delay:0.19s;}
-  .stat-icn{width:34px;height:34px;border-radius:10px;background:rgba(201,151,75,0.14);display:flex;align-items:center;justify-content:center;color:var(--eg-gold-300);font-size:13px;flex-shrink:0;transition:transform 0.2s ease;}
-  .stat-card:hover .stat-icn{transform:scale(1.08);}
-  .stat-card b{display:block;font-size:13.5px;font-weight:700;font-family:'Sora',sans-serif;line-height:1.3;}
-  .stat-card span{font-size:10px;color:var(--eg-text-muted);}
 
   .section-title{font-size:11px;letter-spacing:2.5px;color:var(--eg-gold-300);font-weight:700;margin:0 0 14px;display:flex;align-items:center;gap:9px;}
   .section-title::after{content:"";flex:1;height:1px;background:var(--eg-navy-line);margin-left:4px;}
@@ -182,6 +177,68 @@
   .card-head h3{margin:0;font-size:14.5px;font-weight:700;color:var(--eg-text-primary);}
   .card-head .icn{color:var(--eg-gold-300);font-size:14px;margin-right:8px;}
 
+  /* ===================== movimento ===================== */
+  /* Brilho ambiente por tras do conteudo. Cada pagina tem seu par de cores e a
+     troca e lenta: da sensacao de mudar de ambiente sem a marca mudar. */
+  .main-content{position:relative;}
+  .main-content::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(820px 460px at 76% -6%, rgba(var(--amb-a,201,151,75),0.15), transparent 62%),
+      radial-gradient(640px 420px at 4% 100%, rgba(var(--amb-b,120,150,200),0.10), transparent 60%);
+    transition:background 900ms var(--eg-ease);
+  }
+  .main-content > *{position:relative;z-index:1;}
+
+  /* Ao trocar de pagina o conteudo entra escalonado, bloco a bloco. O reinicio
+     e automatico: .page-view alterna display, o que reinicia a animacao. */
+  @keyframes egRise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+  .page-view.active > *{animation:egRise 0.5s var(--eg-ease) both;}
+  .page-view.active > *:nth-child(1){animation-delay:0ms;}
+  .page-view.active > *:nth-child(2){animation-delay:60ms;}
+  .page-view.active > *:nth-child(3){animation-delay:120ms;}
+  .page-view.active > *:nth-child(4){animation-delay:180ms;}
+  .page-view.active > *:nth-child(5){animation-delay:240ms;}
+  .page-view.active > *:nth-child(n+6){animation-delay:300ms;}
+
+  /* As barras crescem do zero quando o dado chega */
+  .trilha-progress-fill,.curso-progress-fill{transition:width 1.1s var(--eg-ease);}
+
+  /* Menu: empurra o texto e cresce a barra dourada */
+  .side-link{position:relative;transition:color 0.25s var(--eg-ease), padding-left 0.25s var(--eg-ease), background 0.25s var(--eg-ease);}
+  .side-link::before{
+    content:"";position:absolute;left:0;top:7px;bottom:7px;width:2px;background:var(--eg-gold-500);
+    transform:scaleY(0);transform-origin:top;transition:transform 0.3s var(--eg-ease);
+  }
+  .side-link:hover{padding-left:20px;}
+  .side-link:hover::before{transform:scaleY(0.5);}
+  .side-link.active::before{transform:scaleY(1);}
+
+  /* Botoes: levantam e recebem um brilho que atravessa */
+  .btn-primary,.cs-btn{position:relative;overflow:hidden;transition:transform 0.25s var(--eg-ease), box-shadow 0.25s var(--eg-ease);}
+  .btn-primary::after,.cs-btn::after{
+    content:"";position:absolute;top:0;left:-120%;width:60%;height:100%;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,0.5),transparent);
+    transition:left 0.55s var(--eg-ease);
+  }
+  .btn-primary:hover,.cs-btn:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(201,151,75,0.28);}
+  .btn-primary:hover::after,.cs-btn:hover::after{left:130%;}
+
+  /* Cartoes reagem ao passar o mouse */
+  .card2{transition:border-color 0.35s var(--eg-ease), transform 0.35s var(--eg-ease), box-shadow 0.35s var(--eg-ease);}
+  .card2:hover{border-color:var(--eg-border-strong);transform:translateY(-3px);box-shadow:0 14px 34px rgba(0,0,0,0.38);}
+  .mentors .av,.cs-card .av{transition:transform 0.35s var(--eg-ease);}
+  .card2:hover .mentors .av:first-child{transform:translateX(-3px) rotate(-4deg);}
+  .card2:hover .mentors .av:last-child{transform:translateX(3px) rotate(4deg);}
+
+  /* Codigo, versao e data de revisao com cara de registro clinico */
+  .mat-code,.mat-meta,.doc-code,.note-date{font-family:var(--eg-mono);}
+
+  /* Quem pediu menos movimento nao ve nenhum */
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition-duration:0.01ms!important;}
+  }
+
   .mentors{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
   .mentor{display:flex;align-items:center;gap:9px;flex:1;min-width:150px;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:10px;padding:9px 11px;}
   .mentor .av{width:32px;height:32px;border-radius:50%;background:var(--eg-bg-3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--eg-gold-100);flex-shrink:0;}
@@ -190,15 +247,29 @@
   .session-meta{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--eg-text-secondary);margin-bottom:6px;}
   .session-meta i{color:var(--eg-gold-300);}
 
-  .lesson-row{display:flex;align-items:center;gap:12px;padding:11px 6px;border-bottom:1px solid var(--eg-navy-line);border-radius:8px;transition:background 0.2s ease;}
-  .lesson-row:last-child{border-bottom:none;padding-bottom:0;}
-  .lesson-row:hover{background:rgba(255,255,255,0.03);}
-  .lesson-check{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;transition:background 0.3s ease, transform 0.3s ease;}
-  .lesson-check.done{background:var(--eg-gold-500);color:#221708;animation:checkPop 0.4s ease;}
-  .lesson-check.pending{border:1px solid var(--eg-navy-line);color:var(--eg-text-muted);}
-  .lesson-info{flex:1;min-width:0;}
-  .lesson-info b{display:block;font-size:13px;font-weight:600;}
-  .lesson-info span{font-size:11px;color:var(--eg-text-muted);}
+  /* A trilha e uma sequencia: cada aula usa a anterior e a ultima libera o 1x1.
+     Por isso as etapas sao numeradas — aqui o numero informa, nao decora. */
+  .step{
+    display:grid;grid-template-columns:28px 1fr auto;gap:14px;align-items:start;
+    padding:13px 10px 13px 2px;border-bottom:1px solid var(--eg-navy-line);border-radius:6px;
+    transition:background 0.3s var(--eg-ease), transform 0.3s var(--eg-ease);
+  }
+  .step:last-child{border-bottom:none;}
+  .step:hover{background:rgba(255,255,255,0.035);transform:translateX(4px);}
+  .step-n{font-family:var(--eg-mono);font-size:12px;color:var(--eg-text-muted);padding-top:2px;}
+  .step-t{font-size:13.5px;line-height:1.45;margin:0;color:var(--eg-text-primary);}
+  .step-m{font-size:11.5px;color:var(--eg-text-muted);margin:3px 0 0;}
+  .step-s{
+    font-size:10.5px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;
+    white-space:nowrap;padding-top:3px;color:var(--eg-text-muted);text-decoration:none;
+    transition:transform 0.3s var(--eg-ease), color 0.25s var(--eg-ease);
+  }
+  .step:hover .step-s{transform:translateX(-3px);}
+  .step-s.link{color:var(--eg-gold-300);}
+  .step:hover .step-s.link{color:var(--eg-gold-100);}
+  .step.done .step-n,.step.done .step-t{color:var(--eg-text-muted);}
+  .step.done .step-t{text-decoration:line-through;text-decoration-color:rgba(255,255,255,0.22);}
+  .step-s.done{color:var(--eg-green);}
   .lesson-link{flex-shrink:0;font-size:11px;font-weight:700;color:var(--eg-gold-300);text-decoration:none;white-space:nowrap;}
   .lesson-link:hover{opacity:0.8;}
 
@@ -207,7 +278,6 @@
   .trilha-progress-track{flex:1;height:9px;border-radius:99px;background:var(--eg-navy-line);overflow:hidden;}
   .trilha-progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg, var(--eg-gold-500), var(--eg-gold-300));transition:width 0.5s ease;}
   .trilha-progress-note{font-size:11.5px;color:var(--eg-text-muted);margin:-8px 0 16px;}
-  .lesson-row.done .lesson-info b{color:var(--eg-text-secondary);}
   .trilha-complete-banner{display:flex;align-items:center;gap:10px;background:rgba(201,151,75,0.1);border:1px solid var(--eg-border-strong);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:var(--eg-gold-100);animation:fadeSlideUp 0.4s ease both;}
   .trilha-complete-banner i{color:var(--eg-gold-300);font-size:16px;animation:softPulse 1.8s ease-in-out infinite;}
 
@@ -328,7 +398,6 @@
   }
   @media (max-width:760px){
     .grid, .grid-2{grid-template-columns:1fr;}
-    .stats-row{grid-template-columns:1fr 1fr;}
     .nps-scale-grid{grid-template-columns:repeat(6,1fr);}
   }
 </style>
@@ -433,33 +502,25 @@
 
       <!-- ================= PÁGINA: JORNADA ================= -->
       <div class="page-view active" id="page-jornada">
-        <div class="hero">
-          <div class="hero-eyebrow" id="heroEyebrow">SUA JORNADA NA MENTORIA</div>
-          <h1 id="heroTitle">Olá!</h1>
-          <p id="heroSub"></p>
+        <div class="who">
+          <div>
+            <h1 id="heroTitle">Olá!</h1>
+            <ul class="facts">
+              <li><b id="statBranches">—</b></li>
+              <li>CS <b id="statCs">—</b></li>
+              <li>status <b id="statStatus">—</b></li>
+            </ul>
+          </div>
+          <div class="stamp" id="heroEyebrow">SUA JORNADA NA MENTORIA</div>
         </div>
-
-        <div class="stats-row">
-          <div class="stat-card">
-            <div class="stat-icn"><i class="fa-solid fa-route"></i></div>
-            <div><b id="statBranches">—</b><span>Mentoria(s) ativa(s)</span></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icn"><i class="fa-solid fa-user-nurse"></i></div>
-            <div><b id="statCs">—</b><span>CS responsável</span></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icn"><i class="fa-regular fa-circle-check"></i></div>
-            <div><b id="statStatus">—</b><span>Status</span></div>
-          </div>
-        </div>
+        <p class="who-sub" id="heroSub"></p>
 
         <div class="grid">
           <div class="main-col">
 
             <div id="journeyPending">
               <div class="card2" id="sessionCard" style="display:none;">
-                <div class="card-head"><h3><i class="fa-solid fa-user-doctor icn"></i>Sessão 1x1</h3><span class="badge gold" id="sessionBadge"></span></div>
+                <div class="card-head"><h3>Sessão 1x1</h3><span class="badge gold" id="sessionBadge"></span></div>
 
                 <div id="sessionConfirmedWrap" style="display:none;">
                   <div class="mentors" id="sessionMentors"></div>
@@ -479,7 +540,7 @@
               </div>
 
               <div class="card2" id="lessonsCard">
-                <div class="card-head"><h3><i class="fa-solid fa-route icn"></i>Sua trilha de boas-vindas</h3><span class="badge muted" id="lessonsBadge"></span></div>
+                <div class="card-head"><h3>Sua trilha de boas-vindas</h3><span class="badge muted" id="lessonsBadge"></span></div>
                 <div class="trilha-progress-wrap">
                   <div class="trilha-progress-track"><div class="trilha-progress-fill" id="trilhaProgressFill" style="width:0%;"></div></div>
                   <div class="trilha-progress-pct" id="trilhaProgressPct">0%</div>
@@ -500,14 +561,14 @@
             <a class="cs-btn" id="csCardWhatsBtn" href="#" target="_blank" rel="noopener" style="display:none;margin-top:-8px;margin-bottom:20px;"><i class="fa-brands fa-whatsapp"></i> Falar com minha CS</a>
 
             <div class="card2" id="courseProgressCard" style="display:none;">
-              <div class="card-head"><h3><i class="fa-solid fa-chart-line icn"></i>Suas trilhas</h3></div>
+              <div class="card-head"><h3>Suas trilhas</h3></div>
               <div id="courseProgressList"></div>
             </div>
           </div>
         </div>
 
         <div class="card2">
-          <div class="card-head"><h3><i class="fa-solid fa-bullhorn icn"></i>Recados</h3></div>
+          <div class="card-head"><h3>Recados</h3></div>
           <div id="recadosList"><div class="empty-state">Nenhum recado por aqui ainda.</div></div>
         </div>
       </div>
@@ -577,7 +638,7 @@
         <div class="section-title"><i class="fa-regular fa-comment-dots"></i>SUA OPINIÃO</div>
         <div class="grid-2">
           <div class="card2" id="feedbackCard">
-            <div class="card-head"><h3><i class="fa-regular fa-comment-dots icn"></i>Deixar feedback</h3></div>
+            <div class="card-head"><h3>Deixar feedback</h3></div>
             <div id="feedbackFormWrap">
               <label>O que você quer avaliar?</label>
               <select id="fbCategory">
@@ -608,7 +669,7 @@
           </div>
 
           <div class="card2" id="npsCard">
-            <div class="card-head"><h3><i class="fa-solid fa-gauge-high icn"></i>Pesquisa NPS</h3></div>
+            <div class="card-head"><h3>Pesquisa NPS</h3></div>
             <div id="npsFormWrap">
               <p class="nps-question">De 0 a 10, o quanto você recomendaria a Mentoria Endogin para um colega médico?</p>
               <div class="nps-scale-grid" id="npsScaleGrid"></div>
@@ -913,7 +974,9 @@
     var branchIds = mentorias.map(function(d){ return d.branch_id; }).filter(Boolean);
 
     var firstName = (currentStudent.full_name || "").trim().split(/\s+/)[0] || "";
-    $("heroTitle").textContent = "Olá, " + (currentStudent.full_name || firstName) + "!";
+    // O nome sozinho: o "Olá!" ocupava a linha mais nobre da tela sem dizer
+    // nada que o aluno ja nao soubesse.
+    $("heroTitle").textContent = currentStudent.full_name || firstName;
 
     if(mentoriaLabels.length){
       $("topBadgeBranch").style.display = "inline-block";
@@ -1062,12 +1125,19 @@
             $("trilhaProgressFill").style.width = pct + "%";
             $("trilhaProgressPct").textContent = pct + "%";
             $("trilhaCompleteBanner").style.display = (pct === 100) ? "flex" : "none";
-            $("lessonsList").innerHTML = lessons.map(function(l){
+            $("lessonsList").innerHTML = lessons.map(function(l, i){
               var done = !!doneMap[l.id];
-              return '<div class="lesson-row' + (done ? " done" : "") + '">' +
-                '<div class="lesson-check ' + (done ? "done" : "pending") + '"><i class="fa-solid ' + (done ? "fa-check" : "fa-circle-notch") + '"></i></div>' +
-                '<div class="lesson-info"><b>' + l.title + '</b>' + (l.duration_minutes ? '<span>' + l.duration_minutes + ' min</span>' : '') + '</div>' +
-                (l.link_url ? '<a class="lesson-link" href="' + l.link_url + '" target="_blank" rel="noopener">Assistir <i class="fa-solid fa-arrow-up-right-from-square"></i></a>' : '') +
+              var num = (i + 1 < 10 ? "0" : "") + (i + 1);
+              var acao = done
+                ? '<div class="step-s done">Feita</div>'
+                : (l.link_url
+                    ? '<a class="step-s link" href="' + l.link_url + '" target="_blank" rel="noopener">Assistir</a>'
+                    : '<div class="step-s">A assistir</div>');
+              return '<div class="step' + (done ? " done" : "") + '">' +
+                '<div class="step-n">' + num + '</div>' +
+                '<div><p class="step-t">' + l.title + '</p>' +
+                (l.duration_minutes ? '<p class="step-m">' + l.duration_minutes + ' min</p>' : '') + '</div>' +
+                acao +
                 '</div>';
             }).join("");
             return doneCount === lessons.length;
@@ -1392,9 +1462,24 @@
   };
   var sideLinkBtns = document.querySelectorAll(".side-link");
 
+  // Cada pagina tem seu par de cores no brilho de fundo. A troca e lenta e da
+  // sensacao de lugar; a marca continua a mesma.
+  var AMBIENTE = {
+    jornada:    ["201,151,75", "120,150,200"],
+    calendario: ["150,175,215", "201,151,75"],
+    conteudos:  ["196,140,96", "150,120,190"],
+    materiais:  ["130,180,165", "201,151,75"],
+    opiniao:    ["205,150,150", "201,151,75"]
+  };
+
   function showPage(key){
     Object.keys(pageEls).forEach(function(k){ pageEls[k].classList.toggle("active", k === key); });
     sideLinkBtns.forEach(function(l){ l.classList.toggle("active", l.getAttribute("data-page") === key); });
+    var amb = AMBIENTE[key];
+    if(amb){
+      document.documentElement.style.setProperty("--amb-a", amb[0]);
+      document.documentElement.style.setProperty("--amb-b", amb[1]);
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   sideLinkBtns.forEach(function(l){
