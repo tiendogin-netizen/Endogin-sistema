@@ -151,6 +151,98 @@
   }
   .who-sub{margin:0 0 24px;color:var(--eg-text-secondary);font-size:13px;max-width:62ch;line-height:1.6;}
 
+  /* ===================== percurso do aluno =====================
+     A tela antiga escondia o que ja estava pronto: `journeyPending` sumia
+     inteiro quando o aluno terminava, e o card da trilha sumia quando nao
+     havia aula. Sobrava meia tela em branco justamente pra quem tinha
+     avancado mais. Aqui e o contrario: o percurso inteiro fica visivel, e a
+     etapa vencida vira um ponto preenchido com a data — o aluno ve o caminho
+     que andou, nao so o que falta. */
+  .percurso{margin:0 0 26px;}
+  .percurso-top{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:9px;flex-wrap:wrap;}
+  .percurso-etapas{font-family:'Sora',sans-serif;font-size:14px;font-weight:600;color:var(--eg-text-primary);}
+  .percurso-etapas b{color:var(--eg-gold-300);}
+  .percurso-nota{font-size:12px;color:var(--eg-text-muted);}
+  .percurso-track{height:3px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden;}
+  .percurso-track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--eg-gold-500),var(--eg-gold-300));transition:width 1s var(--eg-ease);}
+
+  .linha{list-style:none;margin:0 0 34px;padding:0;position:relative;}
+  .linha::before{
+    content:"";position:absolute;left:11px;top:14px;bottom:16px;width:1px;
+    background:linear-gradient(180deg,var(--eg-gold-500) 0%,rgba(201,151,75,.35) 55%,rgba(255,255,255,.07) 100%);
+  }
+  .etapa{position:relative;padding:0 0 18px 42px;}
+  .etapa:last-child{padding-bottom:0;}
+  .ponto{
+    position:absolute;left:0;top:1px;width:23px;height:23px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:10px;
+    background:var(--eg-bg-0);border:1px solid var(--eg-navy-line);color:var(--eg-text-muted);
+    transition:transform .3s var(--eg-ease);
+  }
+  .etapa.feita .ponto{background:var(--eg-gold-500);border-color:var(--eg-gold-500);color:#20160a;}
+  .etapa.agora .ponto{
+    border:2px solid var(--eg-gold-300);color:var(--eg-gold-300);background:var(--eg-bg-1);
+    box-shadow:0 0 0 0 rgba(227,189,118,.4);animation:pontoPulsa 2.8s ease-in-out infinite;
+  }
+  @keyframes pontoPulsa{0%,100%{box-shadow:0 0 0 0 rgba(227,189,118,.38);}50%{box-shadow:0 0 0 7px rgba(227,189,118,0);}}
+
+  .etapa-linha{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .etapa-nome{font-family:'Sora',sans-serif;font-size:14px;font-weight:600;color:var(--eg-text-primary);margin:0;}
+  .etapa.feita .etapa-nome,.etapa.depois .etapa-nome{color:var(--eg-text-secondary);font-weight:500;}
+  .etapa-quando{font-family:var(--eg-mono);font-size:10.5px;letter-spacing:.06em;color:var(--eg-text-muted);white-space:nowrap;}
+  .etapa.feita .etapa-quando{color:var(--eg-green);}
+  .etapa-nota{margin:4px 0 0;font-size:12.5px;color:var(--eg-text-muted);line-height:1.55;max-width:64ch;}
+
+  /* so a etapa atual ganha superficie: e a unica que pede acao */
+  .etapa-painel{
+    margin-top:12px;background:var(--eg-bg-2);border:1px solid var(--eg-border);
+    border-radius:10px;padding:16px 18px;
+  }
+  .etapa-painel p{margin:0 0 12px;font-size:12.5px;color:var(--eg-text-secondary);line-height:1.6;max-width:60ch;}
+  .etapa-painel p:last-child{margin-bottom:0;}
+  .etapa-painel .err-msg{margin-top:10px;}
+
+  .aula-item{
+    display:grid;grid-template-columns:24px 1fr auto;gap:12px;align-items:start;
+    padding:10px 6px 10px 0;border-bottom:1px solid var(--eg-navy-line);border-radius:6px;
+    transition:background .25s var(--eg-ease),transform .25s var(--eg-ease);
+  }
+  .aula-item:last-of-type{border-bottom:none;}
+  .aula-item:hover{background:rgba(255,255,255,.03);transform:translateX(3px);}
+  .aula-n{font-family:var(--eg-mono);font-size:11.5px;color:var(--eg-text-muted);padding-top:2px;}
+  .aula-t{margin:0;font-size:13px;line-height:1.45;color:var(--eg-text-primary);}
+  .aula-m{margin:3px 0 0;font-size:11px;color:var(--eg-text-muted);}
+  .aula-acao{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;padding-top:3px;text-decoration:none;color:var(--eg-text-muted);}
+  .aula-acao.link{color:var(--eg-gold-300);}
+  .aula-item.ok .aula-t{color:var(--eg-text-muted);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.2);}
+  .aula-item.ok .aula-n{color:var(--eg-text-muted);}
+  .aula-acao.ok{color:var(--eg-green);}
+
+  .mentores{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;}
+  .mentor-chip{display:flex;align-items:center;gap:9px;}
+  .mentor-chip .av{
+    width:34px;height:34px;border-radius:50%;background:linear-gradient(140deg,#24395a,#16253a);
+    display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif;
+    font-size:11px;font-weight:600;color:var(--eg-gold-300);
+  }
+  .mentor-chip b{font-size:12.5px;font-weight:600;}
+
+  /* ===================== blocos de apoio ===================== */
+  .grid-2col{display:grid;grid-template-columns:1.05fr 1fr;gap:34px;align-items:start;}
+  .bloco-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--eg-navy-line);margin-bottom:4px;}
+  .bloco-head h3{font-family:'Sora',sans-serif;font-size:13.5px;font-weight:600;margin:0;}
+  .bloco-meta{font-family:var(--eg-mono);font-size:10.5px;letter-spacing:.06em;color:var(--eg-text-muted);}
+  .vazio{font-size:12.5px;color:var(--eg-text-muted);line-height:1.6;margin:12px 0 0;}
+
+  .curso-linha{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--eg-navy-line);}
+  .curso-linha:last-child{border-bottom:none;}
+  .curso-nome{font-size:12.5px;color:var(--eg-text-secondary);}
+  .curso-pct{font-family:var(--eg-mono);font-size:11.5px;color:var(--eg-text-muted);}
+  .curso-track{grid-column:1/-1;height:3px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden;}
+  .curso-track i{display:block;height:100%;width:0;background:var(--eg-gold-500);opacity:.85;transition:width .9s var(--eg-ease);}
+
+  @media(max-width:860px){ .grid-2col{grid-template-columns:1fr;gap:26px;} }
+
 
   .section-title{font-size:11px;letter-spacing:2.5px;color:var(--eg-gold-300);font-weight:700;margin:0 0 14px;display:flex;align-items:center;gap:9px;}
   .section-title::after{content:"";flex:1;height:1px;background:var(--eg-navy-line);margin-left:4px;}
@@ -215,7 +307,6 @@
   .page-view.active > *:nth-child(n+6){animation-delay:300ms;}
 
   /* As barras crescem do zero quando o dado chega */
-  .trilha-progress-fill,.curso-progress-fill{transition:width 1.1s var(--eg-ease);}
 
   /* Menu: empurra o texto e cresce a barra dourada */
   .side-link{position:relative;transition:color 0.25s var(--eg-ease), padding-left 0.25s var(--eg-ease), background 0.25s var(--eg-ease);}
@@ -240,9 +331,6 @@
   /* Cartoes reagem ao passar o mouse */
   .card2{transition:border-color 0.35s var(--eg-ease), transform 0.35s var(--eg-ease), box-shadow 0.35s var(--eg-ease);}
   .card2:hover{border-color:var(--eg-border-strong);transform:translateY(-3px);box-shadow:0 14px 34px rgba(0,0,0,0.38);}
-  .mentors .av,.cs-card .av{transition:transform 0.35s var(--eg-ease);}
-  .card2:hover .mentors .av:first-child{transform:translateX(-3px) rotate(-4deg);}
-  .card2:hover .mentors .av:last-child{transform:translateX(3px) rotate(4deg);}
 
   /* Codigo, versao e data de revisao com cara de registro clinico */
   .mat-code,.mat-meta,.doc-code,.note-date{font-family:var(--eg-mono);}
@@ -252,60 +340,6 @@
     *,*::before,*::after{animation:none!important;transition-duration:0.01ms!important;}
   }
 
-  .mentors{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
-  .mentor{display:flex;align-items:center;gap:9px;flex:1;min-width:150px;background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:10px;padding:9px 11px;}
-  .mentor .av{width:32px;height:32px;border-radius:50%;background:var(--eg-bg-3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--eg-gold-100);flex-shrink:0;}
-  .mentor .info b{display:block;font-size:12px;}
-  .mentor .info span{font-size:10.5px;color:var(--eg-text-muted);}
-  .session-meta{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--eg-text-secondary);margin-bottom:6px;}
-  .session-meta i{color:var(--eg-gold-300);}
-
-  /* A trilha e uma sequencia: cada aula usa a anterior e a ultima libera o 1x1.
-     Por isso as etapas sao numeradas — aqui o numero informa, nao decora. */
-  .step{
-    display:grid;grid-template-columns:28px 1fr auto;gap:14px;align-items:start;
-    padding:13px 10px 13px 2px;border-bottom:1px solid var(--eg-navy-line);border-radius:6px;
-    transition:background 0.3s var(--eg-ease), transform 0.3s var(--eg-ease);
-  }
-  .step:last-child{border-bottom:none;}
-  .step:hover{background:rgba(255,255,255,0.035);transform:translateX(4px);}
-  .step-n{font-family:var(--eg-mono);font-size:12px;color:var(--eg-text-muted);padding-top:2px;}
-  .step-t{font-size:13.5px;line-height:1.45;margin:0;color:var(--eg-text-primary);}
-  .step-m{font-size:11.5px;color:var(--eg-text-muted);margin:3px 0 0;}
-  .step-s{
-    font-size:10.5px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;
-    white-space:nowrap;padding-top:3px;color:var(--eg-text-muted);text-decoration:none;
-    transition:transform 0.3s var(--eg-ease), color 0.25s var(--eg-ease);
-  }
-  .step:hover .step-s{transform:translateX(-3px);}
-  .step-s.link{color:var(--eg-gold-300);}
-  .step:hover .step-s.link{color:var(--eg-gold-100);}
-  .step.done .step-n,.step.done .step-t{color:var(--eg-text-muted);}
-  .step.done .step-t{text-decoration:line-through;text-decoration-color:rgba(255,255,255,0.22);}
-  .step-s.done{color:var(--eg-green);}
-  .lesson-link{flex-shrink:0;font-size:11px;font-weight:700;color:var(--eg-gold-300);text-decoration:none;white-space:nowrap;}
-  .lesson-link:hover{opacity:0.8;}
-
-  .trilha-progress-wrap{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
-  .trilha-progress-pct{font-family:'Sora',sans-serif;font-size:22px;font-weight:700;color:var(--eg-gold-300);min-width:56px;text-align:right;}
-  .trilha-progress-track{flex:1;height:9px;border-radius:99px;background:var(--eg-navy-line);overflow:hidden;}
-  .trilha-progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg, var(--eg-gold-500), var(--eg-gold-300));transition:width 0.5s ease;}
-  .trilha-progress-note{font-size:11.5px;color:var(--eg-text-muted);margin:-8px 0 16px;}
-  .trilha-complete-banner{display:flex;align-items:center;gap:10px;background:rgba(201,151,75,0.1);border:1px solid var(--eg-border-strong);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:var(--eg-gold-100);animation:fadeSlideUp 0.4s ease both;}
-  .trilha-complete-banner i{color:var(--eg-gold-300);font-size:16px;animation:softPulse 1.8s ease-in-out infinite;}
-
-  .course-progress-item{padding:9px 0;}
-  .course-progress-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px;}
-  .course-progress-name{font-size:12px;font-weight:600;}
-  .course-progress-pct{font-size:11px;color:var(--eg-text-muted);flex-shrink:0;}
-  .course-progress-track{height:6px;border-radius:99px;background:var(--eg-navy-line);overflow:hidden;}
-  .course-progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg, var(--eg-gold-500), var(--eg-gold-300));transition:width 0.6s cubic-bezier(.4,0,.2,1);}
-  .course-progress-item{animation:fadeSlideUp 0.4s ease both;}
-
-  .cs-card{display:flex;align-items:center;gap:13px;}
-  .cs-card .av{width:48px;height:48px;border-radius:50%;background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#241705;flex-shrink:0;background-size:cover;background-position:center;}
-  .cs-card b{display:block;font-size:14px;}
-  .cs-card span{font-size:11.5px;color:var(--eg-text-muted);}
 
   .cal-item{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--eg-navy-line);align-items:center;}
   .cal-item:last-child{border-bottom:none;padding-bottom:0;}
@@ -521,55 +555,25 @@
         </div>
         <p class="who-sub" id="heroSub"></p>
 
-        <div class="grid">
-          <div class="main-col">
-
-            <div id="journeyPending">
-              <div class="card2" id="sessionCard" style="display:none;">
-                <div class="card-head"><h3>Sessão 1x1</h3><span class="badge gold" id="sessionBadge"></span></div>
-
-                <div id="sessionConfirmedWrap" style="display:none;">
-                  <div class="mentors" id="sessionMentors"></div>
-                  <div class="session-meta" id="sessionMeta"></div>
-                </div>
-
-                <div id="sessionPendingConfirm" style="display:none;">
-                  <div class="session-meta"><i class="fa-regular fa-clock"></i> Horário solicitado: <span id="sessionPendingWhen"></span> — aguardando confirmação da sua CS.</div>
-                </div>
-
-                <div id="sessionRequestForm" style="display:none;">
-                  <p class="hint" style="margin:0 0 12px;text-align:left;">Escolha um horário pra sua sessão 1x1 com o Dr. Caio e o Dr. Vinícius. Sua CS confirma em seguida.</p>
-                  <input type="datetime-local" id="sessionRequestInput">
-                  <button class="btn-primary" id="sessionRequestBtn">Solicitar horário</button>
-                  <div class="err-msg" id="sessionRequestErr"></div>
-                </div>
-              </div>
-
-              <div class="card2" id="lessonsCard">
-                <div class="card-head"><h3>Sua trilha de boas-vindas</h3><span class="badge muted" id="lessonsBadge"></span></div>
-                <div class="trilha-progress-wrap">
-                  <div class="trilha-progress-track"><div class="trilha-progress-fill" id="trilhaProgressFill" style="width:0%;"></div></div>
-                  <div class="trilha-progress-pct" id="trilhaProgressPct">0%</div>
-                </div>
-                <p class="trilha-progress-note">O que você já assistiu e o que ainda falta antes da sua sessão 1x1.</p>
-                <div id="trilhaCompleteBanner" class="trilha-complete-banner" style="display:none;"><i class="fa-solid fa-champagne-glasses"></i> Trilha concluída — você já pode aproveitar sua sessão 1x1! 🎉</div>
-                <div id="lessonsList"><div class="empty-state">Sua CS ainda não cadastrou aulas de introdução pra sua mentoria.</div></div>
-              </div>
-            </div>
-
+        <div class="percurso">
+          <div class="percurso-top">
+            <span class="percurso-etapas" id="percursoEtapas">—</span>
+            <span class="percurso-nota" id="percursoNota"></span>
           </div>
-
-          <div class="side-col">
-            <div class="card2" id="courseProgressCard" style="display:none;">
-              <div class="card-head"><h3>Suas trilhas</h3></div>
-              <div id="courseProgressList"></div>
-            </div>
-          </div>
+          <div class="percurso-track"><i id="percursoFill"></i></div>
         </div>
 
-        <div class="card2">
-          <div class="card-head"><h3>Recados</h3></div>
-          <div id="recadosList"><div class="empty-state">Nenhum recado por aqui ainda.</div></div>
+        <ol class="linha" id="linhaTempo"></ol>
+
+        <div class="grid-2col">
+          <section>
+            <div class="bloco-head"><h3>Seus cursos</h3><span class="bloco-meta">Cademí</span></div>
+            <div id="courseProgressList"><p class="vazio">Assim que você começar a assistir as aulas gravadas, o seu progresso em cada curso aparece aqui.</p></div>
+          </section>
+          <section>
+            <div class="bloco-head"><h3>Recados da mentoria</h3></div>
+            <div id="recadosList"><p class="vazio">Nenhum recado por aqui ainda.</p></div>
+          </section>
         </div>
       </div>
 
@@ -1036,47 +1040,27 @@
       });
   }
 
-  function renderSessionCard(){
-    var s = latestSession;
-    $("sessionCard").style.display = "block";
-    if(s && s.status !== "a_agendar"){
-      $("sessionBadge").textContent = SESSION_STATUS_LABEL[s.status] || s.status;
-      $("sessionConfirmedWrap").style.display = "block";
-      $("sessionPendingConfirm").style.display = "none";
-      $("sessionRequestForm").style.display = "none";
-      $("sessionMentors").innerHTML = (s.mentor_names || []).map(function(m){
-        return '<div class="mentor"><span class="av">' + initials(m).toUpperCase() + '</span><div class="info"><b>' + m + '</b></div></div>';
-      }).join("");
-      var when = s.scheduled_at
-        ? new Date(s.scheduled_at).toLocaleString("pt-BR", { weekday:"long", day:"2-digit", month:"long", hour:"2-digit", minute:"2-digit" })
-        : "Ainda sem data marcada";
-      $("sessionMeta").innerHTML = '<i class="fa-regular fa-calendar"></i> ' + when;
-    } else if(s && s.status === "a_agendar" && s.scheduled_at){
-      $("sessionBadge").textContent = "Aguardando confirmação";
-      $("sessionConfirmedWrap").style.display = "none";
-      $("sessionRequestForm").style.display = "none";
-      $("sessionPendingConfirm").style.display = "block";
-      $("sessionPendingWhen").textContent = new Date(s.scheduled_at).toLocaleString("pt-BR", { weekday:"long", day:"2-digit", month:"long", hour:"2-digit", minute:"2-digit" });
-    } else {
-      $("sessionBadge").textContent = "A agendar";
-      $("sessionConfirmedWrap").style.display = "none";
-      $("sessionPendingConfirm").style.display = "none";
-      $("sessionRequestForm").style.display = "block";
-    }
-  }
+  // A sessao nao desenha mais um cartao proprio: ela e uma etapa da linha do
+  // tempo, e quem monta a tela e renderLinha().
+  function renderSessionCard(){ renderLinha(); }
 
-  $("sessionRequestBtn").addEventListener("click", function(){
+  // O formulario e redesenhado a cada render da linha do tempo, entao o clique
+  // e capturado no container — um listener preso ao botao morreria no primeiro
+  // redesenho.
+  $("linhaTempo").addEventListener("click", function(ev){
+    var btn = ev.target.closest("#sessionRequestBtn");
+    if(!btn) return;
     var val = $("sessionRequestInput").value;
     $("sessionRequestErr").textContent = "";
     if(!val){ $("sessionRequestErr").textContent = "Escolha uma data e horário."; return; }
-    $("sessionRequestBtn").disabled = true;
+    btn.disabled = true;
     var iso = new Date(val).toISOString();
     var payload = { student_id: currentStudent.id, scheduled_at: iso, status: "a_agendar" };
     var op = latestSession
       ? sb.from("mentoring_sessions").update(payload).eq("id", latestSession.id)
       : sb.from("mentoring_sessions").insert(payload);
     op.then(function(r){
-      $("sessionRequestBtn").disabled = false;
+      btn.disabled = false;
       if(r.error){ $("sessionRequestErr").textContent = "Erro: " + r.error.message; return; }
       refreshJourney();
     });
@@ -1095,8 +1079,7 @@
       .or(orParts.join(","))
       .then(function(r){
         var lessons = r.data || [];
-        if(!lessons.length){ $("lessonsCard").style.display = "none"; return true; }
-        $("lessonsCard").style.display = "block";
+        if(!lessons.length){ jornada.trilha = { aulas: [], feitas: 0 }; return true; }
         return sb.from("lesson_progress")
           .select("lesson_id,completed")
           .eq("student_id", currentStudent.id)
@@ -1104,70 +1087,209 @@
             var doneMap = {};
             (pr.data || []).forEach(function(p){ doneMap[p.lesson_id] = p.completed; });
             var doneCount = lessons.filter(function(l){ return doneMap[l.id]; }).length;
-            var pct = lessons.length ? Math.round((doneCount / lessons.length) * 100) : 0;
-            $("lessonsBadge").textContent = doneCount + " de " + lessons.length;
-            $("trilhaProgressFill").style.width = pct + "%";
-            $("trilhaProgressPct").textContent = pct + "%";
-            $("trilhaCompleteBanner").style.display = (pct === 100) ? "flex" : "none";
-            $("lessonsList").innerHTML = lessons.map(function(l, i){
-              var done = !!doneMap[l.id];
-              var num = (i + 1 < 10 ? "0" : "") + (i + 1);
-              var acao = done
-                ? '<div class="step-s done">Feita</div>'
-                : (l.link_url
-                    ? '<a class="step-s link" href="' + l.link_url + '" target="_blank" rel="noopener">Assistir</a>'
-                    : '<div class="step-s">A assistir</div>');
-              return '<div class="step' + (done ? " done" : "") + '">' +
-                '<div class="step-n">' + num + '</div>' +
-                '<div><p class="step-t">' + l.title + '</p>' +
-                (l.duration_minutes ? '<p class="step-m">' + l.duration_minutes + ' min</p>' : '') + '</div>' +
-                acao +
-                '</div>';
-            }).join("");
+            jornada.trilha = {
+              aulas: lessons.map(function(l){ return { titulo: l.title, minutos: l.duration_minutes, link: l.link_url, feita: !!doneMap[l.id] }; }),
+              feitas: doneCount
+            };
             return doneCount === lessons.length;
           });
       });
   }
 
   // ---------------- suas trilhas (progresso real vindo da Cademí) ----------------
+  // O progresso nos cursos e justamente "o que ele ja fez" — antes o bloco
+  // inteiro sumia quando ainda nao havia numero, que e exatamente a hora em que
+  // o aluno mais precisa entender o que se espera dele. Agora ele fica, com uma
+  // frase no lugar do vazio.
   function loadCourseProgressStudent(){
-    var card = $("courseProgressCard");
     var wrap = $("courseProgressList");
-    if(!card || !wrap) return;
-    sb.from("course_progress").select("progress_percentage,course:course_id(name)").eq("student_id", currentStudent.id).order("progress_percentage", { ascending: false }).then(function(r){
-      var rows = (r.data || []).filter(function(row){ return row.course; });
-      if(r.error || !rows.length){ card.style.display = "none"; return; }
-      card.style.display = "block";
-      wrap.innerHTML = rows.map(function(row){
-        var pct = Math.max(0, Math.min(100, Math.round(Number(row.progress_percentage) || 0)));
-        return '<div class="course-progress-item">' +
-          '<div class="course-progress-top"><span class="course-progress-name">' + row.course.name + '</span><span class="course-progress-pct">' + pct + '%</span></div>' +
-          '<div class="course-progress-track"><div class="course-progress-fill" style="width:' + pct + '%;"></div></div>' +
-        '</div>';
-      }).join("");
-    });
+    if(!wrap) return;
+    return sb.from("course_progress")
+      .select("progress_percentage,course:course_id(name)")
+      .eq("student_id", currentStudent.id)
+      .order("progress_percentage", { ascending: false })
+      .then(function(r){
+        var rows = (r.data || []).filter(function(row){ return row.course; });
+        if(r.error || !rows.length){
+          wrap.innerHTML = '<p class="vazio">Assim que você começar a assistir as aulas gravadas, o seu progresso em cada curso aparece aqui.</p>';
+          return;
+        }
+        wrap.innerHTML = rows.map(function(row){
+          var pct = Math.max(0, Math.min(100, Math.round(Number(row.progress_percentage) || 0)));
+          return '<div class="curso-linha">' +
+            '<div class="curso-nome">' + row.course.name + '</div>' +
+            '<div class="curso-pct">' + pct + '%</div>' +
+            '<div class="curso-track"><i style="width:' + pct + '%;"></i></div>' +
+          '</div>';
+        }).join("");
+      });
   }
 
-  // ---------------- jornada: mostra as pendências ou some quando tudo concluído ----------------
-  function refreshJourney(){
-    Promise.all([loadSession(), loadLessons(currentBranchIds)]).then(function(results){
-      var sessionDone = results[0];
-      var lessonsDone = results[1];
-      applyJourneyState(sessionDone && lessonsDone);
+  // ---------------- percurso do aluno ----------------
+  // Quatro etapas concretas + o estado final. Nenhuma some depois de vencida:
+  // a etapa concluida vira um ponto preenchido com a data, e e assim que o
+  // aluno enxerga o caminho que ja andou.
+  var jornada = { trilha: null };
+
+  function esc(v){
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
     });
   }
+  function fmtDiaMes(iso){
+    if(!iso) return "";
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", "");
+  }
+  function fmtQuandoLongo(iso){
+    if(!iso) return "";
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return "";
+    return d.toLocaleString("pt-BR", { weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit" });
+  }
 
-  function applyJourneyState(complete){
-    $("journeyPending").style.display = complete ? "none" : "block";
-    if(complete){
-      $("heroEyebrow").textContent = "MENTORIA ATIVA";
-      $("heroSub").textContent = "Você já concluiu sua jornada inicial. Acompanhe o calendário de aulas e novidades por aqui.";
-    } else {
-      $("heroEyebrow").textContent = "SUA JORNADA NA MENTORIA";
-      $("heroSub").textContent = currentMentoriaLabels.length
-        ? "Complete as aulas obrigatórias e agende sua sessão 1x1 pra liberar sua jornada completa na " + currentMentoriaLabels.join(" / ") + "."
-        : "Assim que sua CS vincular você a uma mentoria, seu conteúdo aparece aqui.";
+  function painelTrilha(){
+    var t = jornada.trilha;
+    if(!t || !t.aulas.length){
+      return '<div class="etapa-painel"><p>Sua CS ainda não liberou as aulas de introdução da sua mentoria. Assim que ela liberar, elas aparecem aqui.</p></div>';
     }
+    return '<div class="etapa-painel">' +
+      '<p>Assista na ordem — cada aula usa a anterior. A última libera sua sessão com os fundadores.</p>' +
+      t.aulas.map(function(a, i){
+        var n = (i + 1 < 10 ? "0" : "") + (i + 1);
+        var acao = a.feita
+          ? '<span class="aula-acao ok">Feita</span>'
+          : (a.link
+              ? '<a class="aula-acao link" href="' + esc(a.link) + '" target="_blank" rel="noopener">Assistir</a>'
+              : '<span class="aula-acao">A assistir</span>');
+        return '<div class="aula-item' + (a.feita ? " ok" : "") + '">' +
+          '<span class="aula-n">' + n + '</span>' +
+          '<div><p class="aula-t">' + esc(a.titulo) + '</p>' +
+          (a.minutos ? '<p class="aula-m">' + a.minutos + ' min</p>' : '') + '</div>' +
+          acao +
+        '</div>';
+      }).join("") +
+    '</div>';
+  }
+
+  function painelSessao(){
+    var s = latestSession;
+    if(s && s.status !== "a_agendar"){
+      var mentores = (s.mentor_names || []).map(function(m){
+        return '<div class="mentor-chip"><span class="av">' + esc(initials(m).toUpperCase()) + '</span><b>' + esc(m) + '</b></div>';
+      }).join("");
+      return '<div class="etapa-painel">' +
+        (mentores ? '<div class="mentores">' + mentores + '</div>' : '') +
+        '<p>' + (s.scheduled_at ? esc(fmtQuandoLongo(s.scheduled_at)) : "Ainda sem data marcada.") + '</p>' +
+      '</div>';
+    }
+    if(s && s.status === "a_agendar" && s.scheduled_at){
+      return '<div class="etapa-painel"><p>Você pediu <b>' + esc(fmtQuandoLongo(s.scheduled_at)) + '</b>. Sua CS confirma em seguida — assim que confirmar, aparece aqui.</p></div>';
+    }
+    return '<div class="etapa-painel">' +
+      '<p>Escolha um horário para conversar com o Dr. Caio e o Dr. Vinícius. Sua CS confirma em seguida.</p>' +
+      '<input type="datetime-local" id="sessionRequestInput">' +
+      '<button class="btn-primary" id="sessionRequestBtn" style="margin-left:10px;">Solicitar horário</button>' +
+      '<div class="err-msg" id="sessionRequestErr"></div>' +
+    '</div>';
+  }
+
+  function montaEtapas(){
+    var s = latestSession;
+    var t = jornada.trilha;
+    var totalAulas = t ? t.aulas.length : 0;
+    var feitasAulas = t ? t.feitas : 0;
+    var trilhaOk = totalAulas > 0 && feitasAulas === totalAulas;
+    var sessaoOk = !!(s && s.status === "realizada");
+
+    return [
+      {
+        nome: "Boas-vindas",
+        feita: !!currentStudent.onboarding_completed_at,
+        quando: currentStudent.onboarding_completed_at,
+        nota: "Seu cadastro conferido e o contato da sua CS liberado."
+      },
+      {
+        nome: "Seu perfil DISC",
+        feita: !!currentStudent.disc_completed_at,
+        quando: currentStudent.disc_completed_at,
+        nota: "O questionário que mostra pra sua CS como você prefere ser acompanhado."
+      },
+      {
+        nome: "Trilha de boas-vindas",
+        feita: trilhaOk,
+        contador: totalAulas ? feitasAulas + " de " + totalAulas : null,
+        nota: "As aulas que preparam você para a conversa com os fundadores.",
+        painel: painelTrilha
+      },
+      {
+        nome: "Sessão 1x1 com os fundadores",
+        feita: sessaoOk,
+        quando: sessaoOk ? s.scheduled_at : null,
+        nota: trilhaOk
+          ? "Sua conversa individual com o Dr. Caio e o Dr. Vinícius."
+          : "Abre assim que você fechar a trilha de boas-vindas.",
+        painel: trilhaOk ? painelSessao : null
+      },
+      {
+        nome: "Mentoria em andamento",
+        feita: false,
+        final: true,
+        nota: "Aulas ao vivo no Calendário, protocolos em Materiais e seus cursos gravados aqui embaixo."
+      }
+    ];
+  }
+
+  function renderLinha(){
+    var alvo = $("linhaTempo");
+    if(!alvo || !currentStudent) return;
+    var etapas = montaEtapas();
+    var atual = etapas.findIndex(function(e){ return !e.feita; });
+    if(atual === -1) atual = etapas.length - 1;
+
+    alvo.innerHTML = etapas.map(function(e, i){
+      var estado = e.feita ? "feita" : (i === atual ? "agora" : "depois");
+      var direita = e.feita
+        ? (fmtDiaMes(e.quando) || "Concluída")
+        : (e.contador || "");
+      return '<li class="etapa ' + estado + '">' +
+        '<span class="ponto">' + (e.feita ? '<i class="fa-solid fa-check"></i>' : "") + '</span>' +
+        '<div class="etapa-linha">' +
+          '<p class="etapa-nome">' + esc(e.nome) + '</p>' +
+          (direita ? '<span class="etapa-quando">' + esc(direita) + '</span>' : '') +
+        '</div>' +
+        (e.nota ? '<p class="etapa-nota">' + esc(e.nota) + '</p>' : '') +
+        (estado === "agora" && e.painel ? e.painel() : "") +
+      '</li>';
+    }).join("");
+
+    // A barra conta so as quatro etapas concretas: "mentoria em andamento" e o
+    // estado final, nao um item a cumprir.
+    var concretas = etapas.slice(0, 4);
+    var feitas = concretas.filter(function(e){ return e.feita; }).length;
+    var pct = Math.round((feitas / concretas.length) * 100);
+    $("percursoEtapas").innerHTML = "<b>" + feitas + "</b> de " + concretas.length + " etapas concluídas";
+    $("percursoFill").style.width = pct + "%";
+
+    var tudoFeito = feitas === concretas.length;
+    $("percursoNota").textContent = tudoFeito
+      ? "Jornada inicial completa."
+      : "Falta: " + etapas[atual].nome.toLowerCase() + ".";
+    $("heroEyebrow").textContent = tudoFeito ? "MENTORIA ATIVA" : "SUA JORNADA NA MENTORIA";
+    $("heroSub").textContent = tudoFeito
+      ? "Você concluiu a jornada inicial. Daqui pra frente é acompanhar as aulas ao vivo e os conteúdos da sua mentoria."
+      : (currentMentoriaLabels.length
+          ? "Cada etapa abaixo fica registrada conforme você avança na " + currentMentoriaLabels.join(" / ") + "."
+          : "Assim que sua CS vincular você a uma mentoria, seu conteúdo aparece aqui.");
+  }
+
+  function refreshJourney(){
+    Promise.all([
+      loadSession(),
+      loadLessons(currentBranchIds),
+      loadCourseProgressStudent()
+    ]).then(renderLinha);
   }
 
   // ---------------- calendário (aulas semanais / eventos) ----------------
