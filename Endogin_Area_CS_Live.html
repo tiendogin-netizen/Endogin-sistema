@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
     --eg-bg-0:#0b1420; --eg-bg-1:#101d2e; --eg-bg-2:#152436; --eg-bg-3:#1b2a3d;
@@ -66,6 +67,66 @@
   .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
   .card-head h3{margin:0;font-size:15px;font-weight:700;}
   .card-head .icn{color:var(--eg-gold-300);margin-right:9px;}
+
+  /* ============ arte do cronograma da semana (imagem pro WhatsApp) ============
+     A arte NAO tem cadastro proprio: ela desenha as aulas que ja estao no
+     Calendario. Assim a CS cadastra uma vez, o aluno ve no Portal e a arte sai
+     pronta — em vez de digitar a mesma semana duas vezes e as duas versoes
+     divergirem. */
+  .arte-wrap{overflow:auto;border:1px solid var(--eg-navy-line);border-radius:10px;background:#02101d;}
+  .arte{
+    position:relative;width:1180px;aspect-ratio:1.57/1;padding:3.6% 3% 2.6%;overflow:hidden;
+    background:radial-gradient(circle at 52% -18%,#0d2c49 0,#041a2d 38%,#020d18 78%,#010912 100%);
+    font-family:'Montserrat',sans-serif;color:#f7f8fb;
+  }
+  .arte-arc{position:absolute;pointer-events:none;border:1px solid rgba(226,169,65,.72);border-radius:50%;}
+  .arte-arc1{width:560px;height:260px;right:-250px;bottom:-130px;transform:rotate(-13deg);}
+  .arte-arc2{width:620px;height:300px;right:-275px;bottom:-155px;transform:rotate(-13deg);opacity:.6;}
+  .arte-arc3{width:520px;height:210px;left:-310px;top:-120px;opacity:.28;}
+  .arte-head{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:flex-start;padding:0 1.5%;}
+  .arte-eyebrow{font-size:11px;letter-spacing:6px;color:#f0cc83;margin-bottom:8px;}
+  .arte-title{font-family:'Sora',sans-serif;font-size:47px;line-height:1;font-weight:700;letter-spacing:-1.5px;}
+  .arte-title span{background:linear-gradient(90deg,#f5d78e,#d69b3d);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .arte-quote{width:24%;border-left:2px solid var(--eg-gold-500);padding-left:22px;margin-top:3px;font-size:10px;letter-spacing:4px;line-height:2;color:#d7dfeb;}
+  .arte-quote b{color:var(--eg-gold-100);}
+  .arte-period{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;margin:2.6% 1.5% 1.4%;}
+  .arte-period-block{display:flex;align-items:center;gap:18px;}
+  .arte-cal{
+    width:46px;height:46px;border:2px solid var(--eg-gold-500);border-radius:9px;position:relative;
+    display:grid;grid-template-columns:repeat(3,4px);grid-auto-rows:4px;gap:5px;place-content:center;
+  }
+  .arte-cal::before,.arte-cal::after{content:"";position:absolute;top:-7px;width:4px;height:12px;border-radius:4px;background:var(--eg-gold-500);}
+  .arte-cal::before{left:10px;}
+  .arte-cal::after{right:10px;}
+  .arte-cal i{width:4px;height:4px;background:var(--eg-gold-500);border-radius:1px;display:block;}
+  .arte-period-small{font-size:9px;letter-spacing:4px;color:var(--eg-gold-100);font-weight:700;}
+  .arte-period-big{font-family:'Sora',sans-serif;font-size:18px;font-weight:700;margin-top:5px;}
+  .arte-micro{font-size:8px;letter-spacing:3px;color:#c8d2df;line-height:1.7;text-align:right;}
+  .arte-micro span{display:inline-block;width:55px;height:1px;background:var(--eg-gold-500);vertical-align:middle;margin-right:12px;}
+  .arte-days{position:relative;z-index:2;display:grid;grid-template-columns:repeat(5,1fr);gap:14px;height:53%;}
+  .arte-day{padding:1.8% 1% 0;overflow:hidden;}
+  .arte-day-head{text-align:center;margin-bottom:20px;}
+  .arte-day-name{color:#f2cd7d;font-family:'Sora',sans-serif;font-weight:700;font-size:13px;letter-spacing:.7px;}
+  .arte-day-date{font-size:10px;letter-spacing:2px;margin-top:6px;color:#e2e7ee;}
+  .arte-card{
+    position:relative;border:1px solid #24577b;border-radius:10px;overflow:hidden;
+    background:linear-gradient(145deg,rgba(11,44,72,.95),rgba(4,28,49,.96));
+    padding:12px 12px 12px 16px;margin-bottom:9px;
+  }
+  .arte-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(#f4d68d,#d79b37);}
+  .arte-card-time{font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#f0c86f;margin-bottom:9px;}
+  .arte-card-name{font-size:12px;line-height:1.45;font-weight:600;}
+  .arte-card-tag{font-size:7.5px;letter-spacing:1px;text-transform:uppercase;color:#d4dce7;margin-top:14px;}
+  .arte-empty{
+    border:1px solid #24577b;border-radius:10px;height:calc(100% - 44px);
+    background:linear-gradient(145deg,rgba(11,44,72,.6),rgba(4,28,49,.7));
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;color:#d3dbe5;line-height:1.7;font-size:11px;padding:10px;
+  }
+  .arte-empty b{color:#efc66f;font-family:'Sora',sans-serif;font-size:22px;letter-spacing:2px;margin-bottom:10px;}
+  .arte-empty i{display:block;width:42px;height:1px;background:var(--eg-gold-500);margin:16px 0;}
+  .arte-foot{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;margin-top:2.2%;}
+  .arte-foot img{width:170px;max-height:66px;object-fit:contain;}
 
   table{width:100%;border-collapse:collapse;font-size:12.5px;}
   th{text-align:left;font-size:11px;letter-spacing:0.4px;color:var(--eg-text-muted);font-weight:700;padding:0 10px 12px;border-bottom:1px solid var(--eg-navy-line);}
@@ -580,6 +641,24 @@
         <p class="hint" style="margin:-8px 0 14px;">É o que aparece no card "Calendário" do Portal do Aluno. Aula semanal repete toda semana no mesmo dia/horário; encontro é pontual, numa data específica.</p>
         <div id="calendarioLoading" class="loading-note">Carregando...</div>
         <div id="calendarioList"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-image icn"></i>Arte da semana para o WhatsApp</h3>
+          <button class="btn-primary" id="arteBaixarBtn"><i class="fa-solid fa-download"></i> Baixar PNG</button>
+        </div>
+        <p class="hint" style="margin:-8px 0 14px;">Monta a imagem <b>a partir das aulas que já estão cadastradas acima</b> — você não digita nada de novo. O que o aluno vê no Portal e o que sai na arte são sempre a mesma coisa.</p>
+        <div class="filter-row" style="margin-bottom:14px;align-items:flex-end;gap:14px;flex-wrap:wrap;">
+          <div><label class="hint" style="display:block;margin-bottom:5px;">Semana de</label><input type="date" id="arteInicio"></div>
+          <div><label class="hint" style="display:block;margin-bottom:5px;">até</label><input type="date" id="arteFim"></div>
+          <div><label class="hint" style="display:block;margin-bottom:5px;">Mentoria</label><select id="arteBranch"><option value="">Todas as mentorias</option></select></div>
+          <div style="flex:1;min-width:200px;"><label class="hint" style="display:block;margin-bottom:5px;">Feriado (opcional)</label><input type="text" id="arteFeriado" placeholder="ex: 07/09 Independência"></div>
+        </div>
+        <div id="arteStatus" class="hint" style="margin-bottom:10px;"></div>
+        <div class="arte-wrap">
+          <div class="arte" id="arteCanvas"></div>
+        </div>
       </div>
     </div>
 
@@ -3245,6 +3324,190 @@
     });
   });
 
+  // ============ arte do cronograma da semana ============
+  // A regra que importa aqui: a arte NAO tem cadastro proprio. Ela desenha o
+  // que ja esta em `lessons`. O colega que fez o protótipo tinha um formulario
+  // separado com historico em localStorage — daria uma segunda fonte de
+  // verdade, e a arte no WhatsApp acabaria dizendo uma coisa e o Portal do
+  // Aluno outra. Aqui a CS cadastra a aula uma vez e as duas saidas batem.
+  var ARTE_DIAS = ["segunda", "terca", "quarta", "quinta", "sexta"];
+  var ARTE_DIAS_LABEL = ["SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA", "QUINTA-FEIRA", "SEXTA-FEIRA"];
+  var ARTE_MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+
+  function arteSegundaDaSemana(){
+    var hoje = new Date();
+    var diff = (hoje.getDay() + 6) % 7; // 0 = segunda
+    hoje.setDate(hoje.getDate() - diff);
+    return hoje;
+  }
+  function arteISO(d){
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function arteDatasDaSemana(){
+    var ini = parseDateOnly($("arteInicio").value) || arteSegundaDaSemana();
+    var dias = [];
+    for(var i = 0; i < 5; i++){
+      var d = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + i);
+      dias.push(d);
+    }
+    return dias;
+  }
+  function artePeriodoTexto(dias){
+    var a = dias[0], b = dias[4];
+    var mesA = ARTE_MESES[a.getMonth()], mesB = ARTE_MESES[b.getMonth()];
+    var base = a.getMonth() === b.getMonth()
+      ? a.getDate() + " A " + b.getDate() + " DE " + mesB
+      : a.getDate() + " DE " + mesA + " A " + b.getDate() + " DE " + mesB;
+    return (base + " DE " + b.getFullYear()).toUpperCase();
+  }
+  function arteEscapa(v){
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  // Junta os dois tipos de aula do sistema: a "semanal" cai sempre no mesmo dia
+  // da semana; o "evento" só entra se a data dele estiver dentro da semana
+  // escolhida.
+  function arteAulasDoDia(dia, iso){
+    var branchId = $("arteBranch").value;
+    return allLessons.filter(function(l){
+      if(branchId && l.branch_id && l.branch_id !== branchId) return false;
+      if(l.lesson_type === "evento") return l.event_date === iso;
+      return l.weekday === dia;
+    }).sort(function(a, b){
+      return (a.scheduled_time || "99").localeCompare(b.scheduled_time || "99");
+    });
+  }
+
+  // As mentorias sao repovoadas a cada desenho: allBranches carrega de forma
+  // assincrona e podia ainda estar vazia na primeira montagem da tela.
+  function arteAtualizaMentorias(){
+    var sel = $("arteBranch");
+    if(!sel || sel.options.length - 1 === allBranches.length) return;
+    var escolhida = sel.value;
+    sel.innerHTML = '<option value="">Todas as mentorias</option>';
+    allBranches.forEach(function(b){
+      sel.insertAdjacentHTML("beforeend", '<option value="' + b.id + '">' + b.name + '</option>');
+    });
+    sel.value = escolhida;
+  }
+
+  function renderArteSemana(){
+    var alvo = $("arteCanvas");
+    if(!alvo) return;
+    arteAtualizaMentorias();
+    var dias = arteDatasDaSemana();
+    var feriado = ($("arteFeriado").value || "").trim();
+    var total = 0;
+
+    var colunas = dias.map(function(d, i){
+      var iso = arteISO(d);
+      var aulas = arteAulasDoDia(ARTE_DIAS[i], iso);
+      total += aulas.length;
+      var dataTxt = String(d.getDate()).padStart(2, "0") + " DE " + ARTE_MESES[d.getMonth()].toUpperCase();
+
+      var corpo;
+      if(!aulas.length){
+        corpo = feriado
+          ? '<div class="arte-empty"><b>FERIADO</b><div>' + arteEscapa(feriado.toUpperCase()) + '</div><i></i><div>Sem encontros<br>agendados.</div></div>'
+          : '<div class="arte-empty"><div>Sem encontros<br>agendados.</div><i></i><span style="color:#aebdce;">Tempo para estudos,<br>planejamento e atendimento.</span></div>';
+      } else {
+        corpo = aulas.map(function(l){
+          var hora = l.scheduled_time ? l.scheduled_time.slice(0, 5).replace(":", "h") : "";
+          var tag = l.category || (allBranches.find(function(b){ return b.id === l.branch_id; }) || {}).name || "Todos os grupos";
+          return '<div class="arte-card">' +
+            (hora ? '<div class="arte-card-time">' + arteEscapa(hora) + '</div>' : '') +
+            '<div class="arte-card-name">' + arteEscapa(l.title) + '</div>' +
+            '<div class="arte-card-tag">' + arteEscapa(tag) + '</div>' +
+          '</div>';
+        }).join("");
+      }
+
+      return '<div class="arte-day">' +
+        '<div class="arte-day-head"><div class="arte-day-name">' + ARTE_DIAS_LABEL[i] + '</div>' +
+        '<div class="arte-day-date">' + dataTxt + '</div></div>' + corpo + '</div>';
+    }).join("");
+
+    alvo.innerHTML =
+      '<div class="arte-arc arte-arc1"></div><div class="arte-arc arte-arc2"></div><div class="arte-arc arte-arc3"></div>' +
+      '<div class="arte-head">' +
+        '<div><div class="arte-eyebrow">MENTORIA ENDOGIN</div>' +
+        '<div class="arte-title">CRONOGRAMA <span>SEMANAL</span></div></div>' +
+        '<div class="arte-quote">CONHECIMENTO<br>QUE TRANSFORMA<br>CONSULTÓRIOS<br><b>E VIDAS</b></div>' +
+      '</div>' +
+      '<div class="arte-period">' +
+        '<div class="arte-period-block">' +
+          '<div class="arte-cal"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>' +
+          '<div><div class="arte-period-small">SEMANA DE</div>' +
+          '<div class="arte-period-big">' + artePeriodoTexto(dias) + '</div></div>' +
+        '</div>' +
+        '<div class="arte-micro"><span></span>EVOLUÇÃO CONSTANTE<br>PARA MÉDICOS EXTRAORDINÁRIOS</div>' +
+      '</div>' +
+      '<div class="arte-days">' + colunas + '</div>' +
+      '<div class="arte-foot"><img src="/assets/logo-endogin.png" alt="Endogin"></div>';
+
+    $("arteStatus").textContent = total
+      ? total + " aula(s) nesta semana, vindas do Calendário acima."
+      : "Nenhuma aula cadastrada para essa semana. Cadastre acima em \"Nova aula/encontro\" e a arte se monta sozinha.";
+  }
+
+  function baixarArtePNG(){
+    var btn = $("arteBaixarBtn");
+    var st = $("arteStatus");
+    if(typeof html2canvas !== "function"){
+      st.textContent = "A biblioteca de imagem ainda não carregou. Espera uns segundos e tenta de novo.";
+      return;
+    }
+    var original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = "Gerando imagem...";
+    var alvo = $("arteCanvas");
+
+    // 1600px de largura: o WhatsApp recomprime imagem muito grande e borra o
+    // texto pequeno das tags; nesse tamanho o card ainda fica legível no celular.
+    html2canvas(alvo, {
+      scale: 1600 / alvo.getBoundingClientRect().width,
+      useCORS: true,
+      backgroundColor: "#02101d",
+      logging: false,
+      imageTimeout: 15000
+    }).then(function(canvas){
+      canvas.toBlob(function(blob){
+        if(!blob){ st.textContent = "Não consegui gerar o PNG. Tenta de novo."; return; }
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        var dias = arteDatasDaSemana();
+        a.href = url;
+        a.download = "cronograma-endogin-" + arteISO(dias[0]) + ".png";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1000);
+        st.textContent = "Imagem baixada. É só mandar no grupo.";
+      }, "image/png", 1);
+    }).catch(function(e){
+      st.textContent = "Não consegui gerar o PNG: " + e.message;
+    }).then(function(){
+      btn.disabled = false;
+      btn.innerHTML = original;
+    });
+  }
+
+  var arteIniciada = false;
+  function iniciaArteSemana(){
+    if(arteIniciada || !$("arteInicio")) return;
+    arteIniciada = true;
+    var seg = arteSegundaDaSemana();
+    var sex = new Date(seg.getFullYear(), seg.getMonth(), seg.getDate() + 4);
+    $("arteInicio").value = arteISO(seg);
+    $("arteFim").value = arteISO(sex);
+    ["arteInicio", "arteFim", "arteBranch", "arteFeriado"].forEach(function(id){
+      $(id).addEventListener("change", renderArteSemana);
+      $(id).addEventListener("input", renderArteSemana);
+    });
+    $("arteBaixarBtn").addEventListener("click", baixarArtePNG);
+  }
+
   function loadCalendarioAdmin(){
     $("calendarioLoading").style.display = "block";
     $("calendarioList").innerHTML = "";
@@ -3270,6 +3533,8 @@
         if(new Date(row.clicked_at).getTime() >= weekAgo) stat.last7++;
       });
       renderCalendarioList();
+      iniciaArteSemana();
+      renderArteSemana();
     });
   }
 
