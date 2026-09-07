@@ -138,16 +138,16 @@
      de indicador: "Mentoria(s) ativa(s)", "CS responsavel" e "Status" nao eram
      metricas, eram campos do cadastro num quadro com icone. Viraram uma linha
      de contexto, e o topo da tela passou a ser o proximo passo do aluno. */
-  .who{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:6px;}
+  .who{margin-bottom:6px;}
   .who h1{font-family:'Sora',sans-serif;font-weight:600;font-size:25px;margin:0 0 5px;letter-spacing:-0.012em;color:var(--eg-text-primary);}
   .facts{display:flex;flex-wrap:wrap;gap:6px 13px;font-size:12.5px;color:var(--eg-text-muted);margin:0;padding:0;list-style:none;}
   .facts li{display:flex;align-items:center;gap:13px;}
   .facts li::after{content:"";width:3px;height:3px;border-radius:50%;background:currentColor;opacity:0.5;}
   .facts li:last-child::after{display:none;}
   .facts b{color:var(--eg-text-secondary);font-weight:600;}
-  .stamp{
-    font-family:var(--eg-mono);font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;
-    color:var(--eg-gold-300);border:1px solid var(--eg-border);border-radius:4px;padding:5px 9px;white-space:nowrap;
+  .who-eyebrow{
+    font-family:var(--eg-mono);font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;
+    color:var(--eg-gold-300);margin-bottom:7px;
   }
   .who-sub{margin:0 0 24px;color:var(--eg-text-secondary);font-size:13px;max-width:62ch;line-height:1.6;}
 
@@ -176,6 +176,19 @@
   .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
   .card-head h3{margin:0;font-size:14.5px;font-weight:700;color:var(--eg-text-primary);}
   .card-head .icn{color:var(--eg-gold-300);font-size:14px;margin-right:8px;}
+
+  /* O campo de data nativo entrega o visual: fundo branco, fonte do sistema,
+     seta do calendario escura sobre o navy. */
+  input[type="datetime-local"],input[type="date"]{
+    background:var(--eg-bg-2);color:var(--eg-text-primary);
+    border:1px solid var(--eg-navy-line);border-radius:8px;
+    padding:10px 12px;font-family:var(--eg-mono);font-size:13px;
+    transition:border-color 0.25s var(--eg-ease);
+  }
+  input[type="datetime-local"]:hover,input[type="date"]:hover{border-color:var(--eg-border);}
+  input[type="datetime-local"]:focus,input[type="date"]:focus{outline:none;border-color:var(--eg-gold-500);}
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:0.55;cursor:pointer;}
 
   /* ===================== movimento ===================== */
   /* Brilho ambiente por tras do conteudo. Cada pagina tem seu par de cores e a
@@ -489,12 +502,8 @@
     <div class="wrap">
 
       <div class="topbar">
-        <div class="topbar-left">
-          <span class="topbar-eyebrow">PAINEL DO ALUNO</span>
-          <span class="badge gold" id="topBadgeBranch" style="display:none;"></span>
-        </div>
+        <div class="topbar-left"></div>
         <div class="topbar-right">
-          <div class="cs-pill" id="topCsPill" style="display:none;"><span class="av" id="topCsAv"></span><span id="topCsText"></span></div>
           <div class="student-av" id="studentAvatar"></div>
           <span class="logout-link" id="logoutBtn" style="margin:0;">Sair</span>
         </div>
@@ -503,15 +512,12 @@
       <!-- ================= PÁGINA: JORNADA ================= -->
       <div class="page-view active" id="page-jornada">
         <div class="who">
-          <div>
-            <h1 id="heroTitle">Olá!</h1>
-            <ul class="facts">
-              <li><b id="statBranches">—</b></li>
-              <li>CS <b id="statCs">—</b></li>
-              <li>status <b id="statStatus">—</b></li>
-            </ul>
-          </div>
-          <div class="stamp" id="heroEyebrow">SUA JORNADA NA MENTORIA</div>
+          <div class="who-eyebrow" id="heroEyebrow">SUA JORNADA NA MENTORIA</div>
+          <h1 id="heroTitle">Olá!</h1>
+          <ul class="facts">
+            <li><b id="statBranches">—</b></li>
+            <li>status <b id="statStatus">—</b></li>
+          </ul>
         </div>
         <p class="who-sub" id="heroSub"></p>
 
@@ -554,12 +560,6 @@
           </div>
 
           <div class="side-col">
-            <div class="card2 cs-card" id="csCard" style="display:none;">
-              <span class="av" id="csCardAv"></span>
-              <div><b id="csCardName"></b><span id="csCardSub"></span></div>
-            </div>
-            <a class="cs-btn" id="csCardWhatsBtn" href="#" target="_blank" rel="noopener" style="display:none;margin-top:-8px;margin-bottom:20px;"><i class="fa-brands fa-whatsapp"></i> Falar com minha CS</a>
-
             <div class="card2" id="courseProgressCard" style="display:none;">
               <div class="card-head"><h3>Suas trilhas</h3></div>
               <div id="courseProgressList"></div>
@@ -978,37 +978,21 @@
     // nada que o aluno ja nao soubesse.
     $("heroTitle").textContent = currentStudent.full_name || firstName;
 
-    if(mentoriaLabels.length){
-      $("topBadgeBranch").style.display = "inline-block";
-      $("topBadgeBranch").textContent = mentoriaLabels[0];
-    }
-
     $("statBranches").textContent = mentoriaLabels.length ? mentoriaLabels.join(", ") : "—";
     $("statStatus").textContent = currentStudent.status || "—";
 
+    // A CS aparecia QUATRO vezes na mesma tela: barra do topo, linha de
+    // contexto, cartao da direita e rodape do menu — e a mentoria, tres. Era
+    // isso que dava o ar de tela improvisada, mais do que o estilo. Agora cada
+    // informacao tem um endereco so: a CS mora no rodape do menu, que
+    // acompanha o aluno nas cinco paginas.
     var cs = currentStudent.staff;
     if(cs){
-      $("statCs").textContent = cs.full_name;
-
-      $("topCsPill").style.display = "flex";
-      $("topCsAv").textContent = initials(cs.full_name).toUpperCase();
-      $("topCsText").textContent = "Sua CS: " + cs.full_name;
-
       $("sideCsName").textContent = "Fale com " + cs.full_name + ", sua CS";
-
-      $("csCard").style.display = "flex";
-      $("csCardName").textContent = cs.full_name;
-      $("csCardSub").textContent = mentoriaLabels.length ? "Sua CS na " + mentoriaLabels[0] : "Sua CS na Endogin";
-      if(cs.photo_url){ $("csCardAv").style.backgroundImage = "url(" + cs.photo_url + ")"; $("csCardAv").textContent = ""; }
-      else { $("csCardAv").textContent = initials(cs.full_name).toUpperCase(); }
-
       var link = waLink(cs.phone);
-      if(link){
-        $("sideWhatsBtn").style.display = "flex"; $("sideWhatsBtn").href = link;
-        $("csCardWhatsBtn").style.display = "flex"; $("csCardWhatsBtn").href = link;
-      }
+      if(link){ $("sideWhatsBtn").style.display = "flex"; $("sideWhatsBtn").href = link; }
     } else {
-      $("statCs").textContent = "A definir";
+      $("sideCsName").textContent = "Sua CS ainda será definida";
     }
 
     currentBranchIds = branchIds;
