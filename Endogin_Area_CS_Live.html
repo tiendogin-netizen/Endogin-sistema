@@ -2623,6 +2623,12 @@
       allBranches = branchRes.data || [];
       allGroups = groupsRes.data || [];
       populateMatBranchSelect();
+      // Este load corre em paralelo com o do Calendario. Quando o Calendario
+      // termina primeiro, ele desenha a lista e a arte com allBranches ainda
+      // vazio: seletor de mentoria vazio e aula caindo em "Mentoria nao
+      // encontrada". Agora que as mentorias chegaram, redesenha.
+      arteAtualizaMentorias();
+      if(allLessons.length){ renderCalendarioList(); renderArteSemana(); }
       staffBranchMap = {};
       (sbRes.data || []).forEach(function(row){
         var branch = allBranches.find(function(b){ return b.id === row.branch_id; });
@@ -3703,7 +3709,12 @@
   // assincrona e podia ainda estar vazia na primeira montagem da tela.
   function arteAtualizaMentorias(){
     var sel = $("arteBranch");
-    if(!sel || sel.options.length - 1 === allBranches.length) return;
+    if(!sel) return;
+    // A guarda so vale quando ja existe mentoria carregada. Sem o
+    // `allBranches.length`, uma lista vazia satisfazia a condicao (0 === 0) e a
+    // funcao desistia pra sempre — era isso que deixava o seletor preso em
+    // "Todas as mentorias".
+    if(allBranches.length && sel.options.length - 1 === allBranches.length) return;
     var escolhida = sel.value;
     sel.innerHTML = '<option value="">Todas as mentorias</option>';
     allBranches.forEach(function(b){
