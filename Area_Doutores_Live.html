@@ -456,6 +456,25 @@
     });
   }
 
+  // Antes qualquer falha virava "e-mail ou senha incorretos", o que mandava a
+  // pessoa ficar redigitando a senha certa. As causas sao diferentes e o
+  // conserto de cada uma tambem: senha errada se resolve digitando de novo,
+  // e-mail nao confirmado so se resolve no painel do Supabase.
+  function explicaErroLogin(erro){
+    var m = (erro && erro.message ? erro.message : "").toLowerCase();
+    if(m.indexOf("not confirmed") > -1)
+      return "Esse login existe, mas o e-mail nunca foi confirmado. No Supabase: Authentication > Users > abra o usuario > Confirm email.";
+    if(m.indexOf("invalid login credentials") > -1)
+      return "E-mail ou senha incorretos. Se a senha foi criada agora e voce tem certeza dela, pode ser que o usuario tenha sido criado por convite (sem senha) — nesse caso use Reset password no Supabase.";
+    if(m.indexOf("email logins are disabled") > -1 || m.indexOf("provider is not enabled") > -1)
+      return "O login por e-mail esta desligado no projeto. Supabase > Authentication > Sign In / Providers > Email.";
+    if(m.indexOf("banned") > -1 || m.indexOf("user is banned") > -1)
+      return "Esse usuario esta bloqueado no Supabase.";
+    if(m.indexOf("too many") > -1 || m.indexOf("rate limit") > -1)
+      return "Muitas tentativas seguidas. Espere alguns minutos e tente de novo.";
+    return "Nao consegui entrar: " + (erro && erro.message ? erro.message : "erro desconhecido");
+  }
+
   // ---------- login ----------
   $("formLogin").addEventListener("submit", function(ev){
     ev.preventDefault();
@@ -464,7 +483,7 @@
     $("btnEntrar").disabled = true;
     sb.auth.signInWithPassword({ email: $("loginEmail").value.trim(), password: $("loginSenha").value }).then(function(r){
       $("btnEntrar").disabled = false;
-      if(r.error){ err.textContent = "E-mail ou senha incorretos."; return; }
+      if(r.error){ err.textContent = explicaErroLogin(r.error); return; }
       confereAcesso();
     });
   });
