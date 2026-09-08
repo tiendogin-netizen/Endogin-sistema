@@ -196,6 +196,12 @@
   .modal-overlay{position:fixed;inset:0;background:rgba(4,8,16,0.72);display:none;align-items:center;justify-content:center;z-index:50;padding:24px;}
   .modal-overlay.open{display:flex;}
   .modal-card{background:var(--eg-bg-1);border:1px solid var(--eg-border-strong);border-radius:16px;max-width:440px;width:100%;max-height:86vh;overflow-y:auto;}
+  .modal-card.larga{max-width:1000px;}
+  .modal-card.larga .modal-body{padding:24px 28px;}
+  .modal-card.larga .form-grid{grid-template-columns:repeat(3,1fr);gap:14px 18px;}
+  .modal-card.larga .modal-head{padding:20px 28px;}
+  .modal-card.larga .modal-head b{font-size:17px;}
+  @media (max-width:980px){ .modal-card.larga .form-grid{grid-template-columns:1fr 1fr;} }
   .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--eg-navy-line);}
   .modal-head b{font-size:15px;}
   .modal-close{width:30px;height:30px;border-radius:50%;border:1px solid var(--eg-navy-line);background:none;color:var(--eg-text-secondary);cursor:pointer;}
@@ -849,6 +855,17 @@
         <div id="equipeLoading" class="loading-note">Carregando equipe...</div>
         <div class="team-grid" id="teamGrid"></div>
       </div>
+
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-key icn"></i>Minha senha</h3></div>
+        <p class="hint" style="margin:-8px 0 14px;">Troca a senha que você usa pra entrar aqui. Só você faz isso pela sua conta — ninguém mais vê a senha nova.</p>
+        <div class="form-grid" style="max-width:520px;">
+          <div style="grid-column:1/-1;"><label>Nova senha</label><input type="password" id="minhaSenhaNova" placeholder="mín. 6 caracteres"></div>
+          <div style="grid-column:1/-1;"><label>Repita a nova senha</label><input type="password" id="minhaSenhaConfirma"></div>
+        </div>
+        <button class="btn-secondary" id="minhaSenhaBtn" style="width:auto;margin-top:12px;">Alterar minha senha</button>
+        <div class="err-msg" id="minhaSenhaErr"></div>
+      </div>
     </div>
 
     </div>
@@ -902,7 +919,7 @@
 
 <!-- ================= MODAL: ALUNO ================= -->
 <div class="modal-overlay" id="alunoModal">
-  <div class="modal-card">
+  <div class="modal-card larga">
     <div class="modal-head">
       <div><b id="alunoModalTitle">Editar aluno</b><br><span class="hint" id="alunoModalEmail"></span><span id="alunoModalWa"></span><br><span class="hint" id="alunoModalDisc" style="display:block;margin-top:3px;"></span></div>
       <button class="modal-close" id="alunoModalClose"><i class="fa-solid fa-xmark"></i></button>
@@ -917,6 +934,13 @@
         <div id="alunoCursoProgressWrap"><p class="hint">Carregando...</p></div>
       </div>
       <div class="form-grid">
+        <div style="grid-column:1/-1;"><label>Identificação</label></div>
+        <div style="grid-column:span 2;"><label>Nome completo</label><input type="text" id="alunoFieldName"></div>
+        <div>
+          <label>E-mail do cadastro</label>
+          <input type="email" id="alunoFieldEmail">
+          <p class="hint" style="margin:5px 0 0;">Trocar aqui não muda o login dele — pra isso, use "Credenciais de acesso" no fim da ficha.</p>
+        </div>
         <div><label>Status</label>
           <select id="alunoFieldStatus">
             <option value="onboarding">Onboarding</option>
@@ -972,6 +996,12 @@
         <div><label>Tamanho da jaqueta</label><input type="text" id="alunoFieldJacketSize"></div>
         <div><label>Tamanho da camiseta</label><input type="text" id="alunoFieldShirtSize"></div>
         <div><label>Nº de indicações</label><input type="text" id="alunoFieldReferralCount"></div>
+        <div><label>Contrato</label><input type="text" id="alunoFieldContrato" placeholder="ex: Assinado, Pendente"></div>
+        <div>
+          <label>ICP</label>
+          <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-weight:400;"><input type="checkbox" id="alunoFieldIcp" style="width:auto;"> Respondeu o ICP</label>
+        </div>
+        <div style="grid-column:1/-1;"><label>Endereço</label><input type="text" id="alunoFieldEndereco" placeholder="rua, número, bairro, cidade/UF, CEP"></div>
 
         <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);">
           <label>Anotações</label>
@@ -989,6 +1019,10 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn-secondary" id="alunoSaveCredBtn" style="width:auto;flex:1;">Salvar credenciais</button>
           <button class="btn-secondary" id="alunoViewAsBtn" style="width:auto;flex:1;"><i class="fa-solid fa-eye"></i> Ver como esse aluno</button>
+        </div>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);">
+          <button class="btn-secondary" id="alunoDeleteLoginBtn" style="width:auto;color:var(--eg-red);border-color:rgba(217,138,138,0.4);"><i class="fa-solid fa-user-slash"></i> Excluir login deste aluno</button>
+          <p class="hint" style="margin:8px 0 0;">Tira o acesso dele ao Portal. <b>O cadastro, o progresso e o histórico continuam aqui</b> — some só o login. Pra devolver o acesso depois, é só criar as credenciais de novo acima.</p>
         </div>
         <div class="err-msg" id="alunoCredErr"></div>
       </div>
@@ -1525,7 +1559,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -1812,6 +1846,11 @@
           (DISC_COMM_TIP[profile] ? '<br><span class="hint">' + DISC_COMM_TIP[profile] + '</span>' : '')
         : 'Perfil comportamental (DISC): <span class="hint">ainda não fez o teste</span>';
     }
+    $("alunoFieldName").value = student.full_name || "";
+    $("alunoFieldEmail").value = student.email || "";
+    $("alunoFieldContrato").value = student.contrato_status || "";
+    $("alunoFieldIcp").checked = !!student.respondeu_icp;
+    $("alunoFieldEndereco").value = student.endereco || "";
     $("alunoFieldStatus").value = student.status;
     $("alunoFieldBirth").value = student.birth_date || "";
     $("alunoFieldCpf").value = student.cpf || "";
@@ -1884,7 +1923,15 @@
     var newStatus = $("alunoFieldStatus").value;
     $("alunoModalErr").textContent = "";
 
+    var nome = $("alunoFieldName").value.trim();
+    if(!nome){ $("alunoModalErr").textContent = "O nome não pode ficar em branco."; return; }
+
     var updates = {
+      full_name: nome,
+      email: $("alunoFieldEmail").value.trim() || null,
+      contrato_status: $("alunoFieldContrato").value.trim() || null,
+      respondeu_icp: $("alunoFieldIcp").checked,
+      endereco: $("alunoFieldEndereco").value.trim() || null,
       status: newStatus,
       birth_date: $("alunoFieldBirth").value || null,
       cpf: $("alunoFieldCpf").value.trim() || null,
@@ -1933,7 +1980,7 @@
   // planilha — não tinha como criar um do zero (nem um "aluno teste"). Cria
   // com o mínimo (nome + e-mail) e já abre a ficha completa em seguida, pra
   // marcar mentoria/status/CS na hora, sem precisar de uma segunda tela.
-  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)";
+  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)";
 
   $("novoAlunoBtn").addEventListener("click", function(){
     $("novoAlunoFieldName").value = "";
@@ -2282,6 +2329,42 @@
     });
   });
 
+  // Excluir o login e a unica acao irreversivel da ficha, entao pede o nome
+  // digitado por extenso — um "tem certeza?" e fácil demais de clicar sem ler.
+  $("alunoDeleteLoginBtn").addEventListener("click", function(){
+    var student = allStudents.find(function(s){ return s.id === alunoEditingId; });
+    if(!student) return;
+    if(!student.auth_user_id){
+      $("alunoCredErr").style.color = "";
+      $("alunoCredErr").textContent = "Esse aluno ainda não tem login criado.";
+      return;
+    }
+    var digitado = prompt('Isso tira o acesso de "' + student.full_name + '" ao Portal. O cadastro e o histórico ficam.\n\nPra confirmar, digite o primeiro nome do aluno:');
+    if(digitado === null) return;
+    var primeiro = (student.full_name || "").trim().split(/\s+/)[0] || "";
+    if(digitado.trim().toLowerCase() !== primeiro.toLowerCase()){
+      $("alunoCredErr").style.color = "";
+      $("alunoCredErr").textContent = "O nome não confere — não excluí nada.";
+      return;
+    }
+    $("alunoCredErr").textContent = "";
+    $("alunoDeleteLoginBtn").disabled = true;
+    sb.functions.invoke("admin-tools", {
+      body: { action: "delete_login", student_id: alunoEditingId }
+    }).then(function(r){
+      $("alunoDeleteLoginBtn").disabled = false;
+      if(r.error || (r.data && r.data.ok === false)){
+        $("alunoCredErr").style.color = "";
+        $("alunoCredErr").textContent = "Erro: " + (r.error ? r.error.message : r.data.error);
+        return;
+      }
+      student.auth_user_id = null;
+      $("alunoCredErr").style.color = "var(--eg-green)";
+      $("alunoCredErr").textContent = "Login excluído. O cadastro continua aqui.";
+      loadAlunos();
+    });
+  });
+
   $("alunoViewAsBtn").addEventListener("click", function(){
     $("alunoCredErr").textContent = "";
     $("alunoViewAsBtn").disabled = true;
@@ -2292,6 +2375,28 @@
         return;
       }
       window.open(r.data.action_link, "_blank");
+    });
+  });
+
+  // A troca da propria senha nao passa pela edge function: o supabase-js altera
+  // a senha da sessao logada direto, entao a senha nova nunca chega ao servidor
+  // da gente nem aparece pra mais ninguem.
+  $("minhaSenhaBtn").addEventListener("click", function(){
+    var nova = $("minhaSenhaNova").value;
+    var conf = $("minhaSenhaConfirma").value;
+    var err = $("minhaSenhaErr");
+    err.style.color = "";
+    if(nova.length < 6){ err.textContent = "A senha precisa ter pelo menos 6 caracteres."; return; }
+    if(nova !== conf){ err.textContent = "As duas senhas não são iguais."; return; }
+    $("minhaSenhaBtn").disabled = true;
+    err.textContent = "";
+    sb.auth.updateUser({ password: nova }).then(function(r){
+      $("minhaSenhaBtn").disabled = false;
+      if(r.error){ err.textContent = "Erro: " + r.error.message; return; }
+      $("minhaSenhaNova").value = "";
+      $("minhaSenhaConfirma").value = "";
+      err.style.color = "var(--eg-green)";
+      err.textContent = "Senha alterada. Use a nova no próximo login.";
     });
   });
 
