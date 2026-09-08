@@ -7,83 +7,84 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --eg-bg-0:#0b1420; --eg-bg-1:#101d2e; --eg-bg-2:#152436;
+    /* Azul de verdade, nao quase-preto: a marca e branca, azul e dourada. */
+    --eg-bg-0:#0a1730; --eg-bg-1:#102344; --eg-bg-2:#16305a;
     --eg-gold-100:#f2dfae; --eg-gold-300:#e3bd76; --eg-gold-500:#c9974b; --eg-gold-700:#a3762f;
-    --eg-text-primary:#f3f0e8; --eg-text-muted:#8792a8; --eg-navy-line:rgba(255,255,255,0.07);
-    --eg-border:rgba(255,255,255,0.09); --eg-border-strong:rgba(201,151,75,0.4);
+    --eg-text-primary:#f3f0e8; --eg-text-muted:#93a3c2;
+    --eg-line:rgba(255,255,255,0.08);
     --eg-ease:cubic-bezier(.16,1,.3,1);
   }
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
   html,body{margin:0;background:var(--eg-bg-0);}
-  body{
-    font-family:'Montserrat',sans-serif;color:var(--eg-text-primary);
-    overflow-x:hidden;
-  }
+  body{font-family:'Montserrat',sans-serif;color:var(--eg-text-primary);overflow-x:hidden;}
   body::before{
     content:"";position:fixed;inset:0;z-index:-1;
     background:
-      radial-gradient(ellipse 900px 500px at 15% 10%, rgba(201,151,75,0.10), transparent 60%),
-      radial-gradient(ellipse 700px 500px at 90% 90%, rgba(201,151,75,0.07), transparent 60%);
+      radial-gradient(ellipse 1100px 620px at 50% -12%, #1b3a68 0%, transparent 62%),
+      radial-gradient(ellipse 800px 520px at 88% 92%, rgba(28,63,112,0.55), transparent 60%);
   }
 
-  /* ============================ topo (o que ja existia) ============================ */
-  .hero{
-    min-height:100vh;display:flex;align-items:center;justify-content:center;
-    padding:32px 24px 0;position:relative;z-index:1;background:var(--eg-bg-0);
-  }
-  .shell{width:100%;max-width:960px;display:flex;align-items:center;gap:56px;}
-
-  .col-left{flex:1 1 380px;min-width:0;}
-  .logo-badge{width:120px;height:auto;filter:drop-shadow(0 8px 18px rgba(0,0,0,0.4));
-    animation:eg-rise .7s cubic-bezier(.2,.8,.2,1) both;margin-bottom:22px;}
-  h1{font-family:'Sora',sans-serif;font-weight:600;font-size:26px;margin:0 0 8px;
-    background:linear-gradient(180deg,var(--eg-gold-100),var(--eg-gold-500));-webkit-background-clip:text;background-clip:text;color:transparent;
-    animation:eg-rise .7s cubic-bezier(.2,.8,.2,1) .08s both;}
-  p.sub{color:var(--eg-text-muted);font-size:14px;margin:0 0 30px;letter-spacing:.2px;
-    animation:eg-rise .7s cubic-bezier(.2,.8,.2,1) .14s both;}
-
-  .card{background:var(--eg-bg-1);border:1px solid var(--eg-navy-line);border-radius:14px;padding:20px;margin-bottom:14px;
-    text-align:left;display:flex;align-items:center;gap:16px;text-decoration:none;color:inherit;
-    transition:border-color .2s, transform .2s, box-shadow .2s;
-    animation:eg-rise .7s cubic-bezier(.2,.8,.2,1) both;}
-  .card:nth-of-type(1){animation-delay:.2s;}
-  .card:nth-of-type(2){animation-delay:.28s;}
-  .card:hover{border-color:var(--eg-border-strong);transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,0.35);}
-  .card-icon{width:46px;height:46px;border-radius:11px;background:var(--eg-bg-2);display:flex;align-items:center;justify-content:center;
-    font-size:20px;color:var(--eg-gold-300);flex:none;transition:background .2s;}
-  .card:hover .card-icon{background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));color:#241705;}
-  .card-title{font-weight:700;font-size:14.5px;margin-bottom:3px;}
-  .card-desc{font-size:12px;color:var(--eg-text-muted);line-height:1.4;}
-  .card-arrow{margin-left:auto;color:var(--eg-text-muted);font-size:14px;flex:none;transition:transform .2s, color .2s;}
-  .card:hover .card-arrow{transform:translateX(3px);color:var(--eg-gold-300);}
-
-  .col-right{flex:0 0 320px;animation:eg-rise .8s cubic-bezier(.2,.8,.2,1) .1s both;}
-  .photo-card{position:relative;width:100%;aspect-ratio:4/5;border-radius:18px;overflow:hidden;
-    border:1px solid var(--eg-border-strong);box-shadow:0 24px 60px rgba(0,0,0,0.45);}
-  .photo-card img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block;}
-  .photo-card::after{
-    content:"";position:absolute;inset:0;
-    background:linear-gradient(to top, rgba(11,20,32,0.55) 0%, rgba(11,20,32,0) 30%);
+  /* ============================ 1a tela: so o logo ============================ */
+  .abertura{
+    position:relative;height:100vh;width:100%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--eg-bg-0);overflow:hidden;z-index:1;
   }
 
-  /* convite discreto pra rolar — sem ele ninguem descobre que ha rodape */
-  .rolar{
-    position:absolute;left:50%;bottom:26px;transform:translateX(-50%);
-    display:flex;flex-direction:column;align-items:center;gap:10px;
-    font-size:9.5px;letter-spacing:.32em;text-transform:uppercase;color:var(--eg-text-muted);
-    animation:eg-rise .7s cubic-bezier(.2,.8,.2,1) .5s both;
+  /* A luz vem de cima. Sao duas camadas: um halo largo que dá o ambiente e um
+     cone estreito que dá a direção — sem o cone o logo so parece "brilhante",
+     com ele parece iluminado. */
+  .luz{
+    position:absolute;left:50%;top:-12vh;transform:translateX(-50%);
+    width:min(130vw,1200px);height:100vh;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse 46% 56% at 50% 0%,
+      rgba(242,223,174,0.20) 0%, rgba(201,151,75,0.10) 36%, transparent 72%);
+    animation:eg-luz 7s ease-in-out infinite alternate;
   }
-  .rolar i{display:block;width:1px;height:46px;background:linear-gradient(to bottom,var(--eg-gold-500),transparent);}
+  .luz::after{
+    content:"";position:absolute;left:50%;top:0;transform:translateX(-50%);
+    width:min(86vw,760px);height:82vh;
+    clip-path:polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+    background:linear-gradient(180deg, rgba(242,223,174,0.13) 0%, rgba(242,223,174,0) 76%);
+    filter:blur(28px);
+  }
+  /* o chao de luz sob o logo, que fecha a leitura do facho */
+  .luz-piso{
+    position:absolute;left:50%;top:58%;transform:translateX(-50%);
+    width:min(70vw,620px);height:180px;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(201,151,75,0.16), transparent 70%);
+    filter:blur(22px);
+  }
+
+  .logo-grande{
+    position:relative;z-index:2;width:clamp(190px,29vw,392px);height:auto;display:block;
+    filter:drop-shadow(0 30px 64px rgba(0,0,0,0.7)) drop-shadow(0 0 52px rgba(201,151,75,0.32));
+    animation:eg-entra 1.2s var(--eg-ease) both;
+  }
+
+  .seta{
+    position:absolute;left:50%;bottom:6vh;transform:translateX(-50%);z-index:3;
+    width:66px;height:66px;border-radius:999px;cursor:pointer;padding:0;
+    display:flex;align-items:center;justify-content:center;color:var(--eg-gold-100);
+    background:linear-gradient(150deg, rgba(201,151,75,0.22), rgba(201,151,75,0.05));
+    border:1px solid rgba(201,151,75,0.5);
+    box-shadow:0 20px 44px -16px rgba(0,0,0,0.85);
+    animation:eg-entra 1s var(--eg-ease) .5s both, eg-pula 2.3s ease-in-out 1.5s infinite;
+    transition:background .35s var(--eg-ease), border-color .35s var(--eg-ease), color .35s var(--eg-ease);
+  }
+  .seta::before{
+    content:"";position:absolute;inset:-1px;border-radius:999px;pointer-events:none;
+    border:1px solid rgba(227,189,118,0.55);
+    animation:eg-anel 2.6s ease-out infinite;
+  }
+  .seta:hover{background:linear-gradient(150deg, rgba(201,151,75,0.38), rgba(201,151,75,0.10));border-color:var(--eg-gold-300);color:#fff;}
+  .seta svg{width:28px;height:28px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
 
   /* ============================ a cortina ============================ */
-  /*
-    O truque inteiro esta aqui e nao precisa de biblioteca nenhuma: um bloco de
-    uma tela de altura com `clip-path`. O clip-path faz esse bloco virar o
-    bloco de contencao dos filhos `fixed` — entao o rodape fica preso na
-    janela mas so aparece dentro do retangulo do bloco. Rolando a pagina, o
-    retangulo sobe e o rodape vai sendo "revelado" por baixo do conteudo.
-  */
+  /* Um bloco de uma tela de altura com `clip-path` vira o bloco de contencao
+     dos filhos `fixed`: o rodape fica preso na janela mas so aparece dentro
+     desse retangulo. Rolando, o retangulo sobe e revela. Sem biblioteca. */
   .rodape-wrap{
     position:relative;height:100vh;width:100%;
     clip-path:polygon(0 0, 100% 0, 100% 100%, 0 100%);
@@ -95,41 +96,42 @@
   }
 
   .rodape .aurora{
-    position:absolute;left:50%;top:50%;width:80vw;height:60vh;
-    transform:translate(-50%,-50%);border-radius:50%;filter:blur(80px);
+    position:absolute;left:50%;top:50%;width:82vw;height:62vh;
+    transform:translate(-50%,-50%);border-radius:50%;filter:blur(84px);
     pointer-events:none;z-index:0;
     background:radial-gradient(circle at 50% 50%,
-      rgba(201,151,75,0.16) 0%, rgba(227,189,118,0.09) 40%, transparent 70%);
+      rgba(201,151,75,0.17) 0%, rgba(46,96,168,0.16) 42%, transparent 70%);
     animation:eg-respira 8s ease-in-out infinite alternate;
   }
   .rodape .grade{
     position:absolute;inset:0;z-index:0;pointer-events:none;
     background-size:60px 60px;
     background-image:
-      linear-gradient(to right, rgba(255,255,255,0.035) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255,255,255,0.035) 1px, transparent 1px);
+      linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
     -webkit-mask-image:linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
     mask-image:linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
   }
 
+  /* Duas linhas porque "MENTORIA ENDOGIN" numa linha so nao cabe em tela
+     nenhuma sem virar um borrao cortado no meio da palavra. */
   .gigante{
-    position:absolute;left:50%;bottom:-3vh;z-index:0;
-    font-family:'Sora',sans-serif;font-weight:800;font-size:min(19vw,300px);
+    position:absolute;left:50%;bottom:-6vh;z-index:0;text-align:center;
+    font-family:'Sora',sans-serif;font-weight:800;font-size:min(15vw,230px);
     line-height:.8;letter-spacing:-.05em;white-space:nowrap;
     color:transparent;-webkit-text-stroke:1px rgba(243,240,232,0.07);
-    background:linear-gradient(180deg, rgba(243,240,232,0.10) 0%, transparent 62%);
+    background:linear-gradient(180deg, rgba(243,240,232,0.11) 0%, transparent 64%);
     -webkit-background-clip:text;background-clip:text;
     pointer-events:none;user-select:none;
-    /* --p vai de 0 a 1 conforme a cortina abre; o JS so escreve essa variavel */
     transform:translate(-50%, calc((1 - var(--p,0)) * 10vh)) scale(calc(.86 + var(--p,0) * .14));
     opacity:var(--p,0);
   }
 
   .marquise{
     position:absolute;top:10vh;left:0;width:100%;z-index:10;overflow:hidden;
-    padding:14px 0;border-top:1px solid var(--eg-navy-line);border-bottom:1px solid var(--eg-navy-line);
-    background:rgba(16,29,46,0.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-    transform:rotate(-2deg) scale(1.1);box-shadow:0 24px 60px rgba(0,0,0,0.45);
+    padding:14px 0;border-top:1px solid var(--eg-line);border-bottom:1px solid var(--eg-line);
+    background:rgba(16,35,68,0.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    transform:rotate(-2deg) scale(1.1);box-shadow:0 24px 60px rgba(0,0,0,0.5);
   }
   .marquise-trilho{display:flex;width:max-content;animation:eg-corre 42s linear infinite;}
   .marquise-item{
@@ -141,15 +143,15 @@
 
   .rodape-centro{
     position:relative;z-index:10;flex:1;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:34px;
-    padding:26vh 24px 0;width:100%;max-width:900px;margin:0 auto;
+    align-items:center;justify-content:center;gap:36px;
+    padding:26vh 24px 0;width:100%;max-width:960px;margin:0 auto;
   }
   .rodape-titulo{
-    font-family:'Sora',sans-serif;font-weight:800;font-size:clamp(34px,6.4vw,76px);
-    letter-spacing:-.03em;line-height:1.02;margin:0;text-align:center;
+    font-family:'Sora',sans-serif;font-weight:800;font-size:clamp(32px,6vw,72px);
+    letter-spacing:-.03em;line-height:1.03;margin:0;text-align:center;
     background:linear-gradient(180deg, var(--eg-text-primary) 0%, rgba(243,240,232,0.38) 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 0 22px rgba(243,240,232,0.10));
+    filter:drop-shadow(0 0 24px rgba(243,240,232,0.10));
     transform:translateY(calc((1 - var(--q,0)) * 46px));opacity:var(--q,0);
   }
   .pilulas{
@@ -158,127 +160,86 @@
   }
 
   .pilula{
-    display:inline-flex;align-items:center;gap:12px;
-    padding:17px 30px;border-radius:999px;text-decoration:none;
+    display:inline-flex;align-items:center;gap:12px;text-decoration:none;
+    padding:17px 30px;border-radius:999px;
     font-size:13.5px;font-weight:700;color:var(--eg-text-primary);
-    background:linear-gradient(145deg, rgba(243,240,232,0.035) 0%, rgba(243,240,232,0.012) 100%);
-    border:1px solid rgba(243,240,232,0.09);
-    box-shadow:0 10px 30px -10px rgba(0,0,0,0.5), inset 0 1px 1px rgba(243,240,232,0.10);
+    background:linear-gradient(145deg, rgba(243,240,232,0.05) 0%, rgba(243,240,232,0.014) 100%);
+    border:1px solid rgba(243,240,232,0.10);
+    box-shadow:0 10px 30px -10px rgba(0,0,0,0.6), inset 0 1px 1px rgba(243,240,232,0.10);
     backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
     transition:background .4s var(--eg-ease), border-color .4s var(--eg-ease), box-shadow .4s var(--eg-ease);
     will-change:transform;
   }
   .pilula:hover{
-    background:linear-gradient(145deg, rgba(201,151,75,0.14) 0%, rgba(243,240,232,0.02) 100%);
-    border-color:rgba(201,151,75,0.45);
-    box-shadow:0 20px 40px -10px rgba(0,0,0,0.6), inset 0 1px 1px rgba(243,240,232,0.20);
+    background:linear-gradient(145deg, rgba(201,151,75,0.16) 0%, rgba(243,240,232,0.02) 100%);
+    border-color:rgba(201,151,75,0.5);
+    box-shadow:0 20px 40px -10px rgba(0,0,0,0.7), inset 0 1px 1px rgba(243,240,232,0.22);
   }
   .pilula .ico{font-size:17px;color:var(--eg-gold-300);}
   .pilula small{display:block;font-size:10.5px;font-weight:500;color:var(--eg-text-muted);letter-spacing:.02em;margin-top:2px;}
 
   .rodape-pe{
-    position:relative;z-index:20;width:100%;padding:0 24px 30px;
-    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;
+    position:relative;z-index:20;width:100%;padding:0 26px 30px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
   }
   .credito{font-size:9.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--eg-text-muted);}
-  .selo{
-    display:inline-flex;align-items:center;gap:9px;padding:11px 20px;border-radius:999px;
-    border:1px solid rgba(243,240,232,0.09);background:rgba(243,240,232,0.025);
-    font-size:9.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--eg-text-muted);
-  }
-  .selo b{color:var(--eg-text-primary);font-family:'Sora',sans-serif;font-size:11px;letter-spacing:.06em;}
-  .selo .coracao{color:#d98a8a;font-size:12px;animation:eg-pulsa 2s var(--eg-ease) infinite;}
 
   .topo-btn{
     width:48px;height:48px;border-radius:999px;flex:none;cursor:pointer;
     display:inline-flex;align-items:center;justify-content:center;
     color:var(--eg-text-muted);font-size:16px;
-    background:rgba(243,240,232,0.03);border:1px solid rgba(243,240,232,0.09);
+    background:rgba(243,240,232,0.035);border:1px solid rgba(243,240,232,0.10);
     transition:color .3s var(--eg-ease), border-color .3s var(--eg-ease);
     will-change:transform;
   }
-  .topo-btn:hover{color:var(--eg-gold-300);border-color:rgba(201,151,75,0.45);}
+  .topo-btn:hover{color:var(--eg-gold-300);border-color:rgba(201,151,75,0.5);}
   .topo-btn span{display:block;transition:transform .3s var(--eg-ease);}
   .topo-btn:hover span{transform:translateY(-3px);}
 
-  @keyframes eg-rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes eg-entra{from{opacity:0;transform:translateY(18px) scale(.96);}to{opacity:1;transform:none;}}
+  @keyframes eg-luz{0%{opacity:.72;}100%{opacity:1;}}
+  @keyframes eg-pula{0%,100%{transform:translate(-50%,0);}50%{transform:translate(-50%,10px);}}
+  @keyframes eg-anel{0%{transform:scale(1);opacity:.7;}100%{transform:scale(1.55);opacity:0;}}
   @keyframes eg-respira{0%{transform:translate(-50%,-50%) scale(1);opacity:.6;}100%{transform:translate(-50%,-50%) scale(1.1);opacity:1;}}
   @keyframes eg-corre{from{transform:translateX(0);}to{transform:translateX(-50%);}}
-  @keyframes eg-pulsa{0%,100%{transform:scale(1);}15%,45%{transform:scale(1.2);}30%{transform:scale(1);}}
 
   @media (max-width:760px){
-    .shell{flex-direction:column-reverse;gap:28px;}
-    .col-right{flex:0 0 auto;width:100%;max-width:280px;}
-    .col-left{width:100%;text-align:center;}
-    .logo-badge{margin-left:auto;margin-right:auto;}
-    .card{text-align:left;}
-    .hero{padding-bottom:96px;}
-    .rolar{display:none;}
-    /* No celular a cortina com `fixed` engasga em varios navegadores (barra de
-       endereco que aparece e some muda a altura da janela no meio da rolagem).
-       Ali o rodape vira um bloco normal: perde o efeito, mantem o conteudo. */
+    .gigante{font-size:19vw;}
+    /* No celular a cortina com `fixed` engasga: a barra de endereco aparece e
+       some e muda a altura da janela no meio da rolagem. Aqui o rodape vira
+       bloco normal — perde o efeito, mantem o conteudo. */
     .rodape-wrap{height:auto;clip-path:none;}
     .rodape{position:relative;height:auto;min-height:100vh;}
     .marquise{position:relative;top:0;margin-top:8vh;}
-    .rodape-centro{padding:8vh 20px 0;gap:26px;}
+    .rodape-centro{padding:8vh 20px 0;gap:28px;}
     .pilula{width:100%;justify-content:center;}
-    .rodape-pe{justify-content:center;text-align:center;}
+    .rodape-pe{padding:0 20px 26px;}
   }
 
   @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto;}
-    .logo-badge,h1,p.sub,.card,.col-right,.rolar{animation:none;}
-    .aurora,.marquise-trilho,.selo .coracao{animation:none;}
+    .logo-grande,.seta,.seta::before,.luz,.aurora,.marquise-trilho{animation:none;}
     .gigante,.rodape-titulo,.pilulas{transform:none;opacity:1;}
   }
 </style>
 </head>
 <body>
 
-<main class="hero">
-  <div class="shell">
-    <div class="col-left">
-      <img class="logo-badge" src="/assets/logo-endogin.png" alt="Mentoria Endogin">
-      <h1>Endogin OS</h1>
-      <p class="sub">Escolha onde você quer entrar</p>
-      <a class="card" href="/Endogin_Area_CS_Live.html">
-        <div class="card-icon">&#128101;</div>
-        <div>
-          <div class="card-title">Área CS</div>
-          <div class="card-desc">Equipe — alunos, CRM, sessões, grupos de WhatsApp e mais</div>
-        </div>
-        <div class="card-arrow">&#10132;</div>
-      </a>
-      <a class="card" href="/Portal_Aluno_Live.html">
-        <div class="card-icon">&#127891;</div>
-        <div>
-          <div class="card-title">Portal do Aluno</div>
-          <div class="card-desc">Mentorados — acompanhamento da jornada na mentoria</div>
-        </div>
-        <div class="card-arrow">&#10132;</div>
-      </a>
-      <a class="card" href="/Area_Doutores_Live.html">
-        <div class="card-icon">&#128200;</div>
-        <div>
-          <div class="card-title">Área da Diretoria</div>
-          <div class="card-desc">Dr. Caio e Dr. Vinícius — quem precisa de atenção e o que sustenta a renovação</div>
-        </div>
-        <div class="card-arrow">&#10132;</div>
-      </a>
-    </div>
-    <div class="col-right">
-      <div class="photo-card"><img src="/assets/hero-caio-vinicius.jpg" alt="Dr. Caio e Dr. Vinícius"></div>
-    </div>
-  </div>
+<section class="abertura">
+  <div class="luz"></div>
+  <div class="luz-piso"></div>
+  <img class="logo-grande" src="/assets/logo-endogin.png" alt="Mentoria Endogin">
 
-  <div class="rolar">Role para revelar<i></i></div>
-</main>
+  <button class="seta" id="setaDesce" type="button" aria-label="Rolar para baixo">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v14M5.5 12.5 12 19l6.5-6.5"/></svg>
+  </button>
+</section>
 
 <div class="rodape-wrap" id="rodapeWrap">
   <footer class="rodape">
     <div class="aurora"></div>
     <div class="grade"></div>
-    <div class="gigante" id="gigante">ENDOGIN</div>
+    <div class="gigante" id="gigante">MENTORIA<br>ENDOGIN</div>
 
     <div class="marquise">
       <div class="marquise-trilho" id="marquiseTrilho"></div>
@@ -305,14 +266,6 @@
 
     <div class="rodape-pe">
       <div class="credito">&copy; 2026 Mentoria Endogin</div>
-
-      <div class="selo">
-        <span>Feito para a</span>
-        <span class="coracao">&#10084;</span>
-        <span>equipe</span>
-        <b>ENDOGIN</b>
-      </div>
-
       <button class="topo-btn magnetico" id="voltarTopo" type="button" aria-label="Voltar ao topo">
         <span>&uarr;</span>
       </button>
@@ -340,8 +293,8 @@
   }
 
   // ---------------- botoes magneticos ----------------
-  // O elemento e puxado na direcao do cursor e volta com uma sobra elastica.
-  // Sem biblioteca: transform + transition, trocando a curva na saida.
+  // O elemento e puxado na direcao do cursor e volta com sobra elastica:
+  // transform + troca da curva na saida, sem biblioteca.
   if(!reduzido && window.matchMedia("(hover: hover)").matches){
     document.querySelectorAll(".magnetico").forEach(function(el){
       el.addEventListener("mousemove", function(e){
@@ -359,9 +312,8 @@
   }
 
   // ---------------- cortina ----------------
-  // Uma unica conta: quanto do bloco da cortina ja subiu na janela. Esse
-  // numero (0 a 1) vira variavel CSS e o resto e feito pelo proprio CSS —
-  // por isso nao ha necessidade de GSAP nem de ScrollTrigger aqui.
+  // Uma conta so: quanto do bloco da cortina ja subiu na janela. Esse numero
+  // (0 a 1) vira variavel CSS e o resto e feito pelo proprio CSS.
   var wrap = document.getElementById("rodapeWrap");
   var gigante = document.getElementById("gigante");
   var titulo = document.getElementById("rodapeTitulo");
@@ -381,8 +333,8 @@
     var p = Math.max(0, Math.min(1, 1 - topo / altura));
 
     gigante.style.setProperty("--p", p.toFixed(3));
-    // o texto e as pilulas entram depois do fundo, senao tudo chega junto e
-    // o efeito de profundidade se perde
+    // o texto e as pilulas entram depois do fundo, senao tudo chega junto e a
+    // sensacao de profundidade se perde
     var q = faixa(p, 0.25, 0.85).toFixed(3);
     titulo.style.setProperty("--q", q);
     pilulas.style.setProperty("--q", q);
@@ -398,6 +350,13 @@
     window.addEventListener("scroll", agenda, { passive: true });
     window.addEventListener("resize", agenda);
     desenha();
+  }
+
+  var seta = document.getElementById("setaDesce");
+  if(seta){
+    seta.addEventListener("click", function(){
+      window.scrollTo({ top: window.innerHeight, behavior: reduzido ? "auto" : "smooth" });
+    });
   }
 
   var btnTopo = document.getElementById("voltarTopo");
