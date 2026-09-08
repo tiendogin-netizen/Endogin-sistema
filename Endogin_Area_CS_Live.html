@@ -3680,6 +3680,22 @@
     });
   }
 
+  // Qual mentoria esta escolhida no seletor da arte (null = todas).
+  function arteMentoriaNome(){
+    var sel = $("arteBranch");
+    if(!sel || !sel.value) return null;
+    var b = allBranches.find(function(x){ return x.id === sel.value; });
+    return b ? b.name : null;
+  }
+
+  function arteMentoriaSlug(){
+    var nome = arteMentoriaNome();
+    if(!nome) return "";
+    return "-" + nome.toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+
   // As mentorias sao repovoadas a cada desenho: allBranches carrega de forma
   // assincrona e podia ainda estar vazia na primeira montagem da tela.
   function arteAtualizaMentorias(){
@@ -3732,7 +3748,7 @@
     alvo.innerHTML =
       '<div class="arte-arc arte-arc1"></div><div class="arte-arc arte-arc2"></div><div class="arte-arc arte-arc3"></div>' +
       '<div class="arte-head">' +
-        '<div><div class="arte-eyebrow">MENTORIA ENDOGIN</div>' +
+        '<div><div class="arte-eyebrow">' + arteEscapa((arteMentoriaNome() || "Mentoria Endogin").toUpperCase()) + '</div>' +
         '<div class="arte-title">CRONOGRAMA <span>SEMANAL</span></div></div>' +
         '<div class="arte-quote">CONHECIMENTO<br>QUE TRANSFORMA<br>CONSULTÓRIOS<br><b>E VIDAS</b></div>' +
       '</div>' +
@@ -3779,7 +3795,9 @@
         var a = document.createElement("a");
         var dias = arteDatasDaSemana();
         a.href = url;
-        a.download = "cronograma-endogin-" + arteISO(dias[0]) + ".png";
+        // o nome do arquivo carrega a mentoria: quem baixa quatro cronogramas
+        // seguidos precisa saber qual e qual sem abrir um por um
+        a.download = "cronograma-endogin" + arteMentoriaSlug() + "-" + arteISO(dias[0]) + ".png";
         document.body.appendChild(a);
         a.click();
         setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1000);
@@ -3838,35 +3856,77 @@
     });
   }
 
+  function calendarioOrdena(a, b){
+    if(a.lesson_type !== b.lesson_type) return a.lesson_type === "evento" ? -1 : 1;
+    return (a.weekday || "").localeCompare(b.weekday || "") || (a.scheduled_time || "").localeCompare(b.scheduled_time || "");
+  }
+
+  function calendarioLinha(l){
+    var branch = allBranches.find(function(b){ return b.id === l.branch_id; });
+    var timePart = l.scheduled_time ? l.scheduled_time.slice(0, 5).replace(":", "h") : null;
+    var when = l.lesson_type === "evento"
+      ? [fmtEventDate(l.event_date), timePart].filter(Boolean).join(" · ")
+      : [LESSON_WEEKDAY_LABEL[l.weekday] || l.weekday, timePart].filter(Boolean).join(" · ");
+    return '<div class="wpp-row">' +
+      '<div>' +
+        '<span class="wpp-group-tag">' + (l.lesson_type === "evento" ? "Encontro" : "Aula semanal") + '</span> ' +
+        (l.category ? '<span class="wpp-group-tag" style="opacity:0.7;">' + l.category + '</span> ' : '') +
+        '<b>' + l.title + '</b>' +
+        '<div class="hint">' + (when || "sem horário definido") + (l.duration_minutes ? " · " + l.duration_minutes + " min" : "") + " · " + (branch ? branch.name : "Todas as mentorias") + '</div>' +
+        (l.description ? '<div class="hint">' + l.description + '</div>' : '') +
+        (l.link_url ? '<div class="hint"><i class="fa-solid fa-users"></i> ' + (lessonClickStats[l.id] ? lessonClickStats[l.id].total + " clique(s) no total · " + lessonClickStats[l.id].last7 + " nos últimos 7 dias" : "0 cliques até agora") + '</div>' : '') +
+      '</div>' +
+      (currentStaff.isMasterLike ? '<div style="display:flex;gap:6px;">' +
+        '<button class="btn-secondary lesson-edit-btn" data-id="' + l.id + '"><i class="fa-solid fa-pen"></i></button>' +
+        '<button class="btn-secondary lesson-del-btn" data-id="' + l.id + '"><i class="fa-solid fa-trash"></i></button>' +
+      '</div>' : '') +
+    '</div>';
+  }
+
+  // A lista era um monte so, e com Mae, duas Starts e a Surgical no mesmo lugar
+  // ninguem enxerga de quem e cada aula. Agora cada mentoria tem o seu bloco —
+  // que e exatamente o recorte que a arte do WhatsApp usa.
   function renderCalendarioList(){
     var wrap = $("calendarioList");
     $("newLessonBtn").style.display = currentStaff.isMasterLike ? "inline-flex" : "none";
     if(!allLessons.length){ wrap.innerHTML = '<p class="hint">Nenhuma aula semanal ou encontro cadastrado ainda.</p>'; return; }
-    var sorted = allLessons.slice().sort(function(a, b){
-      if(a.lesson_type !== b.lesson_type) return a.lesson_type === "evento" ? -1 : 1;
-      return (a.weekday || "").localeCompare(b.weekday || "") || (a.scheduled_time || "").localeCompare(b.scheduled_time || "");
+
+    var blocos = [];
+
+    // "Todas as mentorias" primeiro, porque e o grupo que precisa de atencao:
+    // aula sem mentoria aparece pra base inteira.
+    var semMentoria = allLessons.filter(function(l){ return !l.branch_id; }).sort(calendarioOrdena);
+    if(semMentoria.length){
+      blocos.push({ nome: "Todas as mentorias", aulas: semMentoria, alerta: true });
+    }
+
+    allBranches.slice().sort(function(a, b){ return (a.name || "").localeCompare(b.name || ""); }).forEach(function(b){
+      var doBraco = allLessons.filter(function(l){ return l.branch_id === b.id; }).sort(calendarioOrdena);
+      if(doBraco.length) blocos.push({ nome: b.name, aulas: doBraco });
     });
-    wrap.innerHTML = sorted.map(function(l){
-      var branch = allBranches.find(function(b){ return b.id === l.branch_id; });
-      var timePart = l.scheduled_time ? l.scheduled_time.slice(0, 5).replace(":", "h") : null;
-      var when = l.lesson_type === "evento"
-        ? [fmtEventDate(l.event_date), timePart].filter(Boolean).join(" · ")
-        : [LESSON_WEEKDAY_LABEL[l.weekday] || l.weekday, timePart].filter(Boolean).join(" · ");
-      return '<div class="wpp-row">' +
-        '<div>' +
-          '<span class="wpp-group-tag">' + (l.lesson_type === "evento" ? "Encontro" : "Aula semanal") + '</span> ' +
-          (l.category ? '<span class="wpp-group-tag" style="opacity:0.7;">' + l.category + '</span> ' : '') +
-          '<b>' + l.title + '</b>' +
-          '<div class="hint">' + (when || "sem horário definido") + (l.duration_minutes ? " · " + l.duration_minutes + " min" : "") + " · " + (branch ? branch.name : "Todas as mentorias") + '</div>' +
-          (l.description ? '<div class="hint">' + l.description + '</div>' : '') +
-          (l.link_url ? '<div class="hint"><i class="fa-solid fa-users"></i> ' + (lessonClickStats[l.id] ? lessonClickStats[l.id].total + " clique(s) no total · " + lessonClickStats[l.id].last7 + " nos últimos 7 dias" : "0 cliques até agora") + '</div>' : '') +
-        '</div>' +
-        (currentStaff.isMasterLike ? '<div style="display:flex;gap:6px;">' +
-          '<button class="btn-secondary lesson-edit-btn" data-id="' + l.id + '"><i class="fa-solid fa-pen"></i></button>' +
-          '<button class="btn-secondary lesson-del-btn" data-id="' + l.id + '"><i class="fa-solid fa-trash"></i></button>' +
-        '</div>' : '') +
-      '</div>';
+
+    // aula presa a uma mentoria que nao existe mais nao pode sumir da tela
+    var conhecidas = {};
+    allBranches.forEach(function(b){ conhecidas[b.id] = true; });
+    var orfas = allLessons.filter(function(l){ return l.branch_id && !conhecidas[l.branch_id]; }).sort(calendarioOrdena);
+    if(orfas.length) blocos.push({ nome: "Mentoria não encontrada", aulas: orfas, alerta: true });
+
+    var aviso = semMentoria.length
+      ? '<p class="hint" style="margin:-8px 0 16px;color:var(--eg-gold-300);"><b>' + semMentoria.length +
+        ' aula(s) estão como "Todas as mentorias".</b> No Portal elas aparecem para <b>todos</b> os alunos — inclusive quem não é daquela mentoria. ' +
+        'Se a aula é de uma mentoria específica, clique no lápis e escolha qual: aí ela some da tela de quem não é dela, e passa a sair só no cronograma daquela mentoria.</p>'
+      : '';
+
+    wrap.innerHTML = aviso + blocos.map(function(g, i){
+      return '<div style="' + (i ? "margin-top:22px;padding-top:16px;border-top:1px solid var(--eg-navy-line);" : "") + '">' +
+          '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">' +
+            '<b style="font-size:13.5px;' + (g.alerta ? "color:var(--eg-gold-300);" : "") + '">' + g.nome + '</b>' +
+            '<span class="hint">' + g.aulas.length + ' aula(s)</span>' +
+          '</div>' +
+          g.aulas.map(calendarioLinha).join("") +
+        '</div>';
     }).join("");
+
     wrap.querySelectorAll(".lesson-edit-btn").forEach(function(btn){
       btn.addEventListener("click", function(){
         var l = allLessons.find(function(x){ return x.id === btn.getAttribute("data-id"); });
