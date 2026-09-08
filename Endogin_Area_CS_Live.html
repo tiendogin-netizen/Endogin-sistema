@@ -1059,6 +1059,13 @@
         </div>
         <div class="err-msg" id="alunoCredErr"></div>
       </div>
+
+      <div id="alunoExcluirWrap" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--eg-navy-line);">
+        <label style="margin-bottom:8px;">Excluir aluno</label>
+        <p class="hint" style="margin:-2px 0 12px;">Apaga o cadastro <b>e tudo que está preso nele</b>: mentorias, progresso de aulas, NPS, feedbacks, sessões 1x1 e grupos de WhatsApp. Não dá pra desfazer.<br>Se o aluno só saiu da mentoria, o certo é deixar o status como <b>inativo</b> — assim ele continua contando no histórico e nos números da diretoria. Excluir é pra cadastro duplicado, aluno teste e erro de importação.</p>
+        <button class="btn-secondary" id="alunoDeleteStudentBtn" style="width:auto;color:var(--eg-red);border-color:rgba(217,138,138,0.4);"><i class="fa-solid fa-trash"></i> Excluir aluno definitivamente</button>
+        <div class="err-msg" id="alunoDeleteErr"></div>
+      </div>
     </div>
     <div class="modal-foot">
       <span></span>
@@ -1694,6 +1701,21 @@
     if(digits.length <= 11) digits = "55" + digits;
     return "https://wa.me/" + digits;
   }
+  // A importacao trouxe muita gente com o telefone gravado como link inteiro
+  // ("https://wa.me/5516993954115"). O link ate funciona, mas a coluna Contato
+  // fica ilegivel. A tela passa a mostrar o numero formatado, venha como vier —
+  // sem depender de arrumar o dado no banco primeiro.
+  function telefoneBonito(phone){
+    var bruto = String(phone == null ? "" : phone).trim();
+    if(!bruto) return "—";
+    var d = bruto.replace(/\D/g, "");
+    if(!d) return bruto;
+    if((d.length === 12 || d.length === 13) && d.slice(0, 2) === "55") d = d.slice(2);
+    if(d.length === 11) return "(" + d.slice(0, 2) + ") " + d.slice(2, 7) + "-" + d.slice(7);
+    if(d.length === 10) return "(" + d.slice(0, 2) + ") " + d.slice(2, 6) + "-" + d.slice(6);
+    return d;
+  }
+
   function waLinkHtml(phone){
     var link = waLink(phone);
     if(!link) return "";
@@ -1718,7 +1740,7 @@
       var tr = document.createElement("tr");
       tr.innerHTML =
         '<td><b>' + s.full_name + '</b>' + discBadge(s) + '<br><span class="hint">' + s.email + '</span></td>' +
-        '<td>' + (s.phone || "—") + waLinkHtml(s.phone) + '</td>' +
+        '<td>' + telefoneBonito(s.phone) + waLinkHtml(s.phone) + '</td>' +
         '<td>' + tags + '</td>' +
         '<td><span class="status-pill ' + s.status + '">' + s.status + '</span></td>' +
         '<td>' + csName + '</td>' +
@@ -1959,6 +1981,9 @@
     }
 
     $("alunoCredWrap").style.display = currentStaff.isMasterLike ? "block" : "none";
+    $("alunoExcluirWrap").style.display = currentStaff.isMasterLike ? "block" : "none";
+    $("alunoDeleteErr").textContent = "";
+    $("alunoDeleteErr").style.color = "";
     if(currentStaff.isMasterLike){
       var jaTem = !!student.auth_user_id;
       $("alunoCredTitulo").textContent = jaTem ? "Credenciais de acesso" : "Criar acesso ao Portal";
@@ -4237,6 +4262,54 @@
     dashKpisLoaded = false;
     loadDashKpis();
   }
+
+  // Excluir ALUNO — diferente de excluir login. O botao de login so tira o
+  // acesso ao Portal; este some com o cadastro. Quem faz o trabalho e a funcao
+  // excluir_aluno() no banco: ela descobre sozinha todas as tabelas penduradas
+  // no aluno, apaga em uma transacao so e devolve quantas linhas sairam de
+  // cada uma. Se der erro no meio, nada e apagado.
+  $("alunoDeleteStudentBtn").addEventListener("click", function(){
+    var student = allStudents.find(function(x){ return x.id === alunoEditingId; });
+    if(!student) return;
+
+    var err = $("alunoDeleteErr");
+    err.style.color = "";
+    if(!confirm("Excluir " + student.full_name + " definitivamente?\n\nSomem o cadastro, as mentorias, o progresso de aulas, o NPS, os feedbacks e as sessoes 1x1 dele.\n\nIsso nao pode ser desfeito.")) return;
+
+    $("alunoDeleteStudentBtn").disabled = true;
+    err.textContent = "Excluindo...";
+
+    function apagaCadastro(){
+      sb.rpc("excluir_aluno", { p_student_id: student.id }).then(function(r){
+        $("alunoDeleteStudentBtn").disabled = false;
+        if(r.error){ err.textContent = "Erro ao excluir: " + r.error.message; return; }
+
+        var resumo = (r.data && r.data.apagados) || {};
+        var partes = Object.keys(resumo).map(function(t){ return resumo[t] + " em " + t; });
+        $("alunoModal").classList.remove("open");
+        avisa("<b>" + student.full_name + "</b> foi excluído." +
+          (partes.length ? '<br><span style="opacity:.75;font-size:12px;">Saíram junto: ' + partes.join(", ") + ".</span>" : ""));
+        atualizaDerivados();
+      });
+    }
+
+    // Aluno com login precisa perder o usuario do Auth antes, senao sobraria
+    // um login orfao capaz de entrar no Portal sem cadastro nenhum atras.
+    if(student.auth_user_id){
+      sb.functions.invoke("admin-tools", {
+        body: { action: "delete_login", student_id: student.id }
+      }).then(function(r){
+        if(r.error || (r.data && r.data.ok === false)){
+          $("alunoDeleteStudentBtn").disabled = false;
+          err.textContent = "Não consegui remover o login antes de excluir: " + (r.error ? r.error.message : r.data.error);
+          return;
+        }
+        apagaCadastro();
+      });
+    } else {
+      apagaCadastro();
+    }
+  });
 
   // Aviso curto no canto, some sozinho. Serve pra CS ver QUE a mudanca pegou e
   // QUAL foi — sem isso a tela so pisca e ela fica na duvida se salvou.
