@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Montserrat:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.min.js"></script>
 <style>
   :root{
     --bg-0:#080d17; --bg-1:#0e1a29; --bg-2:#152436; --bg-3:#1c2f4a;
@@ -43,6 +43,15 @@
   .btn-ghost{background:none;border:1px solid var(--line-2);color:var(--txt-2);}
   .btn-ghost:hover{border-color:var(--gold);color:var(--txt);box-shadow:none;}
   .btn-full{width:100%;}
+  .btn-mini{font-size:11px;padding:5px 11px;border-radius:6px;}
+  .acao-linha{display:inline-flex;gap:6px;}
+  .atualizado{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 2px;
+    font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--txt-3);}
+  .wa{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;margin-left:7px;border-radius:5px;
+    color:var(--green);border:1px solid rgba(143,199,159,.32);font-size:10.5px;text-decoration:none;vertical-align:middle;
+    transition:background .2s var(--ease),border-color .2s var(--ease);}
+  .wa:hover{background:rgba(143,199,159,.14);border-color:rgba(143,199,159,.6);}
+  .sem-wa{margin-left:7px;font-size:10px;color:var(--txt-3);}
   .erro{color:var(--red);font-size:12px;margin-top:10px;min-height:16px;}
 
   /* ---------------- shell ---------------- */
@@ -145,6 +154,7 @@
   .formulario{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:14px;}
   .formulario .largo{grid-column:1/-1;}
   .formulario input,.formulario select,.formulario textarea{width:100%;}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
 
   @media(max-width:900px){
     .shell{grid-template-columns:1fr;}
@@ -202,6 +212,10 @@
     <div class="side-pe">
       <b id="quemSou">—</b>
       <span>Diretoria</span>
+      <div class="atualizado">
+        <span id="ultimaAtualizacao">—</span>
+        <button class="btn btn-ghost btn-mini" id="btnAtualizar">Atualizar</button>
+      </div>
       <button class="sair" id="btnSair">Sair</button>
     </div>
   </aside>
@@ -334,7 +348,7 @@
       <div class="secao-cab"><h3>Biblioteca</h3><span class="nota" id="notaMateriais"></span></div>
       <div class="tab-rolagem">
         <table>
-          <thead><tr><th>Documento</th><th>Versão</th><th>Revisão</th><th>Responsável</th><th>Mentoria</th><th>Status</th></tr></thead>
+          <thead><tr><th>Documento</th><th>Versão</th><th>Revisão</th><th>Responsável</th><th>Mentoria</th><th>Status</th><th style="width:52px;"></th></tr></thead>
           <tbody id="tabMateriais"></tbody>
         </table>
       </div>
@@ -353,10 +367,59 @@
       </div>
 
       <div class="kpis" id="kpisAoVivo"></div>
+
+      <div class="painel" id="painelAula" style="display:none;margin-bottom:24px;">
+        <h4 id="aulaPainelTitulo">Editar aula</h4>
+        <p class="dica">Muda o que ja esta no calendario. Quem cria e apaga aula continua sendo a CS, na aba Calendario — assim a agenda tem um dono so.</p>
+        <div class="formulario">
+          <div class="largo"><label>Titulo</label><input type="text" id="aulaTitulo"></div>
+          <div><label>Tipo</label>
+            <select id="aulaTipo">
+              <option value="semanal">Semanal (toda semana)</option>
+              <option value="evento">Encontro (data unica)</option>
+            </select>
+          </div>
+          <div><label>Mentoria</label><select id="aulaMentoria"><option value="">Todas as mentorias</option></select></div>
+          <div id="aulaDiaWrap"><label>Dia da semana</label>
+            <select id="aulaDia">
+              <option value="segunda">Segunda</option>
+              <option value="terca">Terca</option>
+              <option value="quarta">Quarta</option>
+              <option value="quinta">Quinta</option>
+              <option value="sexta">Sexta</option>
+              <option value="sabado">Sabado</option>
+              <option value="domingo">Domingo</option>
+            </select>
+          </div>
+          <div id="aulaDataWrap" style="display:none;"><label>Data</label><input type="date" id="aulaData"></div>
+          <div><label>Horario</label><input type="time" id="aulaHora"></div>
+          <div><label>Duracao (minutos)</label><input type="number" id="aulaDuracao" min="0"></div>
+          <div><label>Categoria</label>
+            <select id="aulaCategoria">
+              <option value="Geral">Geral</option>
+              <option value="Vendas">Vendas</option>
+              <option value="Pro Hormonal">Pro Hormonal</option>
+              <option value="Encontros">Encontros</option>
+              <option value="Endogin Black Belt">Endogin Black Belt</option>
+              <option value="Endogin Mentores Masters">Endogin Mentores Masters</option>
+            </select>
+          </div>
+          <div><label>Capa (link da imagem)</label><input type="text" id="aulaCapa" placeholder="https://..."></div>
+          <div class="largo"><label>Descricao curta</label><input type="text" id="aulaDescricao"></div>
+          <div class="largo"><label>Link da aula / encontro</label><input type="text" id="aulaLink" placeholder="https://..."></div>
+          <div class="largo"><label>ID da reuniao no Zoom</label><input type="text" id="aulaZoom" placeholder="ex: 812 3456 7890"></div>
+        </div>
+        <div class="acao-linha">
+          <button class="btn" id="btnSalvarAula">Salvar alteracoes</button>
+          <button class="btn btn-ghost" id="btnCancelarAula">Cancelar</button>
+        </div>
+        <div class="erro" id="aulaErro"></div>
+      </div>
+
       <div class="secao-cab"><h3>Agenda e engajamento</h3><span class="nota" id="notaAoVivo"></span></div>
       <div class="tab-rolagem">
         <table>
-          <thead><tr><th>Aula / encontro</th><th>Quando</th><th>Mentoria</th><th>Cliques (total)</th><th>Últimos 7 dias</th></tr></thead>
+          <thead><tr><th>Aula / encontro</th><th>Quando</th><th>Mentoria</th><th>Cliques (total)</th><th>Últimos 7 dias</th><th style="width:52px;"></th></tr></thead>
           <tbody id="tabAoVivo"></tbody>
         </table>
       </div>
@@ -369,6 +432,23 @@
         <h2>Recados</h2>
         <p>O que os mentorados veem no aviso da Jornada, dentro do Portal do Aluno.</p>
       </div>
+      <div class="painel" style="margin-bottom:24px;">
+        <h4 id="recPainelTitulo">Publicar recado</h4>
+        <p class="dica">Escolha para quais mentorias vai. Quem for dessas mentorias ve o recado na Jornada, dentro do Portal do Aluno.</p>
+        <div class="formulario">
+          <div class="largo"><label>Titulo (opcional)</label><input type="text" id="recTitulo" placeholder="ex: Aula extra nesta quinta"></div>
+          <div class="largo"><label>Mensagem</label><textarea id="recMensagem" rows="3" placeholder="Escreva o recado"></textarea></div>
+          <div><label>Link (opcional)</label><input type="text" id="recLink" placeholder="https://..."></div>
+          <div><label>Vence em (opcional)</label><input type="date" id="recVence"></div>
+          <div class="largo"><label>Mentorias</label><div class="chips" id="recChips"></div></div>
+        </div>
+        <div class="acao-linha">
+          <button class="btn" id="btnPublicarRec">Publicar recado</button>
+          <button class="btn btn-ghost" id="btnCancelarRec" style="display:none;">Cancelar edicao</button>
+        </div>
+        <div class="erro" id="recErro"></div>
+      </div>
+
       <div class="secao-cab"><h3>Publicados</h3><span class="nota" id="notaRecados"></span></div>
       <div id="listaRecados"></div>
     </section>
@@ -426,6 +506,15 @@
     return m;
   }
   var PALETA = ["#c9974b","#8fb3e0","#8fc79f","#d98a8a","#b294c9","#e3bd76","#7fa8a0","#c98f6b"];
+
+  // Mesma regra da Area CS: numero sem DDI e tratado como Brasil.
+  function waHtml(phone){
+    var digits = String(phone || "").replace(/\D/g, "");
+    if(!digits) return '<span class="sem-wa">sem telefone</span>';
+    if(digits.length <= 11) digits = "55" + digits;
+    return '<a class="wa" href="https://wa.me/' + digits + '" target="_blank" rel="noopener" ' +
+      'title="Chamar ' + esc(phone) + ' no WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>';
+  }
 
   function desenha(id, tipo, labels, valores, opcoes){
     var el = $(id);
@@ -534,18 +623,52 @@
   });
 
   // ---------- carga ----------
+  // O PostgREST devolve no maximo 1000 linhas por consulta e NAO avisa que
+  // cortou. course_progress e live_click_log passam disso com folga (cada
+  // aluno tem varias linhas), entao sem paginar a media de progresso e a
+  // contagem de cliques sairiam calculadas sobre um pedaco da base.
+  function buscarTudo(tabela, colunas, ajusta){
+    var LOTE = 1000, acumulado = [];
+    function passo(de){
+      var q = sb.from(tabela).select(colunas).range(de, de + LOTE - 1);
+      if(ajusta) q = ajusta(q);
+      return q.then(function(r){
+        if(r.error) return { error: r.error, data: null };
+        var lote = r.data || [];
+        acumulado = acumulado.concat(lote);
+        if(lote.length < LOTE) return { error: null, data: acumulado };
+        return passo(de + LOTE);
+      });
+    }
+    return passo(0);
+  }
+
+  var carregando = false, momentoCarga = 0;
+
+  function marcaAtualizacao(){
+    momentoCarga = Date.now();
+    var d = new Date();
+    $("ultimaAtualizacao").textContent = "ATUALIZADO " +
+      String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
   function carregaTudo(){
+    if(carregando) return;
+    carregando = true;
+    $("btnAtualizar").disabled = true;
     Promise.all([
-      sb.from("students").select("id,full_name,email,status,temperature,renewal_date,renewal_status,is_lifetime,is_delinquent,entry_date,cs_id,staff:cs_id(full_name),deliveries(label,status,branch_id)"),
+      buscarTudo("students", "id,full_name,email,phone,status,temperature,renewal_date,renewal_status,is_lifetime,is_delinquent,entry_date,cs_id,staff:cs_id(full_name),deliveries(label,status,branch_id)"),
       sb.from("branches").select("id,name").order("name"),
       // Os sinais de risco moram em tabelas separadas — sem elas a tela vira
       // uma lista de cadastro, e o que a diretoria precisa e enxergar quem
       // esta escorregando.
-      sb.from("course_progress").select("student_id,progress_percentage"),
-      sb.from("nps_responses").select("student_id,score,created_at"),
-      sb.from("live_click_log").select("student_id"),
-      sb.from("mentoring_sessions").select("student_id,status")
+      buscarTudo("course_progress", "student_id,progress_percentage"),
+      buscarTudo("nps_responses", "student_id,score,created_at"),
+      buscarTudo("live_click_log", "student_id"),
+      buscarTudo("mentoring_sessions", "student_id,status")
     ]).then(function(res){
+      carregando = false;
+      $("btnAtualizar").disabled = false;
       if(res[0].error){
         $("kpis").innerHTML = '<p class="vazio">Não consegui ler a base de mentorados: ' + esc(res[0].error.message) + '</p>';
         return;
@@ -560,8 +683,29 @@
       carregaMateriais();
       carregaAoVivo();
       carregaRecados();
+      marcaAtualizacao();
+    })["catch"](function(e){
+      // sem isto uma falha de rede deixaria `carregando` travado em true e a
+      // tela pararia de se atualizar pelo resto da sessao, calada
+      carregando = false;
+      $("btnAtualizar").disabled = false;
+      $("ultimaAtualizacao").textContent = "FALHOU — CLIQUE EM ATUALIZAR";
     });
   }
+
+  // A tela le as MESMAS tabelas que a Area CS escreve — nao existe copia nem
+  // sincronizacao. O que faltava era so buscar de novo: sem isso a pagina
+  // mostrava o retrato do momento em que foi aberta. Agora ela se refaz
+  // sozinha de minuto em minuto, e tambem quando a aba volta pro foco.
+  $("btnAtualizar").addEventListener("click", function(){ carregaTudo(); });
+
+  setInterval(function(){
+    if(eu && document.visibilityState === "visible") carregaTudo();
+  }, 60000);
+
+  document.addEventListener("visibilitychange", function(){
+    if(eu && document.visibilityState === "visible" && Date.now() - momentoCarga > 30000) carregaTudo();
+  });
 
   // ---------- sinais por mentorado ----------
   function montaPerfil(progresso, nps, cliques, sessoes){
@@ -696,7 +840,7 @@
       var d = diasAte(a.renewal_date);
       var sel = d < 0 ? '<span class="selo risco">' + Math.abs(d) + 'd vencido</span>'
         : '<span class="selo ' + (d <= 30 ? "alerta" : "") + '">vence em ' + d + 'd</span>';
-      return '<tr><td><span class="principal">' + esc(a.full_name) + '</span><span class="secundario">' + esc(a.email || "") + '</span></td>' +
+      return '<tr><td><span class="principal">' + esc(a.full_name) + waHtml(a.phone) + '</span><span class="secundario">' + esc(a.email || "") + '</span></td>' +
         '<td>' + esc(mentoriasDe(a).join(", ") || "—") + '</td>' +
         '<td>' + esc((a.staff && a.staff.full_name) || "—") + '</td>' +
         '<td class="num-col">' + dataCurta(a.renewal_date) + '</td>' +
@@ -770,7 +914,7 @@
       return '<tr>' +
         '<td><span class="risco-nota ' + f + '">' + r.pontos + '</span>' +
           '<span class="risco-faixa">' + (f === "alto" ? "alto" : f === "medio" ? "médio" : "baixo") + '</span></td>' +
-        '<td><span class="principal">' + esc(a.full_name) + '</span><span class="secundario">' + esc(a.email || "") + '</span></td>' +
+        '<td><span class="principal">' + esc(a.full_name) + waHtml(a.phone) + '</span><span class="secundario">' + esc(a.email || "") + '</span></td>' +
         '<td>' + motivos + '</td>' +
         '<td>' + esc(mentoriasDe(a).join(", ") || "—") + '</td>' +
         '<td>' + esc((a.staff && a.staff.full_name) || "—") + '</td>' +
@@ -827,7 +971,7 @@
   function carregaMateriais(){
     sb.from("documents").select("id,code,title,category,doc_type,version,revision_date,responsible_name,status,file_url,branch_id,created_at")
       .order("created_at", { ascending: false }).then(function(r){
-        if(r.error){ $("tabMateriais").innerHTML = '<tr><td colspan="6" class="vazio">Erro: ' + esc(r.error.message) + '</td></tr>'; return; }
+        if(r.error){ $("tabMateriais").innerHTML = '<tr><td colspan="7" class="vazio">Erro: ' + esc(r.error.message) + '</td></tr>'; return; }
         var docs = r.data || [];
         $("notaMateriais").textContent = docs.length + " documento(s)";
         $("tabMateriais").innerHTML = docs.length ? docs.map(function(d){
@@ -840,9 +984,37 @@
             '<td class="num-col">' + dataCurta(d.revision_date) + '</td>' +
             '<td>' + esc(d.responsible_name || "—") + '</td>' +
             '<td>' + esc(b ? b.name : "Todas") + '</td>' +
-            '<td><span class="selo ' + (vig ? "ok" : "") + '">' + (vig ? "Vigente" : "Arquivado") + '</span></td></tr>';
-        }).join("") : '<tr><td colspan="6" class="vazio">Nenhum material publicado ainda.</td></tr>';
+            '<td><span class="selo ' + (vig ? "ok" : "") + '">' + (vig ? "Vigente" : "Arquivado") + '</span></td>' +
+            '<td><button class="btn btn-ghost btn-mini mat-apagar" data-id="' + d.id + '" ' +
+              'data-url="' + esc(d.file_url || "") + '" data-titulo="' + esc(d.title) + '">Excluir</button></td></tr>';
+        }).join("") : '<tr><td colspan="7" class="vazio">Nenhum material publicado ainda.</td></tr>';
+        ligaExclusaoMaterial();
       });
+  }
+
+  // Apaga o registro E o arquivo. Deixar o arquivo orfao no bucket faria a
+  // biblioteca "esvaziar" na tela enquanto o storage so cresce.
+  function ligaExclusaoMaterial(){
+    document.querySelectorAll(".mat-apagar").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var titulo = btn.getAttribute("data-titulo");
+        if(!confirm('Excluir "' + titulo + '"? Os mentorados deixam de ver esse material.')) return;
+        btn.disabled = true;
+
+        var url = btn.getAttribute("data-url") || "";
+        var corte = url.indexOf("/materiais/");
+        var caminho = corte > -1 ? decodeURIComponent(url.slice(corte + "/materiais/".length)) : null;
+
+        sb.from("documents").delete().eq("id", btn.getAttribute("data-id")).then(function(r){
+          if(r.error){ btn.disabled = false; alert("Erro ao excluir: " + r.error.message); return; }
+          if(caminho){
+            sb.storage.from("materiais").remove([caminho]).then(function(){ carregaMateriais(); });
+          } else {
+            carregaMateriais();
+          }
+        });
+      });
+    });
   }
 
   $("btnPublicarMat").addEventListener("click", function(){
@@ -892,8 +1064,10 @@
       sb.from("lessons").select("id,title,lesson_type,weekday,event_date,scheduled_time,category,branch_id").in("lesson_type", ["semanal","evento"]),
       sb.from("live_click_log").select("lesson_id,clicked_at")
     ]).then(function(res){
-      if(res[0].error){ $("tabAoVivo").innerHTML = '<tr><td colspan="5" class="vazio">Erro: ' + esc(res[0].error.message) + '</td></tr>'; return; }
+      if(res[0].error){ $("tabAoVivo").innerHTML = '<tr><td colspan="6" class="vazio">Erro: ' + esc(res[0].error.message) + '</td></tr>'; return; }
       var aulas = res[0].data || [];
+      aulasAoVivo = aulas;
+      preencheMentoriasAula();
       var cliques = res[1].data || [];
 
       var stats = {}, seteDias = Date.now() - 7*86400000;
@@ -930,28 +1104,284 @@
           '<td>' + esc(quando || "—") + '</td>' +
           '<td>' + esc(b ? b.name : "Todas") + '</td>' +
           '<td class="num-col">' + s.total + '</td>' +
-          '<td class="num-col">' + s.semana + '</td></tr>';
-      }).join("") : '<tr><td colspan="5" class="vazio">Nenhuma aula ao vivo cadastrada. Quem cadastra é a CS, na aba Calendário.</td></tr>';
+          '<td class="num-col">' + s.semana + '</td>' +
+          '<td><button class="btn btn-ghost btn-mini aula-editar" data-id="' + l.id + '">Editar</button></td></tr>';
+      }).join("") : '<tr><td colspan="6" class="vazio">Nenhuma aula ao vivo cadastrada. Quem cadastra é a CS, na aba Calendário.</td></tr>';
+
+      document.querySelectorAll(".aula-editar").forEach(function(btn){
+        btn.addEventListener("click", function(){
+          var l = aulasAoVivo.find(function(x){ return x.id === btn.getAttribute("data-id"); });
+          if(l) abreAula(l);
+        });
+      });
     });
   }
 
-  // ---------- recados ----------
-  function carregaRecados(){
-    sb.from("recados").select("*").order("created_at", { ascending: false }).then(function(r){
-      if(r.error){ $("listaRecados").innerHTML = '<p class="vazio">Erro ao ler os recados: ' + esc(r.error.message) + '</p>'; return; }
-      var lista = r.data || [];
-      $("notaRecados").textContent = lista.length + " recado(s)";
-      $("listaRecados").innerHTML = lista.length ? lista.map(function(x){
-        var quando = x.created_at ? dataCurta(x.created_at) : "";
-        var titulo = x.title || x.titulo || "(sem título)";
-        var texto = x.message || x.mensagem || "";
-        return '<div class="painel" style="margin-bottom:12px;">' +
-          '<h4>' + esc(titulo) + '</h4>' +
-          '<p class="dica" style="margin-bottom:8px;">' + esc(quando) + '</p>' +
-          (texto ? '<p style="margin:0;font-size:12.5px;color:var(--txt-2);">' + esc(texto) + '</p>' : '') +
-        '</div>';
-      }).join("") : '<p class="vazio">Nenhum recado publicado. Quem publica é a CS, na aba Recados da Área CS.</p>';
+  // ---------- edicao de aula ----------
+  // A leitura de cliques ja vinha completa; o que faltava era poder corrigir
+  // horario, link ou titulo sem ter que pedir pra CS.
+  var aulasAoVivo = [], aulaEditando = null;
+
+  function preencheMentoriasAula(){
+    var sel = $("aulaMentoria");
+    if(!sel) return;
+    var atual = sel.value;
+    sel.innerHTML = '<option value="">Todas as mentorias</option>' +
+      branches.map(function(b){ return '<option value="' + b.id + '">' + esc(b.name) + '</option>'; }).join("");
+    sel.value = atual;
+  }
+
+  function alternaCamposAula(){
+    var evento = $("aulaTipo").value === "evento";
+    $("aulaDataWrap").style.display = evento ? "" : "none";
+    $("aulaDiaWrap").style.display = evento ? "none" : "";
+  }
+
+  $("aulaTipo").addEventListener("change", alternaCamposAula);
+  $("btnCancelarAula").addEventListener("click", function(){
+    aulaEditando = null;
+    $("painelAula").style.display = "none";
+  });
+
+  function abreAula(l){
+    aulaEditando = l.id;
+    preencheMentoriasAula();
+    $("aulaPainelTitulo").textContent = "Editar: " + (l.title || "aula");
+    $("aulaTitulo").value = l.title || "";
+    $("aulaTipo").value = l.lesson_type === "evento" ? "evento" : "semanal";
+    $("aulaMentoria").value = l.branch_id || "";
+    $("aulaDia").value = l.weekday || "segunda";
+    $("aulaData").value = l.event_date || "";
+    $("aulaHora").value = l.scheduled_time ? String(l.scheduled_time).slice(0, 5) : "";
+    $("aulaDuracao").value = l.duration_minutes == null ? "" : l.duration_minutes;
+
+    // categoria fora da lista padrao ganha uma opcao propria, senao o select
+    // cairia calado no primeiro item e a edicao trocaria a categoria sozinha
+    var cat = $("aulaCategoria");
+    var valor = l.category || "Geral";
+    if(!Array.prototype.some.call(cat.options, function(o){ return o.value === valor; })){
+      cat.insertAdjacentHTML("beforeend", '<option value="' + esc(valor) + '">' + esc(valor) + '</option>');
+    }
+    cat.value = valor;
+
+    $("aulaCapa").value = l.cover_url || "";
+    $("aulaDescricao").value = l.description || "";
+    $("aulaLink").value = l.link_url || "";
+    $("aulaZoom").value = l.zoom_meeting_id || "";
+    $("aulaErro").textContent = "";
+    $("aulaErro").style.color = "";
+    alternaCamposAula();
+    $("painelAula").style.display = "";
+    $("painelAula").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  $("btnSalvarAula").addEventListener("click", function(){
+    if(!aulaEditando) return;
+    var err = $("aulaErro");
+    err.style.color = "";
+    var titulo = $("aulaTitulo").value.trim();
+    var tipo = $("aulaTipo").value;
+    if(!titulo){ err.textContent = "Escreva o titulo."; return; }
+    if(tipo === "evento" && !$("aulaData").value){ err.textContent = "Escolha a data do encontro."; return; }
+
+    var dados = {
+      title: titulo,
+      lesson_type: tipo,
+      branch_id: $("aulaMentoria").value || null,
+      weekday: tipo === "semanal" ? $("aulaDia").value : null,
+      event_date: tipo === "evento" ? $("aulaData").value : null,
+      scheduled_time: $("aulaHora").value || null,
+      duration_minutes: $("aulaDuracao").value ? parseInt($("aulaDuracao").value, 10) : null,
+      category: $("aulaCategoria").value || null,
+      cover_url: $("aulaCapa").value.trim() || null,
+      description: $("aulaDescricao").value.trim() || null,
+      link_url: $("aulaLink").value.trim() || null,
+      zoom_meeting_id: $("aulaZoom").value.trim() || null
+    };
+
+    $("btnSalvarAula").disabled = true;
+    err.textContent = "Salvando...";
+    sb.from("lessons").update(dados).eq("id", aulaEditando).then(function(r){
+      $("btnSalvarAula").disabled = false;
+      if(r.error){ err.textContent = "Erro ao salvar: " + r.error.message; return; }
+      aulaEditando = null;
+      $("painelAula").style.display = "none";
+      carregaAoVivo();
     });
+  });
+
+  // ---------- recados ----------
+  // A tabela e `announcements` — "recados" e so o nome do bucket de anexos.
+  // Esta tela lia `recados` como se fosse tabela, entao a aba nunca mostrou
+  // nada e o erro passava despercebido.
+  var recados = [], recadoEditando = null, recadoTodas = true, recadoMentorias = {};
+
+  function montaChipsRecado(){
+    var alvo = $("recChips");
+    if(!alvo) return;
+    alvo.innerHTML =
+      '<button type="button" class="chip' + (recadoTodas ? " on" : "") + '" data-todas="1">Todas as mentorias</button>' +
+      branches.map(function(b){
+        return '<button type="button" class="chip' + (!recadoTodas && recadoMentorias[b.id] ? " on" : "") +
+          '" data-b="' + b.id + '">' + esc(b.name) + '</button>';
+      }).join("");
+
+    alvo.querySelectorAll(".chip").forEach(function(c){
+      c.addEventListener("click", function(){
+        if(c.getAttribute("data-todas")){
+          recadoTodas = true; recadoMentorias = {};
+        } else {
+          recadoTodas = false;
+          var id = c.getAttribute("data-b");
+          if(recadoMentorias[id]) delete recadoMentorias[id]; else recadoMentorias[id] = true;
+          // sem nenhuma marcada o recado nao chegaria a ninguem — volta pra "todas"
+          if(!Object.keys(recadoMentorias).length) recadoTodas = true;
+        }
+        montaChipsRecado();
+      });
+    });
+  }
+
+  function limpaFormRecado(){
+    recadoEditando = null;
+    recadoTodas = true;
+    recadoMentorias = {};
+    ["recTitulo","recMensagem","recLink","recVence"].forEach(function(id){ $(id).value = ""; });
+    $("recPainelTitulo").textContent = "Publicar recado";
+    $("btnPublicarRec").textContent = "Publicar recado";
+    $("btnCancelarRec").style.display = "none";
+    $("recErro").textContent = "";
+    $("recErro").style.color = "";
+    montaChipsRecado();
+  }
+
+  function editaRecado(a){
+    recadoEditando = a.id;
+    $("recTitulo").value = a.title || "";
+    $("recMensagem").value = a.message || "";
+    $("recLink").value = a.link_url || "";
+    $("recVence").value = a.expires_at ? String(a.expires_at).slice(0, 10) : "";
+    recadoTodas = !!a.all_branches;
+    recadoMentorias = {};
+    (a.announcement_branches || []).forEach(function(x){ recadoMentorias[x.branch_id] = true; });
+    $("recPainelTitulo").textContent = "Editar recado";
+    $("btnPublicarRec").textContent = "Salvar alteracoes";
+    $("btnCancelarRec").style.display = "";
+    $("recErro").textContent = "";
+    $("recErro").style.color = "";
+    montaChipsRecado();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  $("btnCancelarRec").addEventListener("click", limpaFormRecado);
+
+  $("btnPublicarRec").addEventListener("click", function(){
+    var err = $("recErro");
+    err.style.color = "";
+    var mensagem = $("recMensagem").value.trim();
+    if(!mensagem){ err.textContent = "Escreva a mensagem do recado."; return; }
+
+    var vence = $("recVence").value;
+    var dados = {
+      title: $("recTitulo").value.trim() || null,
+      message: mensagem,
+      link_url: $("recLink").value.trim() || null,
+      all_branches: recadoTodas,
+      expires_at: vence ? new Date(vence + "T23:59:59").toISOString() : null
+    };
+
+    $("btnPublicarRec").disabled = true;
+    err.textContent = "Salvando...";
+
+    function vinculaMentorias(id){
+      sb.from("announcement_branches").delete().eq("announcement_id", id).then(function(){
+        var ids = recadoTodas ? [] : Object.keys(recadoMentorias);
+
+        function fim(erroVinculo){
+          $("btnPublicarRec").disabled = false;
+          if(erroVinculo){ err.textContent = "Recado salvo, mas nao gravei as mentorias: " + erroVinculo; return; }
+          var editou = !!recadoEditando;
+          limpaFormRecado();
+          $("recErro").style.color = "var(--green)";
+          $("recErro").textContent = editou ? "Recado atualizado." : "Recado publicado. Ja aparece no Portal do Aluno.";
+          carregaRecados();
+        }
+
+        if(!ids.length){ fim(null); return; }
+        sb.from("announcement_branches")
+          .insert(ids.map(function(b){ return { announcement_id: id, branch_id: b }; }))
+          .then(function(r){ fim(r.error ? r.error.message : null); });
+      });
+    }
+
+    if(recadoEditando){
+      sb.from("announcements").update(dados).eq("id", recadoEditando).then(function(r){
+        if(r.error){ $("btnPublicarRec").disabled = false; err.textContent = "Erro ao salvar: " + r.error.message; return; }
+        vinculaMentorias(recadoEditando);
+      });
+    } else {
+      dados.created_by = eu ? eu.id : null;
+      sb.from("announcements").insert(dados).select().single().then(function(r){
+        if(r.error){ $("btnPublicarRec").disabled = false; err.textContent = "Erro ao publicar: " + r.error.message; return; }
+        vinculaMentorias(r.data.id);
+      });
+    }
+  });
+
+  function carregaRecados(){
+    sb.from("announcements")
+      .select("id,title,message,link_url,attachment_url,attachment_name,all_branches,expires_at,created_at,created_by,staff:created_by(full_name),announcement_branches(branch_id)")
+      .order("created_at", { ascending: false })
+      .then(function(r){
+        if(r.error){ $("listaRecados").innerHTML = '<p class="vazio">Erro ao ler os recados: ' + esc(r.error.message) + '</p>'; return; }
+        recados = r.data || [];
+        montaChipsRecado();
+        $("notaRecados").textContent = recados.length + " recado(s)";
+
+        $("listaRecados").innerHTML = recados.length ? recados.map(function(a){
+          var vencido = a.expires_at && new Date(a.expires_at).getTime() < Date.now();
+          var alvos = a.all_branches
+            ? '<span class="selo">Todas as mentorias</span>'
+            : (a.announcement_branches || []).map(function(x){
+                var b = branches.find(function(y){ return y.id === x.branch_id; });
+                return '<span class="selo">' + esc(b ? b.name : "mentoria") + '</span>';
+              }).join(" ");
+          var autor = (a.staff && a.staff.full_name) || "equipe";
+
+          return '<div class="painel" style="margin-bottom:12px;' + (vencido ? "opacity:.55;" : "") + '">' +
+            '<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;">' +
+              '<h4 style="margin:0;">' + esc(a.title || "Recado") + '</h4>' +
+              '<div class="acao-linha">' +
+                '<button class="btn btn-ghost btn-mini rec-editar" data-id="' + a.id + '">Editar</button>' +
+                '<button class="btn btn-ghost btn-mini rec-apagar" data-id="' + a.id + '">Excluir</button>' +
+              '</div>' +
+            '</div>' +
+            '<p style="margin:10px 0;font-size:12.5px;color:var(--txt-2);white-space:pre-wrap;">' + esc(a.message || "") + '</p>' +
+            (a.link_url ? '<p style="margin:0 0 8px;"><a href="' + esc(a.link_url) + '" target="_blank" rel="noopener" style="color:var(--gold-lit);font-size:12px;">' + esc(a.link_url) + '</a></p>' : '') +
+            (a.attachment_url ? '<p style="margin:0 0 8px;"><a href="' + esc(a.attachment_url) + '" target="_blank" rel="noopener" style="color:var(--gold-lit);font-size:12px;">' + esc(a.attachment_name || "anexo") + '</a></p>' : '') +
+            '<div style="margin-bottom:8px;">' + alvos + '</div>' +
+            '<p class="dica" style="margin:0;">' + esc(autor) + ' \u00b7 ' + dataCurta(a.created_at) +
+              (a.expires_at ? (vencido ? ' \u00b7 venceu em ' : ' \u00b7 vence em ') + dataCurta(a.expires_at) : '') + '</p>' +
+          '</div>';
+        }).join("") : '<p class="vazio">Nenhum recado publicado ainda.</p>';
+
+        document.querySelectorAll(".rec-editar").forEach(function(btn){
+          btn.addEventListener("click", function(){
+            var a = recados.find(function(x){ return x.id === btn.getAttribute("data-id"); });
+            if(a) editaRecado(a);
+          });
+        });
+        document.querySelectorAll(".rec-apagar").forEach(function(btn){
+          btn.addEventListener("click", function(){
+            if(!confirm("Excluir esse recado? Os mentorados deixam de ve-lo.")) return;
+            btn.disabled = true;
+            sb.from("announcements").delete().eq("id", btn.getAttribute("data-id")).then(function(r){
+              if(r.error){ btn.disabled = false; alert("Erro ao excluir: " + r.error.message); return; }
+              carregaRecados();
+            });
+          });
+        });
+      });
   }
 
   confereAcesso();
