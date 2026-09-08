@@ -682,7 +682,10 @@
       <div class="card">
         <div class="card-head">
           <h3><i class="fa-solid fa-image icn"></i>Arte da semana para o WhatsApp</h3>
-          <button class="btn-primary" id="arteBaixarBtn"><i class="fa-solid fa-download"></i> Baixar PNG</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-secondary" id="arteBaixarTodasBtn" style="width:auto;"><i class="fa-solid fa-layer-group"></i> Baixar uma por mentoria</button>
+            <button class="btn-primary" id="arteBaixarBtn"><i class="fa-solid fa-download"></i> Baixar PNG</button>
+          </div>
         </div>
         <p class="hint" style="margin:-8px 0 14px;">Monta a imagem <b>a partir das aulas que já estão cadastradas acima</b> — você não digita nada de novo. O que o aluno vê no Portal e o que sai na arte são sempre a mesma coisa.</p>
         <div class="filter-row" style="margin-bottom:14px;align-items:flex-end;gap:14px;flex-wrap:wrap;">
@@ -3763,9 +3766,61 @@
       '<div class="arte-days">' + colunas + '</div>' +
       '<div class="arte-foot"><img src="/assets/logo-endogin.png" alt="Endogin"></div>';
 
-    $("arteStatus").textContent = total
-      ? total + " aula(s) nesta semana, vindas do Calendário acima."
-      : "Nenhuma aula cadastrada para essa semana. Cadastre acima em \"Nova aula/encontro\" e a arte se monta sozinha.";
+    var nomeMent = arteMentoriaNome();
+    var misturando = !nomeMent && arteBranchesComAula().length > 0;
+    $("arteStatus").innerHTML = total
+      ? total + " aula(s) nesta semana" + (nomeMent ? ' de <b>' + nomeMent + '</b>' : "") + ", vindas do Calendário acima." +
+        (misturando
+          ? '<br><span style="color:var(--eg-gold-300);"><b>Esta imagem está misturando mentorias.</b> Com "Todas as mentorias" escolhido, a arte junta aula de mentorias diferentes — mandada no grupo de uma delas, mostra aula que aquele aluno não tem. Escolha a mentoria aí em cima, ou clique em "Baixar uma por mentoria".</span>'
+          : "")
+      : 'Nenhuma aula cadastrada para essa semana. Cadastre acima em "Nova aula/encontro" e a arte se monta sozinha.';
+  }
+
+  // Quais mentorias tem aula PROPRIA nesta semana. As aulas marcadas como
+  // "Todas as mentorias" nao entram na conta porque elas saem em toda arte —
+  // sao justamente as que nao dividem ninguem.
+  function arteBranchesComAula(){
+    var dias = arteDatasDaSemana();
+    var achadas = {};
+    ARTE_DIAS.forEach(function(dia, i){
+      var iso = arteISO(dias[i]);
+      allLessons.forEach(function(l){
+        if(!l.branch_id) return;
+        var bate = l.lesson_type === "evento" ? l.event_date === iso : l.weekday === dia;
+        if(bate) achadas[l.branch_id] = true;
+      });
+    });
+    return allBranches.filter(function(b){ return achadas[b.id]; });
+  }
+
+  // 1600px de largura: o WhatsApp recomprime imagem muito grande e borra o
+  // texto pequeno das tags; nesse tamanho o card ainda fica legível no celular.
+  function gerarArtePNG(){
+    var alvo = $("arteCanvas");
+    return html2canvas(alvo, {
+      scale: 1600 / alvo.getBoundingClientRect().width,
+      useCORS: true,
+      backgroundColor: "#02101d",
+      logging: false,
+      imageTimeout: 15000
+    }).then(function(canvas){
+      return new Promise(function(resolve, reject){
+        canvas.toBlob(function(blob){
+          if(!blob){ reject(new Error("o navegador devolveu uma imagem vazia")); return; }
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          var dias = arteDatasDaSemana();
+          a.href = url;
+          // o nome do arquivo carrega a mentoria: quem baixa sete cronogramas
+          // seguidos precisa saber qual e qual sem abrir um por um
+          a.download = "cronograma-endogin" + arteMentoriaSlug() + "-" + arteISO(dias[0]) + ".png";
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1000);
+          resolve();
+        }, "image/png", 1);
+      });
+    });
   }
 
   function baixarArtePNG(){
@@ -3778,37 +3833,68 @@
     var original = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = "Gerando imagem...";
-    var alvo = $("arteCanvas");
-
-    // 1600px de largura: o WhatsApp recomprime imagem muito grande e borra o
-    // texto pequeno das tags; nesse tamanho o card ainda fica legível no celular.
-    html2canvas(alvo, {
-      scale: 1600 / alvo.getBoundingClientRect().width,
-      useCORS: true,
-      backgroundColor: "#02101d",
-      logging: false,
-      imageTimeout: 15000
-    }).then(function(canvas){
-      canvas.toBlob(function(blob){
-        if(!blob){ st.textContent = "Não consegui gerar o PNG. Tenta de novo."; return; }
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement("a");
-        var dias = arteDatasDaSemana();
-        a.href = url;
-        // o nome do arquivo carrega a mentoria: quem baixa quatro cronogramas
-        // seguidos precisa saber qual e qual sem abrir um por um
-        a.download = "cronograma-endogin" + arteMentoriaSlug() + "-" + arteISO(dias[0]) + ".png";
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1000);
-        st.textContent = "Imagem baixada. É só mandar no grupo.";
-      }, "image/png", 1);
-    }).catch(function(e){
+    gerarArtePNG().then(function(){
+      st.textContent = "Imagem baixada. É só mandar no grupo.";
+    })["catch"](function(e){
       st.textContent = "Não consegui gerar o PNG: " + e.message;
     }).then(function(){
       btn.disabled = false;
       btn.innerHTML = original;
     });
+  }
+
+  // Uma imagem por mentoria, em sequencia. Cada grupo de WhatsApp e de uma
+  // mentoria so, entao mandar a arte "de todas" no grupo da Mae mostra aula da
+  // Start pra quem nao tem Start. Isto resolve os sete de uma vez.
+  function baixarTodasArtes(){
+    var btn = $("arteBaixarTodasBtn");
+    var st = $("arteStatus");
+    if(typeof html2canvas !== "function"){
+      st.textContent = "A biblioteca de imagem ainda não carregou. Espera uns segundos e tenta de novo.";
+      return;
+    }
+
+    var alvos = arteBranchesComAula();
+    if(!alvos.length){
+      st.innerHTML = '<span style="color:var(--eg-gold-300);">Nenhuma aula desta semana está vinculada a uma mentoria — todas estão como "Todas as mentorias". ' +
+        'Enquanto for assim, uma imagem só já serve, e ela vale para a base inteira. ' +
+        'Marque a mentoria de cada aula no Calendário acima (lápis) e este botão passa a gerar uma arte por mentoria.</span>';
+      return;
+    }
+
+    var escolhaOriginal = $("arteBranch").value;
+    var original = btn.innerHTML;
+    btn.disabled = true;
+    $("arteBaixarBtn").disabled = true;
+
+    var i = 0;
+    function encerra(msg){
+      $("arteBranch").value = escolhaOriginal;
+      renderArteSemana();
+      btn.disabled = false;
+      btn.innerHTML = original;
+      $("arteBaixarBtn").disabled = false;
+      if(msg) st.textContent = msg;
+    }
+
+    function proxima(){
+      if(i >= alvos.length){ encerra(alvos.length + " imagem(ns) baixada(s), uma por mentoria."); return; }
+      var b = alvos[i++];
+      btn.innerHTML = "Gerando " + i + " de " + alvos.length + "...";
+      $("arteBranch").value = b.id;
+      renderArteSemana();
+      // o desenho precisa terminar antes do html2canvas ler a tela, e os
+      // downloads precisam de folga entre si ou o navegador descarta os ultimos
+      setTimeout(function(){
+        gerarArtePNG().then(function(){
+          setTimeout(proxima, 700);
+        })["catch"](function(e){
+          encerra("Parei em " + b.name + ": " + e.message);
+        });
+      }, 150);
+    }
+
+    proxima();
   }
 
   var arteIniciada = false;
@@ -3824,6 +3910,7 @@
       $(id).addEventListener("input", renderArteSemana);
     });
     $("arteBaixarBtn").addEventListener("click", baixarArtePNG);
+    $("arteBaixarTodasBtn").addEventListener("click", baixarTodasArtes);
   }
 
   function loadCalendarioAdmin(){
