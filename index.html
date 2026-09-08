@@ -279,7 +279,16 @@
   @keyframes eg-corre{from{transform:translateX(0);}to{transform:translateX(-50%);}}
 
   @media (max-width:760px){
-    .gigante{font-size:19vw;}
+    /* O logo caia no minimo do clamp e ficava pequeno perto do vazio da tela.
+       Aqui ele passa a acompanhar a largura do aparelho. */
+    .logo-grande{width:min(72vw,300px);}
+    /* sobe a seta: o selo do Netlify fica ancorado no canto inferior e
+       encostava nela */
+    .descer{bottom:11vh;}
+    /* O texto gigante nascia cortado pela borda de baixo e ainda passava por
+       cima do credito. Numa tela estreita ele nao cabe como marca d'agua sem
+       atrapalhar o que precisa ser lido. */
+    .gigante{display:none;}
     .aro{width:96vw;} .aro2{width:74vw;}
     /* No celular a cortina com `fixed` engasga: a barra de endereco entra e sai
        e muda a altura da janela no meio da rolagem. Aqui vira bloco normal. */
