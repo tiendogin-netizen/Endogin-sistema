@@ -196,6 +196,18 @@
   .modal-overlay{position:fixed;inset:0;background:rgba(4,8,16,0.72);display:none;align-items:center;justify-content:center;z-index:50;padding:24px;}
   .modal-overlay.open{display:flex;}
   .modal-card{background:var(--eg-bg-1);border:1px solid var(--eg-border-strong);border-radius:16px;max-width:440px;width:100%;max-height:86vh;overflow-y:auto;}
+  /* aviso curto de canto: confirma a mudanca e diz qual foi */
+  .aviso{
+    position:fixed;right:22px;bottom:22px;z-index:120;max-width:340px;
+    background:var(--eg-bg-2);border:1px solid var(--eg-border-strong);border-radius:10px;
+    padding:13px 16px;font-size:12.5px;line-height:1.5;color:var(--eg-text-primary);
+    box-shadow:0 16px 40px rgba(0,0,0,0.45);
+    opacity:0;transform:translateY(10px);pointer-events:none;
+    transition:opacity .28s ease, transform .28s ease;
+  }
+  .aviso.on{opacity:1;transform:none;}
+  .aviso b{color:var(--eg-gold-300);}
+
   .modal-card.larga{max-width:1000px;}
   .modal-card.larga .modal-body{padding:24px 28px;}
   .modal-card.larga .form-grid{grid-template-columns:repeat(3,1fr);gap:14px 18px;}
@@ -918,6 +930,8 @@
 </div>
 
 <!-- ================= MODAL: ALUNO ================= -->
+<div class="aviso" id="aviso"></div>
+
 <div class="modal-overlay" id="alunoModal">
   <div class="modal-card larga">
     <div class="modal-head">
@@ -1962,6 +1976,8 @@
       updates.cs_id = csVal || null;
     }
 
+    var statusAntes = student.status;
+
     sb.from("students").update(updates).eq("id", student.id).then(function(r){
       if(r.error){ $("alunoModalErr").textContent = "Erro ao salvar: " + r.error.message; return; }
       syncStudentBranches(student, function(err){
@@ -1969,7 +1985,10 @@
         syncStudentGroups(student, function(err2){
           if(err2){ $("alunoModalErr").textContent = "Status salvo, mas erro nos grupos de WhatsApp: " + err2; return; }
           $("alunoModal").classList.remove("open");
-          loadAlunos();
+          avisa(statusAntes !== newStatus
+            ? "<b>" + nome + "</b> passou de " + statusAntes + " para <b>" + newStatus + "</b>. Os números das Carteiras e do Dashboard já refletem isso."
+            : "<b>" + nome + "</b> salvo.");
+          atualizaDerivados();
         });
       });
     });
@@ -2007,7 +2026,8 @@
       if(r.error){ $("novoAlunoModalErr").textContent = "Erro ao criar: " + r.error.message; return; }
       $("novoAlunoModal").classList.remove("open");
       allStudents.push(r.data);
-      loadAlunos();
+      avisa("Aluno <b>" + (r.data.full_name || "novo") + "</b> criado. Ele ja entra na contagem das Carteiras.");
+      atualizaDerivados();
       openAlunoModal(r.data.id);
     });
   });
@@ -2325,7 +2345,7 @@
       $("alunoFieldLoginPassword").value = "";
       $("alunoCredErr").style.color = "var(--eg-green)";
       $("alunoCredErr").textContent = "Credenciais atualizadas!";
-      loadAlunos();
+      atualizaDerivados();
     });
   });
 
@@ -2361,7 +2381,8 @@
       student.auth_user_id = null;
       $("alunoCredErr").style.color = "var(--eg-green)";
       $("alunoCredErr").textContent = "Login excluído. O cadastro continua aqui.";
-      loadAlunos();
+      avisa("Login de <b>" + student.full_name + "</b> excluído. O cadastro e o histórico continuam.");
+      atualizaDerivados();
     });
   });
 
@@ -4054,6 +4075,32 @@
   var carteirasTempChartInstance = null;
   var CARTEIRAS_FILTERS = {};
 
+  // Toda tela que mostra numero de aluno deriva de uma destas duas consultas:
+  // `allStudents` (aba Alunos, Grupos, Aniversarios, seletores) e
+  // `carteirasStudents` (Carteiras CS). O Dashboard tem a sua propria. Antes,
+  // salvar a ficha so recarregava a primeira — mudar um aluno de inativo pra
+  // ativo corrigia a lista e deixava os cartoes do topo das Carteiras e do
+  // Dashboard com o numero velho ate alguem recarregar a pagina. Agora qualquer
+  // alteracao em aluno passa por aqui e as tres refazem a conta.
+  function atualizaDerivados(){
+    loadAlunos();
+    loadCarteiras();
+    dashKpisLoaded = false;
+    loadDashKpis();
+  }
+
+  // Aviso curto no canto, some sozinho. Serve pra CS ver QUE a mudanca pegou e
+  // QUAL foi — sem isso a tela so pisca e ela fica na duvida se salvou.
+  var avisoTimer = null;
+  function avisa(html){
+    var el = $("aviso");
+    if(!el) return;
+    el.innerHTML = html;
+    el.classList.add("on");
+    clearTimeout(avisoTimer);
+    avisoTimer = setTimeout(function(){ el.classList.remove("on"); }, 5000);
+  }
+
   function loadCarteiras(){
     sb.from("students")
       .select("id,full_name,phone,status,cs_id,legacy_cs_label,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_note,renewal_owner_id,staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),deliveries(label,status,branch_id)")
@@ -4179,13 +4226,22 @@
     var updates = {};
     updates[field] = value;
     if(extra) Object.keys(extra).forEach(function(k){ updates[k] = extra[k]; });
+    var antes = carteirasStudents.find(function(x){ return x.id === id; });
+    var statusAntes = antes ? antes.status : null;
+
     sb.from("students").update(updates).eq("id", id).then(function(r){
       if(r.error){ alert("Erro ao salvar: " + r.error.message); loadCarteiras(); return; }
       var s = carteirasStudents.find(function(x){ return x.id === id; });
       if(s) Object.keys(updates).forEach(function(k){ s[k] = updates[k]; });
       var alunoS = allStudents.find(function(x){ return x.id === id; });
       if(alunoS) Object.keys(updates).forEach(function(k){ alunoS[k] = updates[k]; });
+      // Redesenha na hora com o que ja esta em memoria (resposta imediata) e
+      // depois refaz as consultas, pra Dashboard e Grupos acompanharem.
       renderCarteiras();
+      if(field === "status" && statusAntes && statusAntes !== value){
+        avisa("<b>" + (s ? s.full_name : "Aluno") + "</b> passou de " + statusAntes + " para <b>" + value + "</b>.");
+      }
+      atualizaDerivados();
     });
   }
   function carteiraWireInlineSelects(wrap){
@@ -5320,7 +5376,7 @@
         st.innerHTML = "<b>Importação concluída:</b> " + feitos + " de " + total + " processado(s)"
           + (erros.length ? ', <span style="color:var(--eg-gold-300);">' + erros.length + " com erro:<br>" + erros.slice(0, 15).join("<br>") + "</span>" : ".");
         btn.disabled = false;
-        loadAlunos();
+        atualizaDerivados();
         return;
       }
       var tarefa = fila.shift();
@@ -5459,7 +5515,7 @@
       statusEl.innerHTML = "<b>Importação concluída:</b> " + created + " criado(s), " + updated + " atualizado(s)" +
         (errors.length ? ", " + errors.length + " com aviso (veja abaixo)" : ".") +
         (errors.length ? '<br><span style="color:var(--eg-gold-300);">' + errors.join("<br>") + '</span>' : "");
-      loadAlunos();
+      atualizaDerivados();
     }
     function next(){
       if(i >= rows.length){ finish(); return; }
