@@ -183,6 +183,26 @@
   }
   .dev-zap svg{width:13px;height:13px;color:#8fc79f;flex:none;}
   .dev-zap:hover{border-color:#8fc79f;color:#8fc79f;transform:translateY(-1px);background:rgba(143,199,159,.10);}
+
+  /* ======================= CELULAR ======================= */
+  /* O iOS amplia a pagina inteira quando o foco cai num campo com fonte menor
+     que 16px — e nao desfaz o zoom depois. E a causa mais comum de "quebrou no
+     celular" que nao tem nada a ver com layout. */
+  @media (max-width:760px){
+    input,select,textarea{font-size:16px;}
+  }
+
+  @media (max-width:640px){
+    .main{padding:18px 14px 40px;}
+    .painel{padding:15px 15px;}
+    .formulario{grid-template-columns:1fr;}
+    .filtros{flex-direction:column;align-items:stretch;}
+    .filtros > *{width:100% !important;min-width:0 !important;}
+    .tab-rolagem{-webkit-overflow-scrolling:touch;}
+    .tab-rolagem table{font-size:11.5px;}
+    .topo h2{font-size:25px;}
+    .acao-linha{flex-wrap:wrap;}
+  }
 </style>
 </head>
 <body>

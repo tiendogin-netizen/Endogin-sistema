@@ -369,6 +369,35 @@
   }
   .dev-zap svg{width:13px;height:13px;color:#8fc79f;flex:none;}
   .dev-zap:hover{border-color:#8fc79f;color:#8fc79f;transform:translateY(-1px);background:rgba(143,199,159,.10);}
+
+  /* ======================= CELULAR ======================= */
+  /* O iOS amplia a pagina inteira quando o foco cai num campo com fonte menor
+     que 16px — e nao desfaz o zoom depois. E a causa mais comum de "quebrou no
+     celular" que nao tem nada a ver com layout. */
+  @media (max-width:760px){
+    input,select,textarea{font-size:16px;}
+  }
+
+  @media (max-width:640px){
+    /* A ficha do aluno abria em duas colunas de 125px: "Data de renovacao" e o
+       seletor de data nativo nao cabem nisso. A regra de .modal-card.larga
+       vencia a de .form-grid por especificidade, entao as duas entram aqui. */
+    .form-grid,.modal-card.larga .form-grid{grid-template-columns:1fr;}
+    .modal-overlay{padding:12px;}
+    .modal-card,.modal-card.larga{max-width:100%;max-height:92vh;}
+    .modal-card.larga .modal-body{padding:18px 16px;}
+    .modal-card.larga .modal-head{padding:16px 16px;}
+    .card{padding:16px 15px;}
+    .card-head{flex-wrap:wrap;gap:10px;}
+    .filter-row{flex-direction:column;align-items:stretch;}
+    .filter-row > *{width:100%;}
+    .search-input{max-width:none !important;}
+    .metric-row{grid-template-columns:repeat(2,1fr);}
+    .carteira-table-wrap,.mat-table-wrap{-webkit-overflow-scrolling:touch;}
+    table{font-size:12px;}
+    .modal-foot{flex-wrap:wrap;gap:10px;}
+    .modal-foot .btn-primary{width:100%;}
+  }
 </style>
 </head>
 <body>

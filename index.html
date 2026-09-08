@@ -297,6 +297,14 @@
   }
   .dev-zap svg{width:13px;height:13px;color:#8fc79f;flex:none;}
   .dev-zap:hover{border-color:#8fc79f;color:#8fc79f;transform:translateY(-1px);background:rgba(143,199,159,.10);}
+
+  /* ======================= CELULAR ======================= */
+  @media (max-width:640px){
+    /* o rodape tem tres blocos numa linha so; no celular eles empilham
+       centralizados em vez de se espremerem */
+    .rodape-pe{flex-wrap:wrap;justify-content:center;gap:16px;text-align:center;}
+    .dev-credito{width:100%;}
+  }
 </style>
 </head>
 <body>
