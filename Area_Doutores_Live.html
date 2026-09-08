@@ -189,7 +189,10 @@
      que 16px — e nao desfaz o zoom depois. E a causa mais comum de "quebrou no
      celular" que nao tem nada a ver com layout. */
   @media (max-width:760px){
-    input,select,textarea{font-size:16px;}
+    select,textarea,
+    input[type=text],input[type=email],input[type=password],input[type=number],
+    input[type=date],input[type=datetime-local],input[type=tel],input[type=search],
+    .search-input{font-size:16px;}
   }
 
   @media (max-width:640px){

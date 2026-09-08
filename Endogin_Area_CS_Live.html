@@ -375,7 +375,10 @@
      que 16px — e nao desfaz o zoom depois. E a causa mais comum de "quebrou no
      celular" que nao tem nada a ver com layout. */
   @media (max-width:760px){
-    input,select,textarea{font-size:16px;}
+    select,textarea,
+    input[type=text],input[type=email],input[type=password],input[type=number],
+    input[type=date],input[type=datetime-local],input[type=tel],input[type=search],
+    .search-input{font-size:16px;}
   }
 
   @media (max-width:640px){
@@ -1022,7 +1025,7 @@
       </div>
       <div class="form-grid">
         <div style="grid-column:1/-1;"><label>Identificação</label></div>
-        <div style="grid-column:span 2;"><label>Nome completo</label><input type="text" id="alunoFieldName"></div>
+        <div style="grid-column:1/-1;"><label>Nome completo</label><input type="text" id="alunoFieldName"></div>
         <div>
           <label>E-mail do cadastro</label>
           <input type="email" id="alunoFieldEmail">
