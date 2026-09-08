@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diretoria — Endogin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Montserrat:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg-0:#080d17; --bg-1:#0e1a29; --bg-2:#152436; --bg-3:#1c2f4a;
+    --line:rgba(255,255,255,0.07); --line-2:rgba(255,255,255,0.14);
+    --gold:#c9974b; --gold-lit:#e3bd76; --gold-pale:#f2dfae;
+    --txt:#f3f0e8; --txt-2:#aab4c9; --txt-3:#6d7994;
+    --green:#8fc79f; --red:#d98a8a; --blue:#8fb3e0;
+    --sora:'Sora','Segoe UI',system-ui,sans-serif;
+    --mont:'Montserrat','Segoe UI',system-ui,sans-serif;
+    --mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+    --ease:cubic-bezier(.22,.75,.28,1);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg-0);color:var(--txt);font-family:var(--mont);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+  a{color:var(--gold-lit);}
+  input,select,textarea{font-family:var(--mont);font-size:13px;background:var(--bg-2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:9px 11px;outline:none;transition:border-color .25s var(--ease);}
+  input:focus,select:focus,textarea:focus{border-color:var(--gold);}
+  label{display:block;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--txt-3);margin-bottom:6px;}
+
+  /* ---------------- login ---------------- */
+  .auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+    background:radial-gradient(900px 500px at 50% -10%,#12304f 0,#08131f 45%,#050b13 100%);}
+  .auth-card{width:100%;max-width:380px;background:rgba(14,26,41,.9);border:1px solid var(--line-2);border-radius:14px;padding:30px 28px;}
+  .auth-card h1{font-family:var(--sora);font-size:19px;font-weight:600;margin:0 0 4px;letter-spacing:.02em;}
+  .auth-card .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--gold);margin-bottom:8px;}
+  .auth-card p{margin:0 0 20px;font-size:12.5px;color:var(--txt-3);}
+  .auth-card .campo{margin-bottom:14px;}
+  .btn{font-family:var(--mont);font-size:13px;font-weight:600;border:0;border-radius:8px;padding:11px 18px;cursor:pointer;
+    background:linear-gradient(120deg,var(--gold-lit),var(--gold));color:#1a1206;
+    transition:transform .25s var(--ease),box-shadow .25s var(--ease);}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(201,151,75,.28);}
+  .btn:disabled{opacity:.6;transform:none;box-shadow:none;cursor:default;}
+  .btn-ghost{background:none;border:1px solid var(--line-2);color:var(--txt-2);}
+  .btn-ghost:hover{border-color:var(--gold);color:var(--txt);box-shadow:none;}
+  .btn-full{width:100%;}
+  .erro{color:var(--red);font-size:12px;margin-top:10px;min-height:16px;}
+
+  /* ---------------- shell ---------------- */
+  .shell{display:none;min-height:100vh;grid-template-columns:236px 1fr;}
+  .side{background:var(--bg-1);border-right:1px solid var(--line);padding:22px 0 20px;display:flex;flex-direction:column;gap:22px;position:sticky;top:0;height:100vh;overflow-y:auto;}
+  .marca{display:flex;align-items:center;gap:10px;padding:0 20px;}
+  .marca-selo{width:30px;height:30px;border-radius:7px;flex:none;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;
+    font-family:var(--sora);font-size:11px;font-weight:600;color:var(--gold-lit);letter-spacing:.04em;}
+  .marca-txt{font-family:var(--sora);font-size:13px;font-weight:600;letter-spacing:.14em;line-height:1.2;}
+  .marca-txt span{display:block;font-family:var(--mono);font-size:8.5px;font-weight:400;color:var(--txt-3);letter-spacing:.2em;margin-top:2px;}
+  .nav-grupo{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--txt-3);padding:0 20px;margin-bottom:7px;}
+  .nav{display:flex;flex-direction:column;margin-bottom:18px;}
+  .nav button{position:relative;display:block;width:100%;text-align:left;padding:9px 20px;font-family:var(--mont);font-size:13px;
+    color:var(--txt-2);background:none;border:0;cursor:pointer;transition:color .25s var(--ease),padding-left .25s var(--ease),background .25s var(--ease);}
+  .nav button::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:2px;background:var(--gold);transform:scaleY(0);transform-origin:top;transition:transform .3s var(--ease);}
+  .nav button:hover{color:var(--txt);padding-left:26px;background:rgba(255,255,255,.03);}
+  .nav button:hover::before{transform:scaleY(.5);}
+  .nav button.on{color:var(--txt);font-weight:600;background:rgba(201,151,75,.08);}
+  .nav button.on::before{transform:scaleY(1);}
+  .side-pe{margin-top:auto;padding:0 20px;font-size:11.5px;color:var(--txt-3);}
+  .side-pe b{display:block;color:var(--txt-2);font-size:12.5px;margin-bottom:2px;}
+  .sair{background:none;border:0;color:var(--txt-3);font-family:var(--mont);font-size:11.5px;cursor:pointer;padding:0;margin-top:10px;text-decoration:underline;}
+
+  .main{padding:26px 34px 50px;min-width:0;}
+  .topo{margin-bottom:26px;}
+  .topo .caminho{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--txt-3);margin-bottom:8px;}
+  .topo h2{font-family:var(--sora);font-size:26px;font-weight:600;margin:0 0 6px;letter-spacing:-.015em;}
+  .topo p{margin:0;color:var(--txt-2);font-size:13px;max-width:70ch;}
+
+  .vista{display:none;}
+  .vista.on{display:block;}
+  @keyframes sobe{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+  .vista.on > *{animation:sobe .45s var(--ease) both;}
+  .vista.on > *:nth-child(2){animation-delay:60ms;}
+  .vista.on > *:nth-child(3){animation-delay:120ms;}
+  .vista.on > *:nth-child(4){animation-delay:180ms;}
+  .vista.on > *:nth-child(n+5){animation-delay:240ms;}
+
+  /* ---------------- blocos ---------------- */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:26px;}
+  .kpi{background:var(--bg-1);border:1px solid var(--line);border-radius:10px;padding:16px 18px;transition:border-color .3s var(--ease),transform .3s var(--ease);}
+  .kpi:hover{border-color:var(--line-2);transform:translateY(-2px);}
+  .kpi .rot{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--txt-3);margin-bottom:9px;}
+  .kpi .num{font-family:var(--sora);font-size:30px;font-weight:600;line-height:1;letter-spacing:-.02em;}
+  .kpi .num small{font-size:14px;font-weight:500;color:var(--txt-3);margin-left:2px;}
+  .kpi .sub{font-size:11.5px;color:var(--txt-3);margin-top:7px;}
+  .kpi.ok .num{color:var(--green);} .kpi.alerta .num{color:var(--gold-lit);} .kpi.risco .num{color:var(--red);}
+
+  .secao{margin-bottom:30px;}
+  .secao-cab{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap;}
+  .secao-cab h3{font-family:var(--sora);font-size:14px;font-weight:600;margin:0;}
+  .secao-cab .nota{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--txt-3);}
+
+  .graficos{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;}
+  .painel{background:var(--bg-1);border:1px solid var(--line);border-radius:10px;padding:18px 20px;}
+  .painel h4{font-family:var(--sora);font-size:13px;font-weight:600;margin:0 0 3px;}
+  .painel .dica{font-size:11.5px;color:var(--txt-3);margin:0 0 14px;}
+  .tela-grafico{position:relative;height:230px;}
+
+  table{width:100%;border-collapse:collapse;}
+  th{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--txt-3);text-align:left;font-weight:400;padding:0 10px 9px 0;border-bottom:1px solid var(--line);}
+  td{padding:11px 10px 11px 0;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top;}
+  tbody tr{transition:background .25s var(--ease);}
+  tbody tr:hover{background:rgba(255,255,255,.025);}
+  .tab-rolagem{overflow-x:auto;}
+  .principal{font-weight:600;}
+  .secundario{display:block;font-size:11px;color:var(--txt-3);margin-top:2px;}
+  .cod{font-family:var(--mono);font-size:11px;color:var(--gold-lit);}
+  .num-col{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;}
+
+  .selo{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;border-radius:4px;padding:3px 8px;border:1px solid var(--line-2);color:var(--txt-2);white-space:nowrap;}
+  .selo.ok{color:var(--green);border-color:rgba(143,199,159,.4);}
+  .selo.alerta{color:var(--gold-lit);border-color:rgba(227,189,118,.4);}
+  .selo.risco{color:var(--red);border-color:rgba(217,138,138,.4);}
+  .selo.frio{color:var(--blue);border-color:rgba(143,179,224,.4);}
+
+  .barra{height:4px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:6px;min-width:90px;}
+  .barra i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-lit));width:0;transition:width .9s var(--ease);}
+
+  .filtros{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;}
+  .chip{font-family:var(--mont);font-size:11.5px;color:var(--txt-2);background:none;border:1px solid var(--line-2);border-radius:20px;padding:6px 13px;cursor:pointer;
+    transition:background .25s var(--ease),color .25s var(--ease),border-color .25s var(--ease),transform .25s var(--ease);}
+  .chip:hover{transform:translateY(-2px);border-color:rgba(201,151,75,.45);color:var(--txt);}
+  .chip.on{background:rgba(201,151,75,.16);border-color:rgba(201,151,75,.5);color:var(--gold-pale);font-weight:600;}
+
+  .vazio{font-size:12.5px;color:var(--txt-3);padding:16px 0;line-height:1.6;}
+
+  /* motivos de risco: o que faz o mentorado aparecer na lista */
+  .motivos{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+  .motivo{font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;
+    border-radius:3px;padding:2px 6px;border:1px solid var(--line-2);color:var(--txt-3);white-space:nowrap;}
+  .motivo.grave{color:var(--red);border-color:rgba(217,138,138,.4);background:rgba(217,138,138,.07);}
+  .motivo.medio{color:var(--gold-lit);border-color:rgba(227,189,118,.35);}
+  .risco-nota{font-family:var(--sora);font-size:19px;font-weight:600;line-height:1;}
+  .risco-nota.alto{color:var(--red);} .risco-nota.medio{color:var(--gold-lit);} .risco-nota.baixo{color:var(--green);}
+  .risco-faixa{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt-3);display:block;margin-top:3px;}
+  .aviso-caixa{background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.28);border-radius:9px;padding:13px 16px;font-size:12.5px;color:var(--txt-2);margin-bottom:18px;line-height:1.6;}
+  .aviso-caixa b{color:var(--gold-pale);}
+
+  .formulario{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:14px;}
+  .formulario .largo{grid-column:1/-1;}
+  .formulario input,.formulario select,.formulario textarea{width:100%;}
+
+  @media(max-width:900px){
+    .shell{grid-template-columns:1fr;}
+    .side{position:static;height:auto;flex-direction:row;align-items:center;gap:14px;overflow-x:auto;padding:12px 0;}
+    .nav{flex-direction:row;margin-bottom:0;}
+    .nav-grupo{display:none;}
+    .nav button{white-space:nowrap;}
+    .side-pe{margin-top:0;}
+    .main{padding:20px 18px 40px;}
+  }
+  @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none!important;transition-duration:.01ms!important;} }
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div class="auth" id="telaLogin">
+  <form class="auth-card" id="formLogin">
+    <div class="eyebrow">MENTORIA ENDOGIN</div>
+    <h1>Área da Diretoria</h1>
+    <p>Acesso do Dr. Caio e do Dr. Vinícius ao panorama da mentoria.</p>
+    <div class="campo"><label for="loginEmail">E-mail</label><input type="email" id="loginEmail" style="width:100%;" autocomplete="username" required></div>
+    <div class="campo"><label for="loginSenha">Senha</label><input type="password" id="loginSenha" style="width:100%;" autocomplete="current-password" required></div>
+    <button class="btn btn-full" type="submit" id="btnEntrar">Entrar</button>
+    <div class="erro" id="loginErro"></div>
+  </form>
+</div>
+
+<!-- ===================== APLICAÇÃO ===================== -->
+<div class="shell" id="shell">
+  <aside class="side">
+    <div class="marca">
+      <div class="marca-selo">EG</div>
+      <div class="marca-txt">ENDOGIN<span>DIRETORIA</span></div>
+    </div>
+
+    <div>
+      <div class="nav-grupo">OPERAÇÃO</div>
+      <nav class="nav" id="nav">
+        <button class="on" data-v="panorama">Visão geral</button>
+        <button data-v="atencao">Precisam de atenção</button>
+      </nav>
+      <div class="nav-grupo">CONTEÚDO</div>
+      <nav class="nav" id="nav2">
+        <button data-v="cursos">Aulas gravadas</button>
+        <button data-v="materiais">Materiais</button>
+      </nav>
+      <div class="nav-grupo">ENGAJAMENTO</div>
+      <nav class="nav" id="nav3">
+        <button data-v="aovivo">Aulas ao vivo</button>
+        <button data-v="recados">Recados</button>
+      </nav>
+    </div>
+
+    <div class="side-pe">
+      <b id="quemSou">—</b>
+      <span>Diretoria</span>
+      <button class="sair" id="btnSair">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ============ VISÃO GERAL ============ -->
+    <section class="vista on" id="v-panorama">
+      <div class="topo">
+        <div class="caminho">DIRETORIA</div>
+        <h2>Visão geral</h2>
+        <p>O retrato da mentoria hoje: quem está ativo, quem está esfriando, quem vence e como andam as aulas.</p>
+      </div>
+
+      <div class="kpis" id="kpis"></div>
+
+      <div class="secao">
+        <div class="secao-cab"><h3>O que sustenta a renovação</h3><span class="nota">sinais que pesam na hora de renovar</span></div>
+        <div class="kpis" id="kpisRenovacao"></div>
+      </div>
+
+      <div class="secao">
+        <div class="secao-cab"><h3>Composição da base</h3><span class="nota" id="notaBase"></span></div>
+        <div class="graficos">
+          <div class="painel">
+            <h4>Por situação</h4>
+            <p class="dica">Ativo, onboarding, trancado, inativo.</p>
+            <div class="tela-grafico"><canvas id="gStatus"></canvas></div>
+          </div>
+          <div class="painel">
+            <h4>Por temperatura</h4>
+            <p class="dica">Leitura da CS sobre o engajamento de cada mentorado.</p>
+            <div class="tela-grafico"><canvas id="gTemp"></canvas></div>
+          </div>
+          <div class="painel">
+            <h4>Por mentoria</h4>
+            <p class="dica">Quantos mentorados ativos cada braço tem.</p>
+            <div class="tela-grafico"><canvas id="gMentoria"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="secao">
+        <div class="secao-cab"><h3>Vencimentos</h3><span class="nota">próximos 60 dias</span></div>
+        <div class="tab-rolagem">
+          <table>
+            <thead><tr><th>Mentorado</th><th>Mentoria</th><th>CS</th><th>Vence</th><th>Situação</th></tr></thead>
+            <tbody id="tabVencimentos"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PRECISAM DE ATENÇÃO ============ -->
+    <section class="vista" id="v-atencao">
+      <div class="topo">
+        <div class="caminho">DIRETORIA</div>
+        <h2>Precisam de atenção</h2>
+        <p>Os mentorados ordenados por risco de não renovar. Cada linha mostra <b>por que</b> ele apareceu aqui — não é um palpite, são os sinais que o sistema já registra.</p>
+      </div>
+
+      <div class="aviso-caixa">
+        <b>Como ler:</b> a nota soma sinais objetivos — contrato vencendo, inadimplência, NPS baixo, pouco consumo de aula, ausência nas aulas ao vivo, 1x1 nunca realizado e a temperatura que a CS registrou. Quanto maior, mais o mentorado está escorregando. Esta tela é só leitura: quem age na ficha é a CS.
+      </div>
+
+      <div class="kpis" id="kpisAtencao"></div>
+
+      <div class="filtros">
+        <div style="flex:1;min-width:220px;"><label>Buscar</label><input type="text" id="buscaAluno" placeholder="nome ou e-mail" style="width:100%;"></div>
+        <div><label>Mentoria</label><select id="filtroMentoria"><option value="">Todas</option></select></div>
+        <div><label>CS</label><select id="filtroCs"><option value="">Todas</option></select></div>
+        <div style="align-self:flex-end;padding-bottom:2px;">
+          <button class="chip on" id="chipSoRisco">Só quem tem sinal de risco</button>
+        </div>
+      </div>
+
+      <div class="secao-cab"><h3>Lista</h3><span class="nota" id="contaAlunos"></span></div>
+      <div class="tab-rolagem">
+        <table>
+          <thead><tr><th style="width:70px;">Risco</th><th>Mentorado</th><th>Por quê</th><th>Mentoria</th><th>CS</th><th>Vence</th></tr></thead>
+          <tbody id="tabAlunos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ AULAS GRAVADAS ============ -->
+    <section class="vista" id="v-cursos">
+      <div class="topo">
+        <div class="caminho">CONTEÚDO</div>
+        <h2>Aulas gravadas</h2>
+        <p>Conclusão média de cada curso da Cademí, calculada sobre os mentorados que têm acesso a ele.</p>
+      </div>
+      <div class="kpis" id="kpisCursos"></div>
+      <div class="secao">
+        <div class="secao-cab"><h3>Desempenho por curso</h3><span class="nota" id="notaCursos"></span></div>
+        <div class="tab-rolagem">
+          <table>
+            <thead><tr><th>Curso</th><th>Mentorados com acesso</th><th>Conclusão média</th></tr></thead>
+            <tbody id="tabCursos"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ MATERIAIS ============ -->
+    <section class="vista" id="v-materiais">
+      <div class="topo">
+        <div class="caminho">CONTEÚDO</div>
+        <h2>Materiais</h2>
+        <p>Biblioteca versionada: cada protocolo tem código, versão, data de revisão e responsável. Só a versão vigente fica disponível para o mentorado.</p>
+      </div>
+
+      <div class="painel" style="margin-bottom:24px;">
+        <h4>Publicar material</h4>
+        <p class="dica">O arquivo entra como versão vigente e aparece na hora para os mentorados da mentoria escolhida.</p>
+        <div class="formulario">
+          <div class="largo"><label>Título</label><input type="text" id="matTitulo" placeholder="ex: Protocolo de TRH feminina"></div>
+          <div><label>Código</label><input type="text" id="matCodigo" placeholder="ex: PROT-TRHF-011"></div>
+          <div><label>Versão</label><input type="text" id="matVersao" placeholder="ex: v3.1"></div>
+          <div><label>Categoria</label><input type="text" id="matCategoria" placeholder="ex: TRH Feminina"></div>
+          <div><label>Tipo</label><input type="text" id="matTipo" placeholder="ex: PDF, Checklist"></div>
+          <div><label>Responsável</label><input type="text" id="matResponsavel" placeholder="ex: Dr. Caio Saraiva"></div>
+          <div><label>Mentoria</label><select id="matMentoria"><option value="">Todas as mentorias</option></select></div>
+          <div class="largo"><label>Arquivo</label><input type="file" id="matArquivo" style="width:100%;"></div>
+        </div>
+        <button class="btn" id="btnPublicarMat">Publicar material</button>
+        <div class="erro" id="matErro"></div>
+      </div>
+
+      <div class="secao-cab"><h3>Biblioteca</h3><span class="nota" id="notaMateriais"></span></div>
+      <div class="tab-rolagem">
+        <table>
+          <thead><tr><th>Documento</th><th>Versão</th><th>Revisão</th><th>Responsável</th><th>Mentoria</th><th>Status</th></tr></thead>
+          <tbody id="tabMateriais"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ AO VIVO ============ -->
+    <section class="vista" id="v-aovivo">
+      <div class="topo">
+        <div class="caminho">ENGAJAMENTO</div>
+        <h2>Aulas ao vivo</h2>
+        <p>As aulas semanais e os encontros cadastrados, com quantos mentorados clicaram para entrar.</p>
+      </div>
+
+      <div class="aviso-caixa" id="avisoZoom">
+        <b>Presença confirmada ainda não existe.</b> O número abaixo é de <b>cliques no botão de entrar</b>, medido pela própria plataforma — mostra intenção, não permanência na sala. A presença real depende da credencial da API do Zoom, que ainda não foi configurada; quando for, ela entra nesta mesma tela.
+      </div>
+
+      <div class="kpis" id="kpisAoVivo"></div>
+      <div class="secao-cab"><h3>Agenda e engajamento</h3><span class="nota" id="notaAoVivo"></span></div>
+      <div class="tab-rolagem">
+        <table>
+          <thead><tr><th>Aula / encontro</th><th>Quando</th><th>Mentoria</th><th>Cliques (total)</th><th>Últimos 7 dias</th></tr></thead>
+          <tbody id="tabAoVivo"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ RECADOS ============ -->
+    <section class="vista" id="v-recados">
+      <div class="topo">
+        <div class="caminho">ENGAJAMENTO</div>
+        <h2>Recados</h2>
+        <p>O que os mentorados veem no aviso da Jornada, dentro do Portal do Aluno.</p>
+      </div>
+      <div class="secao-cab"><h3>Publicados</h3><span class="nota" id="notaRecados"></span></div>
+      <div id="listaRecados"></div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var SUPABASE_URL = "https://pguyeowngwrolrrqbopw.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBndXllb3duZ3dyb2xycnFib3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxMzQyMzYsImV4cCI6MjA3MTcxMDIzNn0.4CxOgw2fmvCXeYSjaEQaTBNIYtTVvNwvvR5Y-l3vAiA";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  var eu = null;
+  var alunos = [], branches = [], graficos = {};
+  var perfil = {};   // student_id -> sinais coletados de outras tabelas
+  var soRisco = true;
+
+  // ---------- utilidades ----------
+  function esc(v){
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+  function dataCurta(iso){
+    if(!iso) return "—";
+    var p = String(iso).slice(0,10).split("-");
+    return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : "—";
+  }
+  function diasAte(iso){
+    if(!iso) return null;
+    var p = String(iso).slice(0,10).split("-");
+    if(p.length !== 3) return null;
+    var d = new Date(+p[0], +p[1]-1, +p[2]);
+    var hoje = new Date(); hoje.setHours(0,0,0,0);
+    return Math.round((d - hoje) / 86400000);
+  }
+  // A temperatura é campo de texto livre — "Quente", "quente" e "QUENTE" são a
+  // mesma coisa e precisam cair na mesma fatia do gráfico.
+  function temperatura(v){
+    var t = String(v || "").trim().toLowerCase();
+    if(!t) return "Sem classificação";
+    if(t.indexOf("quent") === 0) return "Quente";
+    if(t.indexOf("morn") === 0) return "Morno";
+    if(t.indexOf("fri") === 0) return "Frio";
+    return v.trim();
+  }
+  function mentoriasDe(a){
+    return (a.deliveries || []).filter(function(d){ return d.status === "ativo"; }).map(function(d){ return d.label; });
+  }
+  function contaPor(lista, chave){
+    var m = {};
+    lista.forEach(function(x){ var k = chave(x); m[k] = (m[k] || 0) + 1; });
+    return m;
+  }
+  var PALETA = ["#c9974b","#8fb3e0","#8fc79f","#d98a8a","#b294c9","#e3bd76","#7fa8a0","#c98f6b"];
+
+  function desenha(id, tipo, labels, valores, opcoes){
+    var el = $(id);
+    if(!el || typeof Chart === "undefined") return;
+    if(graficos[id]) graficos[id].destroy();
+    var base = {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: tipo === "bar" ? { display:false } : { position:"bottom", labels:{ color:"#aab4c9", font:{ size:11, family:"Montserrat" }, boxWidth:10, padding:14 } },
+        tooltip: { backgroundColor:"#0e1a29", borderColor:"rgba(255,255,255,.14)", borderWidth:1, titleColor:"#f3f0e8", bodyColor:"#aab4c9", padding:10 }
+      },
+      scales: tipo === "bar" ? {
+        x:{ grid:{ display:false }, ticks:{ color:"#6d7994", font:{ size:10.5, family:"Montserrat" } } },
+        y:{ grid:{ color:"rgba(255,255,255,.06)" }, ticks:{ color:"#6d7994", font:{ size:10.5, family:"JetBrains Mono" }, precision:0 }, beginAtZero:true }
+      } : {}
+    };
+    graficos[id] = new Chart(el, {
+      type: tipo,
+      data: { labels: labels, datasets: [{
+        data: valores,
+        backgroundColor: tipo === "bar" ? "rgba(201,151,75,.75)" : PALETA,
+        borderColor: tipo === "bar" ? "#c9974b" : "#0e1a29",
+        borderWidth: tipo === "bar" ? 0 : 2,
+        borderRadius: tipo === "bar" ? 5 : 0,
+        hoverOffset: tipo === "bar" ? 0 : 6
+      }]},
+      options: Object.assign(base, opcoes || {})
+    });
+  }
+
+  // ---------- login ----------
+  $("formLogin").addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var err = $("loginErro");
+    err.textContent = "";
+    $("btnEntrar").disabled = true;
+    sb.auth.signInWithPassword({ email: $("loginEmail").value.trim(), password: $("loginSenha").value }).then(function(r){
+      $("btnEntrar").disabled = false;
+      if(r.error){ err.textContent = "E-mail ou senha incorretos."; return; }
+      confereAcesso();
+    });
+  });
+
+  $("btnSair").addEventListener("click", function(){
+    sb.auth.signOut().then(function(){ location.reload(); });
+  });
+
+  function confereAcesso(){
+    sb.auth.getSession().then(function(s){
+      var sessao = s.data && s.data.session;
+      if(!sessao) return;
+      sb.from("staff").select("*").eq("auth_user_id", sessao.user.id).maybeSingle().then(function(r){
+        if(!r.data){
+          $("loginErro").textContent = "Login ok, mas não achei seu cadastro na equipe. Fale com a Thais.";
+          sb.auth.signOut();
+          return;
+        }
+        // A tela é da diretoria; master e admin geral entram também porque
+        // enxergam a base inteira de qualquer forma.
+        var pode = r.data.is_diretoria || r.data.is_master || r.data.is_super_admin;
+        if(!pode){
+          $("loginErro").textContent = "Sua conta não tem acesso à área da diretoria.";
+          sb.auth.signOut();
+          return;
+        }
+        eu = r.data;
+        $("quemSou").textContent = eu.full_name || "Diretoria";
+        $("telaLogin").style.display = "none";
+        $("shell").style.display = "grid";
+        carregaTudo();
+      });
+    });
+  }
+
+  // ---------- navegação ----------
+  document.querySelectorAll(".nav button").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll(".nav button").forEach(function(b){ b.classList.remove("on"); });
+      document.querySelectorAll(".vista").forEach(function(v){ v.classList.remove("on"); });
+      btn.classList.add("on");
+      $("v-" + btn.getAttribute("data-v")).classList.add("on");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      // Chart.js mede o canvas na criação: dentro de uma aba escondida ele lê
+      // zero e o gráfico nasce sem tamanho. Por isso o redesenho no clique.
+      if(btn.getAttribute("data-v") === "panorama") setTimeout(desenhaPanorama, 30);
+    });
+  });
+
+  // ---------- carga ----------
+  function carregaTudo(){
+    Promise.all([
+      sb.from("students").select("id,full_name,email,status,temperature,renewal_date,renewal_status,is_lifetime,is_delinquent,entry_date,cs_id,staff:cs_id(full_name),deliveries(label,status,branch_id)"),
+      sb.from("branches").select("id,name").order("name"),
+      // Os sinais de risco moram em tabelas separadas — sem elas a tela vira
+      // uma lista de cadastro, e o que a diretoria precisa e enxergar quem
+      // esta escorregando.
+      sb.from("course_progress").select("student_id,progress_percentage"),
+      sb.from("nps_responses").select("student_id,score,created_at"),
+      sb.from("live_click_log").select("student_id"),
+      sb.from("mentoring_sessions").select("student_id,status")
+    ]).then(function(res){
+      if(res[0].error){
+        $("kpis").innerHTML = '<p class="vazio">Não consegui ler a base de mentorados: ' + esc(res[0].error.message) + '</p>';
+        return;
+      }
+      alunos = res[0].data || [];
+      branches = res[1].data || [];
+      montaPerfil(res[2].data, res[3].data, res[4].data, res[5].data);
+      montaFiltros();
+      desenhaPanorama();
+      renderAlunos();
+      carregaCursos();
+      carregaMateriais();
+      carregaAoVivo();
+      carregaRecados();
+    });
+  }
+
+  // ---------- sinais por mentorado ----------
+  function montaPerfil(progresso, nps, cliques, sessoes){
+    perfil = {};
+    function p(id){ return perfil[id] || (perfil[id] = { soma:0, qtd:0, nps:null, cliques:0, sessao:null }); }
+
+    (progresso || []).forEach(function(x){
+      var r = p(x.student_id);
+      r.soma += Math.max(0, Math.min(100, Number(x.progress_percentage) || 0));
+      r.qtd++;
+    });
+    // NPS: vale a nota mais recente, nao a media — o que importa e como ele
+    // esta agora, nao como estava seis meses atras.
+    (nps || []).sort(function(a,b){ return String(a.created_at).localeCompare(String(b.created_at)); })
+      .forEach(function(x){ p(x.student_id).nps = Number(x.score); });
+    (cliques || []).forEach(function(x){ p(x.student_id).cliques++; });
+    (sessoes || []).forEach(function(x){
+      var r = p(x.student_id);
+      if(x.status === "realizada" || !r.sessao) r.sessao = x.status;
+    });
+
+    Object.keys(perfil).forEach(function(id){
+      var r = perfil[id];
+      r.media = r.qtd ? Math.round(r.soma / r.qtd) : null;
+    });
+  }
+
+  // Nota de risco: soma de sinais objetivos, cada um com o seu motivo em texto.
+  // Nada de media ponderada obscura — a diretoria precisa ver POR QUE o nome
+  // apareceu, senao a lista vira palpite.
+  function avaliaRisco(a){
+    var r = perfil[a.id] || {};
+    var pontos = 0, motivos = [];
+
+    var d = (a.is_lifetime || !a.renewal_date) ? null : diasAte(a.renewal_date);
+    var renov = String(a.renewal_status || "").toLowerCase();
+    var jaResolvido = renov.indexOf("renovado") > -1;
+
+    if(d !== null && d < 0 && !jaResolvido){ pontos += 3; motivos.push({ t: Math.abs(d) + "d vencido", g:true }); }
+    else if(d !== null && d <= 60 && !jaResolvido){ pontos += 2; motivos.push({ t:"vence em " + d + "d", g:false }); }
+
+    if(a.is_delinquent){ pontos += 3; motivos.push({ t:"inadimplente", g:true }); }
+    if(renov.indexOf("não renov") > -1 || renov.indexOf("nao renov") > -1){ pontos += 3; motivos.push({ t:"disse que não renova", g:true }); }
+
+    if(r.nps !== null && r.nps !== undefined){
+      if(r.nps <= 6){ pontos += 3; motivos.push({ t:"NPS " + r.nps, g:true }); }
+      else if(r.nps <= 8){ pontos += 1; motivos.push({ t:"NPS " + r.nps, g:false }); }
+    }
+
+    if(temperatura(a.temperature) === "Frio"){ pontos += 2; motivos.push({ t:"CS marcou frio", g:false }); }
+
+    if(r.media === null || r.media === undefined){ pontos += 1; motivos.push({ t:"sem progresso registrado", g:false }); }
+    else if(r.media < 15){ pontos += 2; motivos.push({ t:"assistiu " + r.media + "%", g:true }); }
+    else if(r.media < 35){ pontos += 1; motivos.push({ t:"assistiu " + r.media + "%", g:false }); }
+
+    if(!r.cliques){ pontos += 1; motivos.push({ t:"nunca entrou ao vivo", g:false }); }
+    if(r.sessao !== "realizada" && a.status !== "inativo"){ pontos += 1; motivos.push({ t:"1x1 não realizado", g:false }); }
+
+    return { pontos: pontos, motivos: motivos, media: r.media, nps: r.nps };
+  }
+  function faixa(p){ return p >= 6 ? "alto" : (p >= 3 ? "medio" : "baixo"); }
+
+  // ---------- visão geral ----------
+  function desenhaPanorama(){
+    if(!alunos.length){ return; }
+    var ativos = alunos.filter(function(a){ return a.status === "ativo" || a.status === "onboarding" || a.status === "em_reonboarding"; });
+    var vencendo = alunos.filter(function(a){
+      if(a.is_lifetime || !a.renewal_date) return false;
+      var d = diasAte(a.renewal_date);
+      return d !== null && d >= 0 && d <= 30;
+    });
+    var vencidos = alunos.filter(function(a){
+      if(a.is_lifetime || !a.renewal_date) return false;
+      var d = diasAte(a.renewal_date);
+      return d !== null && d < 0;
+    });
+    var quentes = alunos.filter(function(a){ return temperatura(a.temperature) === "Quente"; });
+
+    $("kpis").innerHTML = [
+      { rot:"Mentorados na base", num: alunos.length, sub: ativos.length + " em atividade" },
+      { rot:"Vencem em 30 dias", num: vencendo.length, sub:"contratos a renovar", cls:"alerta" },
+      { rot:"Já vencidos", num: vencidos.length, sub:"sem renovação registrada", cls: vencidos.length ? "risco" : "" },
+      { rot:"Marcados como quentes", num: quentes.length, sub:"leitura da CS", cls:"ok" }
+    ].map(function(k){
+      return '<div class="kpi ' + (k.cls || "") + '"><div class="rot">' + k.rot + '</div>' +
+        '<div class="num">' + k.num + '</div><div class="sub">' + k.sub + '</div></div>';
+    }).join("");
+
+    var emRisco = alunos.filter(function(a){ return avaliaRisco(a).pontos >= 6; });
+    var comNps = alunos.map(function(a){ return (perfil[a.id] || {}).nps; }).filter(function(n){ return n !== null && n !== undefined; });
+    var mediaNps = comNps.length ? (comNps.reduce(function(s,n){ return s + n; }, 0) / comNps.length) : null;
+    var semAoVivo = alunos.filter(function(a){ return !(perfil[a.id] || {}).cliques; });
+    var sem1a1 = alunos.filter(function(a){ return (perfil[a.id] || {}).sessao !== "realizada" && a.status !== "inativo"; });
+
+    $("kpisRenovacao").innerHTML = [
+      { rot:"Risco alto de não renovar", num: emRisco.length, sub:"6+ pontos de sinal", cls: emRisco.length ? "risco" : "ok" },
+      { rot:"NPS médio", num: mediaNps === null ? "—" : mediaNps.toFixed(1), sub: comNps.length + " respostas", cls: mediaNps !== null && mediaNps >= 9 ? "ok" : "alerta" },
+      { rot:"Nunca entrou numa aula ao vivo", num: semAoVivo.length, sub:"de " + alunos.length + " mentorados", cls:"alerta" },
+      { rot:"Sem 1x1 realizado", num: sem1a1.length, sub:"conversa com os fundadores", cls:"alerta" }
+    ].map(function(k){
+      return '<div class="kpi ' + (k.cls || "") + '"><div class="rot">' + k.rot + '</div>' +
+        '<div class="num">' + k.num + '</div><div class="sub">' + k.sub + '</div></div>';
+    }).join("");
+
+    var porStatus = contaPor(alunos, function(a){ return a.status || "sem situação"; });
+    desenha("gStatus", "doughnut", Object.keys(porStatus), Object.values(porStatus));
+
+    var porTemp = contaPor(alunos, function(a){ return temperatura(a.temperature); });
+    desenha("gTemp", "doughnut", Object.keys(porTemp), Object.values(porTemp));
+
+    var porMentoria = {};
+    ativos.forEach(function(a){
+      var ms = mentoriasDe(a);
+      if(!ms.length) ms = ["Sem mentoria"];
+      ms.forEach(function(m){ porMentoria[m] = (porMentoria[m] || 0) + 1; });
+    });
+    var ordenadas = Object.keys(porMentoria).sort(function(x,y){ return porMentoria[y] - porMentoria[x]; });
+    desenha("gMentoria", "bar", ordenadas, ordenadas.map(function(m){ return porMentoria[m]; }));
+
+    var semTemp = alunos.filter(function(a){ return !String(a.temperature || "").trim(); }).length;
+    $("notaBase").textContent = semTemp
+      ? semTemp + " sem temperatura preenchida"
+      : "temperatura preenchida em toda a base";
+
+    var proximos = alunos.filter(function(a){
+      if(a.is_lifetime || !a.renewal_date) return false;
+      var d = diasAte(a.renewal_date);
+      return d !== null && d <= 60;
+    }).sort(function(x,y){ return diasAte(x.renewal_date) - diasAte(y.renewal_date); }).slice(0, 25);
+
+    $("tabVencimentos").innerHTML = proximos.length ? proximos.map(function(a){
+      var d = diasAte(a.renewal_date);
+      var sel = d < 0 ? '<span class="selo risco">' + Math.abs(d) + 'd vencido</span>'
+        : '<span class="selo ' + (d <= 30 ? "alerta" : "") + '">vence em ' + d + 'd</span>';
+      return '<tr><td><span class="principal">' + esc(a.full_name) + '</span><span class="secundario">' + esc(a.email || "") + '</span></td>' +
+        '<td>' + esc(mentoriasDe(a).join(", ") || "—") + '</td>' +
+        '<td>' + esc((a.staff && a.staff.full_name) || "—") + '</td>' +
+        '<td class="num-col">' + dataCurta(a.renewal_date) + '</td>' +
+        '<td>' + sel + '</td></tr>';
+    }).join("") : '<tr><td colspan="5" class="vazio">Nenhum vencimento nos próximos 60 dias.</td></tr>';
+  }
+
+  // ---------- mentorados ----------
+  function montaFiltros(){
+    branches.forEach(function(b){
+      $("filtroMentoria").insertAdjacentHTML("beforeend", '<option value="' + esc(b.name) + '">' + esc(b.name) + '</option>');
+      $("matMentoria").insertAdjacentHTML("beforeend", '<option value="' + esc(b.id) + '">' + esc(b.name) + '</option>');
+    });
+
+    var css = {};
+    alunos.forEach(function(a){ if(a.staff && a.staff.full_name) css[a.staff.full_name] = true; });
+    Object.keys(css).sort().forEach(function(n){
+      $("filtroCs").insertAdjacentHTML("beforeend", '<option value="' + esc(n) + '">' + esc(n) + '</option>');
+    });
+
+    ["buscaAluno","filtroMentoria","filtroCs"].forEach(function(id){
+      $(id).addEventListener("input", renderAlunos);
+      $(id).addEventListener("change", renderAlunos);
+    });
+    $("chipSoRisco").addEventListener("click", function(){
+      soRisco = !soRisco;
+      $("chipSoRisco").classList.toggle("on", soRisco);
+      renderAlunos();
+    });
+  }
+
+  function renderAlunos(){
+    var busca = ($("buscaAluno").value || "").trim().toLowerCase();
+    var fm = $("filtroMentoria").value, fc = $("filtroCs").value;
+
+    var lista = alunos.map(function(a){
+      return { aluno: a, risco: avaliaRisco(a) };
+    }).filter(function(x){
+      var a = x.aluno;
+      if(a.status === "inativo" || a.status === "cancelado") return false;
+      if(soRisco && x.risco.pontos < 3) return false;
+      if(fm && mentoriasDe(a).indexOf(fm) === -1) return false;
+      if(fc && ((a.staff && a.staff.full_name) || "") !== fc) return false;
+      if(busca){
+        var alvo = (a.full_name || "").toLowerCase() + " " + (a.email || "").toLowerCase();
+        if(alvo.indexOf(busca) === -1) return false;
+      }
+      return true;
+    }).sort(function(x,y){
+      return y.risco.pontos - x.risco.pontos || (x.aluno.full_name || "").localeCompare(y.aluno.full_name || "");
+    });
+
+    var altos = lista.filter(function(x){ return x.risco.pontos >= 6; }).length;
+    $("kpisAtencao").innerHTML = [
+      { rot:"Na lista agora", num: lista.length, sub: soRisco ? "com algum sinal de risco" : "mentorados ativos" },
+      { rot:"Risco alto", num: altos, sub:"vale marcar um 1x1", cls: altos ? "risco" : "ok" }
+    ].map(function(k){
+      return '<div class="kpi ' + (k.cls || "") + '"><div class="rot">' + k.rot + '</div>' +
+        '<div class="num">' + k.num + '</div><div class="sub">' + k.sub + '</div></div>';
+    }).join("");
+
+    $("contaAlunos").textContent = lista.length + " mentorado(s)";
+    $("tabAlunos").innerHTML = lista.length ? lista.slice(0, 200).map(function(x){
+      var a = x.aluno, r = x.risco, f = faixa(r.pontos);
+      var d = a.is_lifetime ? null : diasAte(a.renewal_date);
+      var motivos = r.motivos.length
+        ? '<div class="motivos">' + r.motivos.map(function(m){
+            return '<span class="motivo ' + (m.g ? "grave" : "medio") + '">' + esc(m.t) + '</span>';
+          }).join("") + '</div>'
+        : '<span class="secundario">nenhum sinal — está em dia</span>';
+      return '<tr>' +
+        '<td><span class="risco-nota ' + f + '">' + r.pontos + '</span>' +
+          '<span class="risco-faixa">' + (f === "alto" ? "alto" : f === "medio" ? "médio" : "baixo") + '</span></td>' +
+        '<td><span class="principal">' + esc(a.full_name) + '</span><span class="secundario">' + esc(a.email || "") + '</span></td>' +
+        '<td>' + motivos + '</td>' +
+        '<td>' + esc(mentoriasDe(a).join(", ") || "—") + '</td>' +
+        '<td>' + esc((a.staff && a.staff.full_name) || "—") + '</td>' +
+        '<td class="num-col">' + (a.is_lifetime ? "vitalício" : (d !== null && d < 0 ? Math.abs(d) + "d vencido" : dataCurta(a.renewal_date))) + '</td></tr>';
+    }).join("") : '<tr><td colspan="6" class="vazio">Ninguém com sinal de risco nesses filtros. Desmarque o botão acima pra ver a base ativa inteira.</td></tr>';
+  }
+
+  // ---------- aulas gravadas ----------
+  function carregaCursos(){
+    sb.from("course_progress").select("progress_percentage,course:course_id(name)").then(function(r){
+      if(r.error){ $("tabCursos").innerHTML = '<tr><td colspan="3" class="vazio">Erro: ' + esc(r.error.message) + '</td></tr>'; return; }
+      var linhas = (r.data || []).filter(function(x){ return x.course; });
+      var porCurso = {};
+      linhas.forEach(function(x){
+        var n = x.course.name;
+        if(!porCurso[n]) porCurso[n] = { soma:0, qtd:0 };
+        porCurso[n].soma += Math.max(0, Math.min(100, Number(x.progress_percentage) || 0));
+        porCurso[n].qtd++;
+      });
+      var nomes = Object.keys(porCurso).sort(function(a,b){
+        return (porCurso[b].soma / porCurso[b].qtd) - (porCurso[a].soma / porCurso[a].qtd);
+      });
+
+      if(!nomes.length){
+        $("tabCursos").innerHTML = '<tr><td colspan="3" class="vazio">Sem progresso registrado ainda. Ele chega pela sincronização com a Cademí.</td></tr>';
+        $("kpisCursos").innerHTML = "";
+        return;
+      }
+
+      var mediaGeral = Math.round(nomes.reduce(function(s,n){ return s + porCurso[n].soma / porCurso[n].qtd; }, 0) / nomes.length);
+      var melhor = nomes[0], pior = nomes[nomes.length - 1];
+      $("kpisCursos").innerHTML = [
+        { rot:"Cursos com progresso", num: nomes.length, sub:"registrados na Cademí" },
+        { rot:"Conclusão média geral", num: mediaGeral + "<small>%</small>", sub:"média das médias por curso" },
+        { rot:"Melhor desempenho", num: Math.round(porCurso[melhor].soma / porCurso[melhor].qtd) + "<small>%</small>", sub: melhor, cls:"ok" },
+        { rot:"Maior abandono", num: Math.round(porCurso[pior].soma / porCurso[pior].qtd) + "<small>%</small>", sub: pior, cls:"risco" }
+      ].map(function(k){
+        return '<div class="kpi ' + (k.cls || "") + '"><div class="rot">' + k.rot + '</div>' +
+          '<div class="num">' + k.num + '</div><div class="sub">' + esc(k.sub) + '</div></div>';
+      }).join("");
+
+      $("notaCursos").textContent = linhas.length + " registros de progresso";
+      $("tabCursos").innerHTML = nomes.map(function(n){
+        var m = Math.round(porCurso[n].soma / porCurso[n].qtd);
+        return '<tr><td><span class="principal">' + esc(n) + '</span></td>' +
+          '<td class="num-col">' + porCurso[n].qtd + '</td>' +
+          '<td style="min-width:160px;"><span class="num-col">' + m + '%</span>' +
+          '<div class="barra"><i style="width:' + m + '%;"></i></div></td></tr>';
+      }).join("");
+    });
+  }
+
+  // ---------- materiais ----------
+  function carregaMateriais(){
+    sb.from("documents").select("id,code,title,category,doc_type,version,revision_date,responsible_name,status,file_url,branch_id,created_at")
+      .order("created_at", { ascending: false }).then(function(r){
+        if(r.error){ $("tabMateriais").innerHTML = '<tr><td colspan="6" class="vazio">Erro: ' + esc(r.error.message) + '</td></tr>'; return; }
+        var docs = r.data || [];
+        $("notaMateriais").textContent = docs.length + " documento(s)";
+        $("tabMateriais").innerHTML = docs.length ? docs.map(function(d){
+          var b = branches.find(function(x){ return x.id === d.branch_id; });
+          var vig = (d.status || "vigente") === "vigente";
+          return '<tr><td><span class="principal">' +
+              (d.file_url ? '<a href="' + esc(d.file_url) + '" target="_blank" rel="noopener">' + esc(d.title) + '</a>' : esc(d.title)) +
+            '</span>' + (d.code ? '<span class="secundario cod">' + esc(d.code) + '</span>' : '') + '</td>' +
+            '<td class="num-col">' + esc(d.version || "—") + '</td>' +
+            '<td class="num-col">' + dataCurta(d.revision_date) + '</td>' +
+            '<td>' + esc(d.responsible_name || "—") + '</td>' +
+            '<td>' + esc(b ? b.name : "Todas") + '</td>' +
+            '<td><span class="selo ' + (vig ? "ok" : "") + '">' + (vig ? "Vigente" : "Arquivado") + '</span></td></tr>';
+        }).join("") : '<tr><td colspan="6" class="vazio">Nenhum material publicado ainda.</td></tr>';
+      });
+  }
+
+  $("btnPublicarMat").addEventListener("click", function(){
+    var err = $("matErro");
+    err.style.color = "";
+    var titulo = $("matTitulo").value.trim();
+    var arquivo = $("matArquivo").files && $("matArquivo").files[0];
+    if(!titulo){ err.textContent = "Escreva o título do material."; return; }
+    if(!arquivo){ err.textContent = "Escolha o arquivo."; return; }
+
+    $("btnPublicarMat").disabled = true;
+    err.textContent = "Subindo arquivo...";
+    var caminho = Date.now() + "-" + arquivo.name.replace(/[^A-Za-z0-9._-]/g, "_");
+
+    sb.storage.from("materiais").upload(caminho, arquivo).then(function(up){
+      if(up.error){ $("btnPublicarMat").disabled = false; err.textContent = "Erro ao subir: " + up.error.message; return; }
+      var url = sb.storage.from("materiais").getPublicUrl(caminho).data.publicUrl;
+      sb.from("documents").insert({
+        title: titulo,
+        code: $("matCodigo").value.trim() || null,
+        version: $("matVersao").value.trim() || null,
+        category: $("matCategoria").value.trim() || null,
+        doc_type: $("matTipo").value.trim() || null,
+        responsible_name: $("matResponsavel").value.trim() || (eu && eu.full_name) || null,
+        branch_id: $("matMentoria").value || null,
+        revision_date: new Date().toISOString().slice(0, 10),
+        status: "vigente",
+        file_url: url,
+        is_new: true
+      }).then(function(ins){
+        $("btnPublicarMat").disabled = false;
+        if(ins.error){ err.textContent = "Arquivo subiu, mas não gravou o registro: " + ins.error.message; return; }
+        ["matTitulo","matCodigo","matVersao","matCategoria","matTipo","matResponsavel"].forEach(function(id){ $(id).value = ""; });
+        $("matArquivo").value = "";
+        err.style.color = "var(--green)";
+        err.textContent = "Material publicado. Já aparece para os mentorados.";
+        carregaMateriais();
+      });
+    });
+  });
+
+  // ---------- ao vivo ----------
+  var DIAS = { segunda:"Segunda", terca:"Terça", quarta:"Quarta", quinta:"Quinta", sexta:"Sexta", sabado:"Sábado", domingo:"Domingo" };
+
+  function carregaAoVivo(){
+    Promise.all([
+      sb.from("lessons").select("id,title,lesson_type,weekday,event_date,scheduled_time,category,branch_id").in("lesson_type", ["semanal","evento"]),
+      sb.from("live_click_log").select("lesson_id,clicked_at")
+    ]).then(function(res){
+      if(res[0].error){ $("tabAoVivo").innerHTML = '<tr><td colspan="5" class="vazio">Erro: ' + esc(res[0].error.message) + '</td></tr>'; return; }
+      var aulas = res[0].data || [];
+      var cliques = res[1].data || [];
+
+      var stats = {}, seteDias = Date.now() - 7*86400000;
+      cliques.forEach(function(c){
+        var s = stats[c.lesson_id] || (stats[c.lesson_id] = { total:0, semana:0 });
+        s.total++;
+        if(new Date(c.clicked_at).getTime() >= seteDias) s.semana++;
+      });
+
+      var totalSemana = cliques.filter(function(c){ return new Date(c.clicked_at).getTime() >= seteDias; }).length;
+      $("kpisAoVivo").innerHTML = [
+        { rot:"Aulas e encontros", num: aulas.length, sub:"cadastrados no calendário" },
+        { rot:"Cliques para entrar", num: cliques.length, sub:"desde o início" },
+        { rot:"Nos últimos 7 dias", num: totalSemana, sub:"medido pela plataforma", cls:"ok" }
+      ].map(function(k){
+        return '<div class="kpi ' + (k.cls || "") + '"><div class="rot">' + k.rot + '</div>' +
+          '<div class="num">' + k.num + '</div><div class="sub">' + k.sub + '</div></div>';
+      }).join("");
+
+      $("notaAoVivo").textContent = aulas.length + " no calendário";
+      var ordenadas = aulas.slice().sort(function(a,b){
+        return ((stats[b.id] || {}).total || 0) - ((stats[a.id] || {}).total || 0);
+      });
+
+      $("tabAoVivo").innerHTML = ordenadas.length ? ordenadas.map(function(l){
+        var s = stats[l.id] || { total:0, semana:0 };
+        var b = branches.find(function(x){ return x.id === l.branch_id; });
+        var hora = l.scheduled_time ? String(l.scheduled_time).slice(0,5).replace(":", "h") : "";
+        var quando = l.lesson_type === "evento"
+          ? [dataCurta(l.event_date), hora].filter(Boolean).join(" · ")
+          : [DIAS[l.weekday] || l.weekday, hora].filter(Boolean).join(" · ");
+        return '<tr><td><span class="principal">' + esc(l.title) + '</span>' +
+            (l.category ? '<span class="secundario">' + esc(l.category) + '</span>' : '') + '</td>' +
+          '<td>' + esc(quando || "—") + '</td>' +
+          '<td>' + esc(b ? b.name : "Todas") + '</td>' +
+          '<td class="num-col">' + s.total + '</td>' +
+          '<td class="num-col">' + s.semana + '</td></tr>';
+      }).join("") : '<tr><td colspan="5" class="vazio">Nenhuma aula ao vivo cadastrada. Quem cadastra é a CS, na aba Calendário.</td></tr>';
+    });
+  }
+
+  // ---------- recados ----------
+  function carregaRecados(){
+    sb.from("recados").select("*").order("created_at", { ascending: false }).then(function(r){
+      if(r.error){ $("listaRecados").innerHTML = '<p class="vazio">Erro ao ler os recados: ' + esc(r.error.message) + '</p>'; return; }
+      var lista = r.data || [];
+      $("notaRecados").textContent = lista.length + " recado(s)";
+      $("listaRecados").innerHTML = lista.length ? lista.map(function(x){
+        var quando = x.created_at ? dataCurta(x.created_at) : "";
+        var titulo = x.title || x.titulo || "(sem título)";
+        var texto = x.message || x.mensagem || "";
+        return '<div class="painel" style="margin-bottom:12px;">' +
+          '<h4>' + esc(titulo) + '</h4>' +
+          '<p class="dica" style="margin-bottom:8px;">' + esc(quando) + '</p>' +
+          (texto ? '<p style="margin:0;font-size:12.5px;color:var(--txt-2);">' + esc(texto) + '</p>' : '') +
+        '</div>';
+      }).join("") : '<p class="vazio">Nenhum recado publicado. Quem publica é a CS, na aba Recados da Área CS.</p>';
+    });
+  }
+
+  confereAcesso();
+})();
+</script>
+</body>
+</html>
