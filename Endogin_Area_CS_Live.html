@@ -492,6 +492,7 @@
           <h3><i class="fa-solid fa-users icn"></i><span id="alunosTitle">Meus alunos</span></h3>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <input type="text" class="search-input" id="alunosSearch" placeholder="Buscar por nome, e-mail ou CPF..." style="max-width:260px;">
+            <span class="filter-chip" id="alunosChipSemAcesso" style="display:none;">Sem acesso ao Portal</span>
             <div id="csFilterWrap" style="display:none;">
               <select id="csFilterSelect"><option value="">Todas as CS</option></select>
             </div>
@@ -600,6 +601,23 @@
           <div class="crm-stat-card"><div class="crm-stat-num" id="wppStatGrupos">—</div><div class="crm-stat-label">Grupos/listas monitorados</div></div>
         </div>
         <div id="wppAlertWrap"></div>
+      </div>
+
+      <div class="card" id="novoGrupoCard" style="display:none;">
+        <div class="card-head"><h3><i class="fa-brands fa-whatsapp icn"></i>Cadastrar grupo</h3></div>
+        <p class="hint" style="margin:-8px 0 14px;">Um grupo só aparece nas fichas dos alunos depois de cadastrado aqui. Se a CS não acha onde marcar um grupo que existe no WhatsApp, é porque ele ainda não foi criado nesta lista.</p>
+        <div class="filter-row" style="align-items:flex-end;gap:14px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:220px;">
+            <label class="hint" style="display:block;margin-bottom:5px;">Nome do grupo</label>
+            <input type="text" id="novoGrupoNome" placeholder="ex: Ativação">
+          </div>
+          <div>
+            <label class="hint" style="display:block;margin-bottom:5px;">Tipo</label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;"><input type="checkbox" id="novoGrupoBroadcast" style="width:auto;"> É lista de transmissão</label>
+          </div>
+          <button class="btn-secondary" id="novoGrupoBtn" style="width:auto;">Cadastrar grupo</button>
+        </div>
+        <div class="err-msg" id="novoGrupoErr"></div>
       </div>
 
       <div class="card">
@@ -1025,7 +1043,8 @@
       <div class="err-msg" id="alunoModalErr"></div>
 
       <div id="alunoCredWrap" style="display:none;margin-top:22px;padding-top:18px;border-top:1px solid var(--eg-navy-line);">
-        <label style="margin-bottom:10px;">Credenciais de acesso</label>
+        <label style="margin-bottom:10px;" id="alunoCredTitulo">Credenciais de acesso</label>
+        <p class="hint" id="alunoCredNota" style="margin:-4px 0 10px;"></p>
         <div class="form-grid">
           <div style="grid-column:1/-1;"><label>Novo e-mail de login (deixe em branco pra não trocar)</label><input type="email" id="alunoFieldLoginEmail"></div>
           <div style="grid-column:1/-1;"><label>Nova senha (deixe em branco pra não trocar)</label><input type="password" id="alunoFieldLoginPassword" placeholder="mín. 6 caracteres"></div>
@@ -1558,9 +1577,29 @@
     applyAlunosFilter();
   });
 
+  // Quem entra pela Cademi chega sem login. Este atalho mostra exatamente quem
+  // ainda nao consegue entrar no Portal, pra CS ir criando o acesso de cada um.
+  $("alunosChipSemAcesso").addEventListener("click", function(){
+    alunosSoSemAcesso = !alunosSoSemAcesso;
+    applyAlunosFilter();
+  });
+
+  var alunosSoSemAcesso = false;
+
+  function atualizaChipSemAcesso(){
+    var chip = $("alunosChipSemAcesso");
+    if(!chip) return;
+    var n = allStudents.filter(function(s){ return !s.auth_user_id; }).length;
+    chip.textContent = "Sem acesso ao Portal (" + n + ")";
+    chip.classList.toggle("selected", alunosSoSemAcesso);
+    chip.style.display = n ? "" : "none";
+  }
+
   function applyAlunosFilter(){
+    atualizaChipSemAcesso();
     var search = alunosSearchValue.trim().toLowerCase();
-    var filtered = !search ? allStudents : allStudents.filter(function(s){
+    var base = alunosSoSemAcesso ? allStudents.filter(function(s){ return !s.auth_user_id; }) : allStudents;
+    var filtered = !search ? base : base.filter(function(s){
       return (s.full_name || "").toLowerCase().indexOf(search) > -1 ||
         (s.email || "").toLowerCase().indexOf(search) > -1 ||
         (s.cpf || "").toLowerCase().indexOf(search) > -1 ||
@@ -1920,6 +1959,16 @@
     }
 
     $("alunoCredWrap").style.display = currentStaff.isMasterLike ? "block" : "none";
+    if(currentStaff.isMasterLike){
+      var jaTem = !!student.auth_user_id;
+      $("alunoCredTitulo").textContent = jaTem ? "Credenciais de acesso" : "Criar acesso ao Portal";
+      $("alunoCredNota").textContent = jaTem
+        ? "Deixe em branco o que não quiser trocar."
+        : "Esse aluno ainda não consegue entrar no Portal. Defina uma senha e clique em salvar — depois é só mandar o e-mail e a senha pra ele.";
+      $("alunoSaveCredBtn").textContent = jaTem ? "Salvar credenciais" : "Criar acesso";
+      $("alunoViewAsBtn").style.display = jaTem ? "" : "none";
+      $("alunoDeleteLoginBtn").style.display = jaTem ? "" : "none";
+    }
     $("alunoFieldLoginEmail").value = "";
     $("alunoFieldLoginPassword").value = "";
     $("alunoCredErr").textContent = "";
@@ -2023,7 +2072,35 @@
       status: "onboarding", source: "manual", cs_id: (!currentStaff.isMasterLike ? currentStaff.id : null)
     }).select(ALUNOS_SELECT_STRING).single().then(function(r){
       $("novoAlunoSaveBtn").disabled = false;
-      if(r.error){ $("novoAlunoModalErr").textContent = "Erro ao criar: " + r.error.message; return; }
+      if(r.error){
+        // O banco recusa e-mail repetido com um texto que ninguem entende
+        // ("duplicate key value violates unique constraint"). Nesse caso o
+        // aluno JA EXISTE — e o que a CS precisa e chegar na ficha dele, nao
+        // decifrar a mensagem.
+        if((r.error.message || "").indexOf("students_email_key") > -1){
+          $("novoAlunoModalErr").innerHTML = "Procurando quem já usa esse e-mail...";
+          sb.from("students").select("id,full_name,staff:cs_id(full_name)").ilike("email", email).limit(1).then(function(ex){
+            var achado = ex.data && ex.data[0];
+            if(!achado){
+              $("novoAlunoModalErr").textContent = "Esse e-mail já está cadastrado, mas não consegui achar de quem é. Fale com a Thais.";
+              return;
+            }
+            var cs = achado.staff ? achado.staff.full_name : "sem CS";
+            $("novoAlunoModalErr").innerHTML =
+              "<b>" + achado.full_name + "</b> já está cadastrado com esse e-mail (CS: " + cs + "). " +
+              '<a href="#" id="novoAlunoAbrirExistente" style="color:var(--eg-gold-300);">Abrir a ficha dele</a>';
+            var link = $("novoAlunoAbrirExistente");
+            if(link) link.addEventListener("click", function(ev){
+              ev.preventDefault();
+              $("novoAlunoModal").classList.remove("open");
+              openAlunoModal(achado.id);
+            });
+          });
+          return;
+        }
+        $("novoAlunoModalErr").textContent = "Erro ao criar: " + r.error.message;
+        return;
+      }
       $("novoAlunoModal").classList.remove("open");
       allStudents.push(r.data);
       avisa("Aluno <b>" + (r.data.full_name || "novo") + "</b> criado. Ele ja entra na contagem das Carteiras.");
@@ -2118,8 +2195,50 @@
     if(idx > -1) arr.splice(idx, 1); else arr.push(val);
   }
 
+  // O cadastro de grupo fica com a master: e uma lista curta e compartilhada
+  // por toda a operacao, entao criar duplicata ("Ativacao" e "Ativação") atrapalha
+  // todo mundo.
+  function iniciaNovoGrupo(){
+    var card = $("novoGrupoCard");
+    if(!card) return;
+    card.style.display = currentStaff.isMasterLike ? "block" : "none";
+  }
+
+  if($("novoGrupoBtn")){
+    $("novoGrupoBtn").addEventListener("click", function(){
+      var nome = $("novoGrupoNome").value.trim();
+      var err = $("novoGrupoErr");
+      err.style.color = "";
+      if(!nome){ err.textContent = "Escreva o nome do grupo."; return; }
+
+      var repetido = allGroups.find(function(g){
+        return (g.name || "").trim().toLowerCase() === nome.toLowerCase();
+      });
+      if(repetido){ err.textContent = 'Já existe um grupo chamado "' + repetido.name + '".'; return; }
+
+      var maiorOrdem = allGroups.reduce(function(m, g){ return Math.max(m, g.sort_order || 0); }, 0);
+      $("novoGrupoBtn").disabled = true;
+      err.textContent = "";
+      sb.from("whatsapp_groups").insert({
+        name: nome,
+        sort_order: maiorOrdem + 1,
+        is_broadcast_list: $("novoGrupoBroadcast").checked
+      }).then(function(r){
+        $("novoGrupoBtn").disabled = false;
+        if(r.error){ err.textContent = "Erro ao cadastrar: " + r.error.message; return; }
+        $("novoGrupoNome").value = "";
+        $("novoGrupoBroadcast").checked = false;
+        err.style.color = "var(--eg-green)";
+        err.textContent = 'Grupo "' + nome + '" cadastrado. Já aparece na ficha dos alunos.';
+        avisa('Grupo <b>' + nome + '</b> cadastrado.');
+        loadStaffAndBranches();
+      });
+    });
+  }
+
   function renderGruposTab(){
     if(!$("wppStatTotal")) return;
+    iniciaNovoGrupo();
     var total = allStudents.length;
     var ativos = allStudents.filter(function(s){ return s.status === "ativo"; }).length;
     var trancados = allStudents.filter(function(s){ return s.status === "trancado"; }).length;
@@ -2327,9 +2446,39 @@
 
   // ---------------- credenciais de acesso do aluno (só master) ----------------
   $("alunoSaveCredBtn").addEventListener("click", function(){
+    var alunoAtual = allStudents.find(function(s){ return s.id === alunoEditingId; });
+    var temLogin = !!(alunoAtual && alunoAtual.auth_user_id);
     var newEmail = $("alunoFieldLoginEmail").value.trim();
     var newPassword = $("alunoFieldLoginPassword").value;
+    $("alunoCredErr").style.color = "";
     $("alunoCredErr").textContent = "";
+
+    // Aluno que entrou sozinho pela Cademi chega SEM login. Antes o unico
+    // caminho era "update_login", que exige um usuario que ainda nao existe —
+    // dava erro e nao havia como criar o acesso pela tela.
+    if(!temLogin){
+      if(!newPassword || newPassword.length < 6){
+        $("alunoCredErr").textContent = "Esse aluno ainda não tem acesso. Defina uma senha de 6+ caracteres pra criar o login dele.";
+        return;
+      }
+      $("alunoSaveCredBtn").disabled = true;
+      sb.functions.invoke("admin-tools", {
+        body: { action: "create_login", student_id: alunoEditingId, new_email: newEmail || undefined, new_password: newPassword }
+      }).then(function(r){
+        $("alunoSaveCredBtn").disabled = false;
+        if(r.error || (r.data && r.data.ok === false)){
+          $("alunoCredErr").textContent = "Erro: " + (r.error ? r.error.message : r.data.error);
+          return;
+        }
+        var login = (r.data && r.data.email) || newEmail || (alunoAtual && alunoAtual.email) || "";
+        if(alunoAtual) alunoAtual.auth_user_id = "novo";
+        $("alunoCredErr").style.color = "var(--eg-green)";
+        $("alunoCredErr").innerHTML = "Acesso criado. Mande pro aluno: <b>" + login + "</b> / senha <b>" + newPassword + "</b> — o Portal fica em mentoriaendogin.netlify.app/portal_aluno_live";
+        atualizaDerivados();
+      });
+      return;
+    }
+
     if(!newEmail && !newPassword){ $("alunoCredErr").textContent = "Preencha o e-mail novo e/ou a senha nova."; return; }
     if(newPassword && newPassword.length < 6){ $("alunoCredErr").textContent = "A senha precisa ter 6+ caracteres."; return; }
     $("alunoSaveCredBtn").disabled = true;

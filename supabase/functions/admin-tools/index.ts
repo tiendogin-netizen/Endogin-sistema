@@ -101,6 +101,63 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "Content-Type": "application/json" } });
   }
 
+  // Criar o acesso do aluno ao Portal.
+  //
+  // Ate agora so existia "update_login", que exige um usuario ja criado — e a
+  // criacao acontecia fora do sistema, por um script (convidar_alunos.py). Por
+  // isso os alunos que entram sozinhos pela Cademi ficavam sem nenhuma forma de
+  // entrar: o webhook gera um token de link magico que nenhuma tela le, e o
+  // e-mail nunca saiu. Com esta acao a CS cria o acesso pela propria ficha.
+  if (body.action === "create_login") {
+    if (student.auth_user_id) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Esse aluno já tem login. Use os campos acima para trocar e-mail ou senha." }),
+        { status: 422, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    const email = (body.new_email || student.email || "").trim();
+    if (!email) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Esse aluno está sem e-mail no cadastro — preencha o e-mail antes de criar o acesso." }),
+        { status: 422, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (!body.new_password || body.new_password.length < 6) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Defina uma senha de pelo menos 6 caracteres." }),
+        { status: 422, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email,
+      password: body.new_password,
+      email_confirm: true,
+    });
+    if (createErr || !created?.user) {
+      return new Response(
+        JSON.stringify({ ok: false, error: createErr?.message ?? "Falha ao criar o acesso" }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const { error: linkErr } = await admin
+      .from("students")
+      .update({ auth_user_id: created.user.id, email })
+      .eq("id", student.id);
+    if (linkErr) {
+      // desfaz o usuario recem-criado: deixa-lo orfao faria a proxima tentativa
+      // falhar com "e-mail ja cadastrado" sem que ninguem entenda por que.
+      await admin.auth.admin.deleteUser(created.user.id);
+      return new Response(JSON.stringify({ ok: false, error: linkErr.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ ok: true, email }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }
+
   // Excluir o acesso do aluno ao Portal. Só o login some: o cadastro, o
   // progresso nas aulas, o NPS e o histórico continuam em `students` — quem
   // apaga isso é uma decisão de outra ordem, não um botão na ficha.
