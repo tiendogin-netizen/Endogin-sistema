@@ -88,11 +88,16 @@
   }
 
   /* ------------------------------- a seta ------------------------------- */
+  /* Centralizado por flex e nao por translateX(-50%): a animacao de entrada
+     termina em `transform:none` e animacao vence declaracao normal na cascata,
+     entao ela apagava a centralizacao e o botao ficava meia largura a direita. */
   .descer{
-    position:absolute;left:50%;bottom:5.5vh;transform:translateX(-50%);z-index:4;
+    position:absolute;left:0;right:0;bottom:5.5vh;z-index:4;
     display:flex;flex-direction:column;align-items:center;gap:14px;
+    pointer-events:none;
     animation:eg-entra 1s var(--eg-ease) .6s both;
   }
+  .descer .seta{pointer-events:auto;}
   /* fio de luz descendo ate a seta, indicando o caminho */
   .descer .fio{
     width:1px;height:64px;position:relative;overflow:hidden;
@@ -247,6 +252,16 @@
   .topo-btn:hover span{transform:translateY(-3px);}
 
   @keyframes eg-entra{from{opacity:0;transform:translateY(18px) scale(.96);}to{opacity:1;transform:none;}}
+
+  /* No celular 100vh inclui a area sob a barra do navegador: a seta, que fica
+     colada embaixo, nascia escondida atras dela. `dvh` mede a altura que a
+     pessoa realmente enxerga. Fica em @supports porque navegador antigo
+     ignora a unidade inteira e perderia a altura. */
+  @supports (height:100dvh){
+    .abertura{height:100dvh;}
+    .rodape-wrap{height:100dvh;}
+    .rodape{height:100dvh;}
+  }
   /* So opacidade: e a unica propriedade, junto com transform, que o navegador
      anima sem repintar nada. Era em transform+blur que o custo estava. */
   @keyframes eg-lamina{0%{opacity:.22;}100%{opacity:.92;}}
