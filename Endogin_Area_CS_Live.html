@@ -5108,6 +5108,19 @@
     var csFilter = $("exportCsSelect") ? $("exportCsSelect").value : "";
     var list = allStudents.filter(function(s){ return !csFilter || s.cs_id === csFilter; });
 
+    // Sem isto a exportacao gerava um arquivo so com o cabecalho, em silencio, e
+    // quem baixava concluia que a exportacao estava quebrada. Ela nao esta: a
+    // planilha sai com o que a pessoa enxerga, e quem nao tem aluno na carteira
+    // nao tem o que exportar.
+    if(!list.length){
+      alert(currentStaff.isMasterLike
+        ? "Nenhum aluno no filtro escolhido — nao ha o que exportar."
+        : "Voce ainda nao tem nenhum aluno na sua carteira, entao a planilha sairia vazia.
+
+A exportacao traz os alunos em que voce esta como CS responsavel. Peca para a Thais te atribuir os alunos e tente de novo.");
+      return;
+    }
+
     var wb = new ExcelJS.Workbook();
     var sheet = wb.addWorksheet("Alunos");
     sheet.columns = cols.map(function(c){ return { header: c.label, key: c.key, width: Math.max(14, Math.min(30, c.label.length + 6)) }; });
