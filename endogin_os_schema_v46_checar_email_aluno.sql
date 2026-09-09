@@ -77,8 +77,29 @@ notify pgrst, 'reload schema';
 
 
 -- -----------------------------------------------------------------------------
--- Conferencia. Troque o e-mail por um que exista na base e rode: deve voltar
--- existe = true e o nome da CS responsavel.
+-- Conferencia.
+--
+-- NAO chame a funcao direto aqui: o SQL Editor roda como dono do banco, sem
+-- usuario logado, entao auth.uid() e nulo e a funcao responde "apenas a equipe
+-- ativa pode consultar" - que e ela funcionando, nao falhando.
+--
+-- O que da para conferir no editor e que ela existe e roda elevada:
 -- -----------------------------------------------------------------------------
 
-select public.checar_email_aluno('adriellylage1@gmail.com') as resposta_para_email_inexistente;
+select p.proname                                 as funcao,
+       pg_get_function_identity_arguments(p.oid) as argumentos,
+       p.prosecdef                               as roda_com_privilegio_elevado
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public' and p.proname = 'checar_email_aluno';
+
+-- Para testar a logica, finja ser alguem da equipe dentro da mesma transacao:
+--
+--   with ctx as (
+--     select set_config('request.jwt.claims',
+--       json_build_object('sub', (select auth_user_id from staff
+--                                 where lower(email) = 'contato@mentoriaendogin.com.br'))::text, true)
+--   )
+--   select public.checar_email_aluno('naoexiste@exemplo.com') as nao_existe,
+--          public.checar_email_aluno((select email from students where cs_id is not null limit 1)) as existe
+--   from ctx;
