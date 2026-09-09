@@ -1396,11 +1396,14 @@
         if(currentStaff.isMasterLike){
           $("masterDistCard").style.display = "block";
           $("csFilterWrap").style.display = "block";
-          $("importAlunosCard").style.display = "block";
           $("impPlanilhaCard").style.display = "block";
           $("alunosTitle").textContent = "Todos os alunos";
           loadDistSetting();
         }
+        // Importar planilha de alunos vale para qualquer CS. O outro card, o das
+        // planilhas da operacao, continua so da master: aquele reescreve o cs_id
+        // da base inteira a partir das abas do arquivo.
+        $("importAlunosCard").style.display = "block";
         loadStaffAndBranches();
         loadReferrals();
         loadSessions();
@@ -5959,10 +5962,11 @@
   }
 
   function processImportRows(rows, statusEl){
-    var created = 0, updated = 0, errors = [];
+    var created = 0, updated = 0, pulados = 0, errors = [];
     var i = 0;
     function finish(){
       statusEl.innerHTML = "<b>Importação concluída:</b> " + created + " criado(s), " + updated + " atualizado(s)" +
+        (pulados ? ", " + pulados + " pulado(s)" : "") +
         (errors.length ? ", " + errors.length + " com aviso (veja abaixo)" : ".") +
         (errors.length ? '<br><span style="color:var(--eg-gold-300);">' + errors.join("<br>") + '</span>' : "");
       atualizaDerivados();
@@ -5993,29 +5997,54 @@
       var entryDate = parseImportDate(row.entry_date); if(entryDate) updates.entry_date = entryDate;
       var renewalDate = parseImportDate(row.renewal_date); if(renewalDate) updates.renewal_date = renewalDate;
       var birthDate = parseImportDate(row.birth_date); if(birthDate) updates.birth_date = birthDate;
-      if(row.__cs_name){
+      // Mover aluno de carteira e decisao da master: uma coluna "CS" na planilha
+      // de uma CS comum nao pode tirar aluno de ninguem. Para ela a coluna e
+      // ignorada, e o aluno novo nasce na carteira de quem importou — senao ela
+      // importaria dezenas e nao veria nenhum, porque a RLS filtra por cs_id.
+      if(row.__cs_name && currentStaff.isMasterLike){
         var csName = String(row.__cs_name).trim().toLowerCase();
         var matchedCs = allStaff.find(function(s){ return (s.full_name || "").trim().toLowerCase() === csName; });
         if(matchedCs) updates.cs_id = matchedCs.id;
         else errors.push(email + ': CS "' + row.__cs_name + '" não encontrada — deixei sem CS vinculada.');
       }
 
-      sb.from("students").select("id").ilike("email", email).limit(1).then(function(existing){
-        var found = existing.data && existing.data[0];
-        if(found){
-          sb.from("students").update(updates).eq("id", found.id).then(function(r){
+      // Antes isto era um `select` comum, que passa pela RLS: para uma CS a
+      // consulta so alcanca a carteira dela, entao aluno de outra CS voltava
+      // como "nao existe", o importador tentava criar e o banco recusava com
+      // "duplicate key ... students_email_key" — erro que ninguem entende.
+      // A funcao checar_email_aluno roda com privilegio elevado e devolve a
+      // verdade sem expor dado de aluno alheio.
+      sb.rpc("checar_email_aluno", { p_email: email }).then(function(chk){
+        if(chk.error){
+          errors.push(email + ": não consegui verificar se já existe — " + chk.error.message);
+          next(); return;
+        }
+        var achado = chk.data || {};
+
+        if(achado.existe && !achado.id){
+          // existe, mas em carteira alheia: nao ha o que escrever aqui
+          errors.push(email + ': já cadastrado na plataforma (CS responsável: ' + (achado.cs_nome || "sem CS") +
+            ') — pulei. Se ele tem que ser seu, fale com a Thais.');
+          pulados++;
+          next(); return;
+        }
+
+        if(achado.existe){
+          sb.from("students").update(updates).eq("id", achado.id).then(function(r){
             if(r.error) errors.push(email + ": erro ao atualizar — " + r.error.message); else updated++;
             next();
           });
-        } else {
-          if(!updates.full_name) updates.full_name = email;
-          if(!updates.status) updates.status = "onboarding";
-          updates.source = "planilha_cs";
-          sb.from("students").insert(updates).then(function(r){
-            if(r.error) errors.push(email + ": erro ao criar — " + r.error.message); else created++;
-            next();
-          });
+          return;
         }
+
+        if(!updates.full_name) updates.full_name = email;
+        if(!updates.status) updates.status = "onboarding";
+        updates.source = "planilha_cs";
+        if(!updates.cs_id && !currentStaff.isMasterLike) updates.cs_id = currentStaff.id;
+        sb.from("students").insert(updates).then(function(r){
+          if(r.error) errors.push(email + ": erro ao criar — " + r.error.message); else created++;
+          next();
+        });
       });
     }
     next();
