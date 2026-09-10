@@ -279,6 +279,33 @@
   .toggle-btn{font-size:11.5px;font-weight:700;padding:8px 13px;background:var(--eg-bg-2);color:var(--eg-text-muted);border:none;cursor:pointer;font-family:inherit;}
   .toggle-btn.active{background:rgba(201,151,75,0.16);color:var(--eg-gold-100);}
   .filter-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+  /* barra de filtros da lista de alunos */
+  .filtros-alunos{
+    display:flex;align-items:flex-end;gap:10px 14px;flex-wrap:wrap;
+    padding:12px 14px;margin:-4px 0 14px;border-radius:12px;
+    background:rgba(255,255,255,.025);border:1px solid var(--eg-navy-line);
+  }
+  .filtros-alunos > div{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .filtros-alunos label{margin:0;font-size:9.5px;letter-spacing:.14em;}
+  .filtros-alunos select{
+    margin:0;padding:8px 30px 8px 10px;font-size:12px;min-width:150px;
+    background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:8px;
+    color:var(--eg-text-primary);font-family:inherit;
+  }
+  .filtros-alunos .contagem{
+    margin-left:auto;align-self:center;font-family:var(--eg-mono,monospace);
+    font-size:11px;color:var(--eg-text-muted);white-space:nowrap;
+  }
+  .filtros-alunos .limpar{
+    align-self:center;font-size:11.5px;font-weight:600;color:var(--eg-gold-300);
+    background:none;border:none;cursor:pointer;font-family:inherit;padding:6px 4px;
+  }
+  .filtros-alunos .limpar:hover{text-decoration:underline;}
+  @media (max-width:640px){
+    .filtros-alunos > div{flex:1 1 46%;}
+    .filtros-alunos select{min-width:0;width:100%;}
+    .filtros-alunos .contagem{margin-left:0;width:100%;text-align:right;}
+  }
   .filter-block{margin-bottom:12px;}
   .filter-block-label{font-size:10.5px;color:var(--eg-text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:6px;display:block;}
   .filter-chip{font-size:11px;font-weight:600;padding:6px 11px;border-radius:99px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-secondary);cursor:pointer;user-select:none;display:inline-block;margin:0 6px 6px 0;}
@@ -548,6 +575,59 @@
             </div>
             <button class="btn-secondary" id="novoAlunoBtn"><i class="fa-solid fa-user-plus"></i> Novo aluno</button>
           </div>
+        </div>
+
+        <div class="filtros-alunos" id="filtrosAlunos">
+          <div>
+            <label>Ordenar por</label>
+            <select id="fltOrdem">
+              <option value="nome_az">Nome (A → Z)</option>
+              <option value="nome_za">Nome (Z → A)</option>
+              <option value="venc_prox">Vencimento — mais próximo</option>
+              <option value="venc_dist">Vencimento — mais distante</option>
+              <option value="entrada_rec">Entrada — mais recente</option>
+              <option value="entrada_ant">Entrada — mais antiga</option>
+            </select>
+          </div>
+          <div>
+            <label>Status</label>
+            <select id="fltStatus">
+              <option value="">Todos</option>
+              <option value="ativo">Ativo</option>
+              <option value="onboarding">Onboarding</option>
+              <option value="em_reonboarding">Em reonboarding</option>
+              <option value="trancado">Trancado</option>
+              <option value="inativo">Inativo</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+          <div>
+            <label>Mentoria</label>
+            <select id="fltMentoria"><option value="">Todas</option></select>
+          </div>
+          <div>
+            <label>Temperatura</label>
+            <select id="fltTemp">
+              <option value="">Todas</option>
+              <option value="quente">Quente</option>
+              <option value="morno">Morno</option>
+              <option value="frio">Frio</option>
+              <option value="sem">Sem temperatura</option>
+            </select>
+          </div>
+          <div>
+            <label>Vencimento</label>
+            <select id="fltVenc">
+              <option value="">Qualquer</option>
+              <option value="vencidos">Já vencidos</option>
+              <option value="30">Próximos 30 dias</option>
+              <option value="60">Próximos 60 dias</option>
+              <option value="90">Próximos 90 dias</option>
+              <option value="vitalicio">Vitalícios</option>
+            </select>
+          </div>
+          <button class="limpar" id="fltLimpar" type="button">Limpar filtros</button>
+          <span class="contagem" id="fltContagem"></span>
         </div>
         <div id="alunosLoading" class="loading-note">Carregando alunos...</div>
         <table id="alunosTable" style="display:none;">
@@ -1665,17 +1745,115 @@
     chip.style.display = n ? "" : "none";
   }
 
+  // ---------------- filtros e ordenacao da lista de alunos ----------------
+  // Tudo aqui roda sobre allStudents, que a RLS ja limitou ao que a pessoa
+  // pode ver. Filtro e ordenacao nao ampliam acesso: so reorganizam.
+  var alunosFiltro = { status:"", mentoria:"", temp:"", venc:"", ordem:"nome_az" };
+
+  // temperatura e texto livre no cadastro ("Quente", "quente ", "QUENTE!"):
+  // normaliza pelo radical, igual a exportacao ja faz
+  function alunosTemp(s){
+    var t = String(s.temperature || "").toLowerCase();
+    if(t.indexOf("quent") > -1) return "quente";
+    if(t.indexOf("morn") > -1) return "morno";
+    if(t.indexOf("fri") > -1) return "frio";
+    return "";
+  }
+
+  function diasParaVencer(s){
+    if(!s.renewal_date) return null;
+    var d = new Date(String(s.renewal_date).slice(0, 10) + "T00:00:00");
+    if(isNaN(d.getTime())) return null;
+    var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    return Math.round((d.getTime() - hoje.getTime()) / 86400000);
+  }
+
+  function passaFiltros(s){
+    if(alunosFiltro.status && s.status !== alunosFiltro.status) return false;
+    if(alunosFiltro.mentoria){
+      var tem = (s.deliveries || []).some(function(d){ return d.status === "ativo" && d.branch_id === alunosFiltro.mentoria; });
+      if(!tem) return false;
+    }
+    if(alunosFiltro.temp){
+      var t = alunosTemp(s);
+      if(alunosFiltro.temp === "sem" ? t !== "" : t !== alunosFiltro.temp) return false;
+    }
+    if(alunosFiltro.venc){
+      if(alunosFiltro.venc === "vitalicio") return !!s.is_lifetime;
+      if(s.is_lifetime) return false;
+      var dias = diasParaVencer(s);
+      if(alunosFiltro.venc === "vencidos") return dias !== null && dias < 0;
+      var limite = parseInt(alunosFiltro.venc, 10);
+      return dias !== null && dias >= 0 && dias <= limite;
+    }
+    return true;
+  }
+
+  // datas vem como "AAAA-MM-DD", entao comparar como texto ja ordena certo.
+  // Quem nao tem a data vai para o fim em qualquer sentido — o que a CS quer
+  // ver primeiro e quem tem vencimento, nao quem esta sem cadastro.
+  function ordenaAlunos(a, b){
+    var na = (a.full_name || "").toLowerCase(), nb = (b.full_name || "").toLowerCase();
+    function porData(campo, crescente){
+      var x = a[campo] ? String(a[campo]).slice(0, 10) : "";
+      var y = b[campo] ? String(b[campo]).slice(0, 10) : "";
+      if(!x && !y) return na.localeCompare(nb);
+      if(!x) return 1;
+      if(!y) return -1;
+      return crescente ? x.localeCompare(y) : y.localeCompare(x);
+    }
+    switch(alunosFiltro.ordem){
+      case "nome_za":     return nb.localeCompare(na);
+      case "venc_prox":   return porData("renewal_date", true);
+      case "venc_dist":   return porData("renewal_date", false);
+      case "entrada_rec": return porData("entry_date", false);
+      case "entrada_ant": return porData("entry_date", true);
+      default:            return na.localeCompare(nb);
+    }
+  }
+
+  function preencheFiltroMentoria(){
+    var sel = $("fltMentoria");
+    if(!sel) return;
+    var atual = sel.value;
+    sel.innerHTML = '<option value="">Todas</option>' +
+      allBranches.map(function(b){ return '<option value="' + b.id + '">' + b.name + '</option>'; }).join("");
+    sel.value = atual;
+  }
+
   function applyAlunosFilter(){
     atualizaChipSemAcesso();
     var search = alunosSearchValue.trim().toLowerCase();
     var base = alunosSoSemAcesso ? allStudents.filter(function(s){ return !s.auth_user_id; }) : allStudents;
-    var filtered = !search ? base : base.filter(function(s){
+    var filtered = base.filter(function(s){
+      if(!passaFiltros(s)) return false;
+      if(!search) return true;
       return (s.full_name || "").toLowerCase().indexOf(search) > -1 ||
         (s.email || "").toLowerCase().indexOf(search) > -1 ||
         (s.cpf || "").toLowerCase().indexOf(search) > -1 ||
         (s.phone || "").toLowerCase().indexOf(search) > -1;
-    });
+    }).sort(ordenaAlunos);
+
+    var cont = $("fltContagem");
+    if(cont) cont.textContent = filtered.length === allStudents.length
+      ? allStudents.length + " aluno(s)"
+      : filtered.length + " de " + allStudents.length;
     renderAlunos(filtered);
+  }
+
+  [["fltOrdem","ordem"],["fltStatus","status"],["fltMentoria","mentoria"],["fltTemp","temp"],["fltVenc","venc"]]
+    .forEach(function(par){
+      var el = $(par[0]);
+      if(el) el.addEventListener("change", function(){ alunosFiltro[par[1]] = el.value; applyAlunosFilter(); });
+    });
+  if($("fltLimpar")){
+    $("fltLimpar").addEventListener("click", function(){
+      alunosFiltro = { status:"", mentoria:"", temp:"", venc:"", ordem:"nome_az" };
+      ["fltStatus","fltMentoria","fltTemp","fltVenc"].forEach(function(id){ $(id).value = ""; });
+      $("fltOrdem").value = "nome_az";
+      $("alunosSearch").value = ""; alunosSearchValue = "";
+      applyAlunosFilter();
+    });
   }
 
   function loadAlunos(){
@@ -2706,6 +2884,7 @@
       // vazio: seletor de mentoria vazio e aula caindo em "Mentoria nao
       // encontrada". Agora que as mentorias chegaram, redesenha.
       arteAtualizaMentorias();
+      preencheFiltroMentoria();
       if(allLessons.length){ renderCalendarioList(); renderArteSemana(); }
       staffBranchMap = {};
       (sbRes.data || []).forEach(function(row){
