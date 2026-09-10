@@ -1128,7 +1128,12 @@
           </select>
         </div>
         <div id="alunoCsWrap"><label>CS responsável</label><select id="alunoFieldCs"></select></div>
-        <div id="alunoCs2Wrap"><label>Segunda CS <span class="hint" style="text-transform:none;letter-spacing:0;font-weight:500;">(vê, edita e conta na carteira dela também)</span></label><select id="alunoFieldCs2"></select></div>
+        <!-- "Segunda CS" (cs_id_2) saiu da ficha em 10/09/2026: com a CS por
+             mentoria, o unico caso que sobrou e duas CS na MESMA mentoria do
+             mesmo aluno (Adrielly + Viviane nos 45 da Start Regina e Twoany),
+             e isso se atribui por SQL. A coluna continua no banco e a lista e
+             as carteiras continuam lendo. -->
+        <div id="alunoCs2Wrap" style="display:none;"><select id="alunoFieldCs2"></select></div>
         <div><label>Data de nascimento</label><input type="date" id="alunoFieldBirth"></div>
         <div><label>CPF</label><input type="text" id="alunoFieldCpf" placeholder="000.000.000-00"></div>
         <div><label>Telefone / contato</label><input type="text" id="alunoFieldPhone" placeholder="(00) 00000-0000"></div>
@@ -2331,7 +2336,6 @@
     }
 
     $("alunoCsWrap").style.display = currentStaff.isMasterLike ? "block" : "none";
-    $("alunoCs2Wrap").style.display = currentStaff.isMasterLike ? "block" : "none";
     if(currentStaff.isMasterLike){
       var sel = $("alunoFieldCs");
       sel.innerHTML = '<option value="">Sem CS</option>';
@@ -2426,9 +2430,7 @@
     if(currentStaff.isMasterLike){
       var csVal = $("alunoFieldCs").value;
       updates.cs_id = csVal || null;
-      var cs2Val = $("alunoFieldCs2").value;
-      // apoio igual a responsavel nao faz sentido: vira so ruido na tela
-      updates.cs_id_2 = (cs2Val && cs2Val !== updates.cs_id) ? cs2Val : null;
+      // cs_id_2 nao e mais editado pela ficha — e preservado como esta
     }
 
     var statusAntes = student.status;
