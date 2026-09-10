@@ -1416,6 +1416,10 @@
   // data so por aluno nao representa isso, e a diretoria conta safra por aqui.
   var alunoBranchDates = {};
   var alunoBranchRenewals = {};
+  // CS responsavel por CADA mentoria do aluno (id da staff, por nome da mentoria).
+  // E isso que decide quem enxerga o aluno: quem responde por alguma mentoria
+  // ativa dele. Aluno na Mae com uma CS e na Start com outra tem duas.
+  var alunoBranchCs = {};
   var alunoSelectedGroups = [];
   var wppSearchValue = "";
   var wppViewMode = "mentorado";
@@ -1872,7 +1876,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -1981,6 +1985,30 @@
     return ' <span class="disc-badge" title="Perfil comportamental (DISC) — visível só pra equipe">DISC: ' + (DISC_PROFILE_LABEL[profile] || profile) + '</span>';
   }
 
+  // Quem responde pelo aluno, mentoria a mentoria. Se todas as mentorias
+  // ativas tem a mesma CS, mostra so o nome; se diferem, mostra cada uma com
+  // a sua mentoria — e isso que a Thais precisa ver de relance.
+  function csPorMentoriaHtml(s){
+    var ativas = (s.deliveries || []).filter(function(d){ return d.status === "ativo"; });
+    var pares = ativas.map(function(d){ return { cs: (d.cs && d.cs.full_name) || null, m: d.label }; });
+    var nomes = pares.map(function(x){ return x.cs; }).filter(Boolean);
+    var distintos = nomes.filter(function(n, i){ return nomes.indexOf(n) === i; });
+    var html;
+    if(!ativas.length || !distintos.length){
+      html = (s.staff && s.staff.full_name) || (s.legacy_cs_label ? s.legacy_cs_label + " (não vinculada)" : "Sem CS");
+    } else if(distintos.length === 1){
+      html = distintos[0];
+    } else {
+      html = pares.map(function(x){
+        return (x.cs || "sem CS") + ' <span class="hint">(' + x.m + ')</span>';
+      }).join("<br>");
+    }
+    if(s.cs2 && s.cs2.full_name && distintos.indexOf(s.cs2.full_name) === -1){
+      html += '<br><span class="hint">+ ' + s.cs2.full_name + '</span>';
+    }
+    return html;
+  }
+
   function renderAlunos(list){
     var body = $("alunosBody");
     body.innerHTML = "";
@@ -1992,10 +2020,7 @@
             return '<span class="branch-tag' + (d.status !== "ativo" ? " inactive" : "") + '"' + quando + '>' + d.label + '</span>';
           }).join("")
         : '<span class="hint">—</span>';
-      var csName = (s.staff && s.staff.full_name) || (s.legacy_cs_label ? s.legacy_cs_label + " (não vinculada)" : "Sem CS");
-      if(s.cs2 && s.cs2.full_name){
-        csName += '<br><span class="hint" title="CS de apoio: vê e edita este aluno junto com a responsável">apoio: ' + s.cs2.full_name + '</span>';
-      }
+      var csName = csPorMentoriaHtml(s);
       var tr = document.createElement("tr");
       tr.innerHTML =
         '<td><b>' + s.full_name + '</b>' + discBadge(s) + '<br><span class="hint">' + s.email + '</span></td>' +
@@ -2065,6 +2090,26 @@
       v.addEventListener("change", function(){ alunoBranchRenewals[nome] = v.value || null; atualizaCicloDerivado(); });
 
       row.appendChild(l1); row.appendChild(e); row.appendChild(l2); row.appendChild(v);
+
+      // a CS desta mentoria: a master escolhe; a CS comum so ve
+      var l3 = document.createElement("span"); l3.textContent = "CS";
+      row.appendChild(l3);
+      if(currentStaff.isMasterLike){
+        var sel = document.createElement("select");
+        sel.style.cssText = "margin:0;width:auto;min-width:150px;padding:6px 9px;font-size:12px;";
+        sel.innerHTML = '<option value="">(automático)</option>' +
+          allStaff.filter(function(x){ return x.is_active; }).map(function(x){
+            return '<option value="' + x.id + '"' + (alunoBranchCs[nome] === x.id ? ' selected' : '') + '>' + x.full_name + '</option>';
+          }).join("");
+        sel.addEventListener("change", function(){ alunoBranchCs[nome] = sel.value || null; });
+        row.appendChild(sel);
+      } else {
+        var quem = allStaff.find(function(x){ return x.id === alunoBranchCs[nome]; });
+        var b2 = document.createElement("b");
+        b2.style.cssText = "flex:0 0 auto;font-weight:600;color:var(--eg-text-secondary);";
+        b2.textContent = quem ? quem.full_name : (alunoBranchCs[nome] ? "—" : "(será definida ao salvar)");
+        row.appendChild(b2);
+      }
       wrap.appendChild(row);
     });
     atualizaCicloDerivado();
@@ -2216,9 +2261,11 @@
     alunoSelectedBranches = activeDeliveries.map(function(d){ return d.label; });
     alunoBranchDates = {};
     alunoBranchRenewals = {};
+    alunoBranchCs = {};
     (student.deliveries || []).forEach(function(d){
       if(d.entry_date) alunoBranchDates[d.label] = String(d.entry_date).slice(0, 10);
       if(d.renewal_date) alunoBranchRenewals[d.label] = String(d.renewal_date).slice(0, 10);
+      if(d.cs_id) alunoBranchCs[d.label] = d.cs_id;
     });
     ensureBranchesLoaded(renderAlunoBranchChecks);
     var activeGroups = (student.student_whatsapp_groups || []).filter(function(g){ return g.status === "ativo"; });
@@ -2407,7 +2454,7 @@
   // planilha — não tinha como criar um do zero (nem um "aluno teste"). Cria
   // com o mínimo (nome + e-mail) e já abre a ficha completa em seguida, pra
   // marcar mentoria/status/CS na hora, sem precisar de uma segunda tela.
-  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)";
+  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)";
 
   $("novoAlunoBtn").addEventListener("click", function(){
     $("novoAlunoFieldName").value = "";
@@ -2509,12 +2556,19 @@
       var venNova = stillSelected ? (alunoBranchRenewals[d.label] || null) : undefined;
       var entAntes = d.entry_date ? String(d.entry_date).slice(0, 10) : null;
       var venAntes = d.renewal_date ? String(d.renewal_date).slice(0, 10) : null;
+      var csNova = (currentStaff.isMasterLike && stillSelected) ? (alunoBranchCs[d.label] || null) : undefined;
+      var csAntes = d.cs_id || null;
+      var mudouCs = currentStaff.isMasterLike && stillSelected && csNova !== csAntes;
       if(stillSelected && d.status !== "ativo"){
-        tasks.push(sb.from("deliveries").update({ status: "ativo", entry_date: entNova, renewal_date: venNova }).eq("id", d.id));
+        var up = { status: "ativo", entry_date: entNova, renewal_date: venNova };
+        if(currentStaff.isMasterLike) up.cs_id = csNova;
+        tasks.push(sb.from("deliveries").update(up).eq("id", d.id));
       } else if(!stillSelected && d.status === "ativo"){
         tasks.push(sb.from("deliveries").update({ status: "inativo" }).eq("id", d.id));
-      } else if(stillSelected && (entNova !== entAntes || venNova !== venAntes)){
-        tasks.push(sb.from("deliveries").update({ entry_date: entNova, renewal_date: venNova }).eq("id", d.id));
+      } else if(stillSelected && (entNova !== entAntes || venNova !== venAntes || mudouCs)){
+        var up2 = { entry_date: entNova, renewal_date: venNova };
+        if(mudouCs) up2.cs_id = csNova;
+        tasks.push(sb.from("deliveries").update(up2).eq("id", d.id));
       }
     });
 
@@ -2522,11 +2576,15 @@
     var newOnes = alunoSelectedBranches.filter(function(name){ return existingLabels.indexOf(name) === -1; });
     newOnes.forEach(function(name){
       var branch = allBranches.find(function(b){ return b.name === name; });
-      tasks.push(sb.from("deliveries").insert({
+      var nova = {
         student_id: student.id, branch_id: branch ? branch.id : null, label: name,
         status: "ativo", source: "manual",
         entry_date: alunoBranchDates[name] || null, renewal_date: alunoBranchRenewals[name] || null
-      }));
+      };
+      // sem cs_id o banco define sozinho: a CS unica da mentoria, senao a
+      // principal do aluno
+      if(currentStaff.isMasterLike && alunoBranchCs[name]) nova.cs_id = alunoBranchCs[name];
+      tasks.push(sb.from("deliveries").insert(nova));
     });
 
     if(!tasks.length){ done(null); return; }
@@ -4825,7 +4883,7 @@
 
   function loadCarteiras(){
     sb.from("students")
-      .select("id,full_name,phone,status,cs_id,cs_id_2,legacy_cs_label,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_note,renewal_owner_id,staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),deliveries(label,status,branch_id)")
+      .select("id,full_name,phone,status,cs_id,cs_id_2,legacy_cs_label,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_note,renewal_owner_id,staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),deliveries(label,status,branch_id,cs_id,cs:cs_id(full_name))")
       .then(function(r){
         if(r.error) return;
         carteirasStudents = r.data || [];
@@ -4863,13 +4921,16 @@
   // Aluno com CS de apoio conta na carteira das duas: e assim que a apoio
   // enxerga a carga real dela, e nao so a responsavel principal.
   function carteiraCsTodas(s){
-    var lista = [carteiraCsLabel(s)];
+    var lista = [];
+    (s.deliveries || []).forEach(function(d){
+      if(d.status === "ativo" && d.cs && d.cs.full_name && lista.indexOf(d.cs.full_name) === -1) lista.push(d.cs.full_name);
+    });
+    if(!lista.length) lista.push(carteiraCsLabel(s));
     if(s.cs2 && s.cs2.full_name && lista.indexOf(s.cs2.full_name) === -1) lista.push(s.cs2.full_name);
     return lista;
   }
   function carteiraCsTexto(s){
-    var base = carteiraCsLabel(s);
-    return (s.cs2 && s.cs2.full_name) ? base + ' <span class="hint">+ ' + s.cs2.full_name + '</span>' : base;
+    return carteiraCsTodas(s).join(" · ");
   }
   function carteiraTemperatureLabel(s){
     var t = (s.temperature || "").trim().toLowerCase();
@@ -6215,7 +6276,7 @@
     reader.readAsArrayBuffer(file);
   }
 
-  var IMP_CAMPOS_ALUNO = "id,full_name,email,phone,cpf,status,cs_id,birth_date,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id,entry_date,renewal_date),student_whatsapp_groups(id,group_id,status),staff:cs_id(full_name)";
+  var IMP_CAMPOS_ALUNO = "id,full_name,email,phone,cpf,status,cs_id,birth_date,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,group_id,status),staff:cs_id(full_name)";
 
   function impComparar(lido, st, temColunasNovas){
     // As colunas do v39 só entram no select se existirem; senão o PostgREST
