@@ -1123,7 +1123,7 @@
           </select>
         </div>
         <div id="alunoCsWrap"><label>CS responsável</label><select id="alunoFieldCs"></select></div>
-        <div id="alunoCs2Wrap"><label>CS de apoio <span class="hint" style="text-transform:none;letter-spacing:0;font-weight:500;">(vê e edita o mesmo aluno)</span></label><select id="alunoFieldCs2"></select></div>
+        <div id="alunoCs2Wrap"><label>Segunda CS <span class="hint" style="text-transform:none;letter-spacing:0;font-weight:500;">(vê, edita e conta na carteira dela também)</span></label><select id="alunoFieldCs2"></select></div>
         <div><label>Data de nascimento</label><input type="date" id="alunoFieldBirth"></div>
         <div><label>CPF</label><input type="text" id="alunoFieldCpf" placeholder="000.000.000-00"></div>
         <div><label>Telefone / contato</label><input type="text" id="alunoFieldPhone" placeholder="(00) 00000-0000"></div>
@@ -4778,6 +4778,17 @@
   function carteiraCsLabel(s){
     return (s.staff && s.staff.full_name) || s.legacy_cs_label || "Sem CS";
   }
+  // Aluno com CS de apoio conta na carteira das duas: e assim que a apoio
+  // enxerga a carga real dela, e nao so a responsavel principal.
+  function carteiraCsTodas(s){
+    var lista = [carteiraCsLabel(s)];
+    if(s.cs2 && s.cs2.full_name && lista.indexOf(s.cs2.full_name) === -1) lista.push(s.cs2.full_name);
+    return lista;
+  }
+  function carteiraCsTexto(s){
+    var base = carteiraCsLabel(s);
+    return (s.cs2 && s.cs2.full_name) ? base + ' <span class="hint">+ ' + s.cs2.full_name + '</span>' : base;
+  }
   function carteiraTemperatureLabel(s){
     var t = (s.temperature || "").trim().toLowerCase();
     if(t.indexOf("quente") > -1) return "Quente";
@@ -4923,7 +4934,7 @@
     if(search){
       list = list.filter(function(s){
         return (s.full_name || "").toLowerCase().indexOf(search) > -1 ||
-          carteiraCsLabel(s).toLowerCase().indexOf(search) > -1 ||
+          carteiraCsTodas(s).join(" ").toLowerCase().indexOf(search) > -1 ||
           carteiraMentoriaLabel(s).toLowerCase().indexOf(search) > -1;
       });
     }
@@ -4945,7 +4956,7 @@
         return '<tr>' +
           '<td><b>' + s.full_name + '</b>' + waLinkHtml(s.phone) + '</td>' +
           '<td>' + carteiraMentoriaLabel(s) + '</td>' +
-          '<td>' + carteiraCsLabel(s) + '</td>' +
+          '<td>' + carteiraCsTexto(s) + '</td>' +
           '<td>' + carteiraStatusSelectHtml(s) + '</td>' +
           '<td>' + (s.entry_date ? fmtEventDate(s.entry_date) : "—") + '</td>' +
           '<td>' + carteiraVencimentoCell(s) + '</td>' +
@@ -5126,9 +5137,9 @@
     renderCarteirasBarChart("carteirasMentoriaChart", mentoriaEntries, "mentoria_", "#c9974b");
 
     var csCounts = {};
-    list.forEach(function(s){ var c = carteiraCsLabel(s); csCounts[c] = (csCounts[c] || 0) + 1; });
+    list.forEach(function(s){ carteiraCsTodas(s).forEach(function(c){ csCounts[c] = (csCounts[c] || 0) + 1; }); });
     var csEntries = Object.keys(csCounts).sort(function(a, b){ return csCounts[b] - csCounts[a]; }).map(function(c){
-      return { label: c, count: csCounts[c], predicate: function(s){ return carteiraCsLabel(s) === c; } };
+      return { label: c, count: csCounts[c], predicate: function(s){ return carteiraCsTodas(s).indexOf(c) > -1; } };
     });
     renderCarteirasBarChart("carteirasCsChart", csEntries, "cs_", "#5b8def");
 
