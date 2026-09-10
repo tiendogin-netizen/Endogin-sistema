@@ -1043,6 +1043,7 @@
           </select>
         </div>
         <div id="alunoCsWrap"><label>CS responsável</label><select id="alunoFieldCs"></select></div>
+        <div id="alunoCs2Wrap"><label>CS de apoio <span class="hint" style="text-transform:none;letter-spacing:0;font-weight:500;">(vê e edita o mesmo aluno)</span></label><select id="alunoFieldCs2"></select></div>
         <div><label>Data de nascimento</label><input type="date" id="alunoFieldBirth"></div>
         <div><label>CPF</label><input type="text" id="alunoFieldCpf" placeholder="000.000.000-00"></div>
         <div><label>Telefone / contato</label><input type="text" id="alunoFieldPhone" placeholder="(00) 00000-0000"></div>
@@ -1681,7 +1682,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -1799,6 +1800,9 @@
         ? deliveries.map(function(d){ return '<span class="branch-tag' + (d.status !== "ativo" ? " inactive" : "") + '">' + d.label + '</span>'; }).join("")
         : '<span class="hint">—</span>';
       var csName = (s.staff && s.staff.full_name) || (s.legacy_cs_label ? s.legacy_cs_label + " (não vinculada)" : "Sem CS");
+      if(s.cs2 && s.cs2.full_name){
+        csName += '<br><span class="hint" title="CS de apoio: vê e edita este aluno junto com a responsável">apoio: ' + s.cs2.full_name + '</span>';
+      }
       var tr = document.createElement("tr");
       tr.innerHTML =
         '<td><b>' + s.full_name + '</b>' + discBadge(s) + '<br><span class="hint">' + s.email + '</span></td>' +
@@ -2031,6 +2035,7 @@
     }
 
     $("alunoCsWrap").style.display = currentStaff.isMasterLike ? "block" : "none";
+    $("alunoCs2Wrap").style.display = currentStaff.isMasterLike ? "block" : "none";
     if(currentStaff.isMasterLike){
       var sel = $("alunoFieldCs");
       sel.innerHTML = '<option value="">Sem CS</option>';
@@ -2039,6 +2044,17 @@
         opt.value = s.id; opt.textContent = s.full_name;
         if(s.id === student.cs_id) opt.selected = true;
         sel.appendChild(opt);
+      });
+      // A apoio nao e uma segunda dona: e alguem que precisa ver e editar o
+      // mesmo aluno. A responsavel (contagem de carteira, rodizio) continua
+      // sendo a de cima.
+      var sel2 = $("alunoFieldCs2");
+      sel2.innerHTML = '<option value="">Nenhuma</option>';
+      allStaff.filter(function(s){ return s.is_active; }).forEach(function(s){
+        var opt = document.createElement("option");
+        opt.value = s.id; opt.textContent = s.full_name;
+        if(s.id === student.cs_id_2) opt.selected = true;
+        sel2.appendChild(opt);
       });
     }
 
@@ -2110,6 +2126,9 @@
     if(currentStaff.isMasterLike){
       var csVal = $("alunoFieldCs").value;
       updates.cs_id = csVal || null;
+      var cs2Val = $("alunoFieldCs2").value;
+      // apoio igual a responsavel nao faz sentido: vira so ruido na tela
+      updates.cs_id_2 = (cs2Val && cs2Val !== updates.cs_id) ? cs2Val : null;
     }
 
     var statusAntes = student.status;
@@ -2135,7 +2154,7 @@
   // planilha — não tinha como criar um do zero (nem um "aluno teste"). Cria
   // com o mínimo (nome + e-mail) e já abre a ficha completa em seguida, pra
   // marcar mentoria/status/CS na hora, sem precisar de uma segunda tela.
-  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)";
+  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)";
 
   $("novoAlunoBtn").addEventListener("click", function(){
     $("novoAlunoFieldName").value = "";
@@ -4545,7 +4564,7 @@
 
   function loadCarteiras(){
     sb.from("students")
-      .select("id,full_name,phone,status,cs_id,legacy_cs_label,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_note,renewal_owner_id,staff:cs_id(full_name),renewal_owner:renewal_owner_id(full_name),deliveries(label,status,branch_id)")
+      .select("id,full_name,phone,status,cs_id,cs_id_2,legacy_cs_label,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_note,renewal_owner_id,staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),deliveries(label,status,branch_id)")
       .then(function(r){
         if(r.error) return;
         carteirasStudents = r.data || [];
