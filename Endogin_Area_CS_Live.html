@@ -227,6 +227,11 @@
   .team-photo-drop i{font-size:18px;color:var(--eg-gold-300);}
   .branch-chip{font-size:11px;font-weight:600;padding:7px 11px;border-radius:8px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-secondary);cursor:pointer;user-select:none;display:inline-block;margin:0 6px 6px 0;}
   .branch-chip.selected{background:rgba(201,151,75,0.16);border-color:var(--eg-gold-500);color:var(--eg-gold-100);}
+  /* data de entrada por mentoria: aparece so para as mentorias marcadas */
+  .mentoria-data{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--eg-navy-line);}
+  .mentoria-data b{font-size:12px;color:var(--eg-gold-100);flex:1 1 140px;}
+  .mentoria-data span{font-size:10.5px;color:var(--eg-text-muted);}
+  .mentoria-data input[type=date]{margin:0;width:auto;padding:6px 9px;font-size:12px;}
   .crm-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
   .crm-stat-card{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:10px;padding:14px 16px;}
   .crm-stat-num{font-size:24px;font-weight:700;color:var(--eg-gold-100);}
@@ -1130,6 +1135,7 @@
         <div style="grid-column:1/-1;">
           <label>Mentorias (clique pra marcar/desmarcar)</label>
           <div id="alunoBranchChecks"></div>
+          <div id="alunoBranchDates" style="display:grid;gap:6px;margin-top:8px;"></div>
           <p class="hint" id="alunoMentoriaRawHint" style="margin-top:6px;display:none;"></p>
         </div>
         <div style="grid-column:1/-1;">
@@ -1404,6 +1410,10 @@
   var teamSelectedBranches = [];
   var alunoEditingId = null;
   var alunoSelectedBranches = [];
+  // data de entrada em cada mentoria, por nome da mentoria (AAAA-MM-DD).
+  // O aluno pode ter entrado na Mae em janeiro e na Start em fevereiro: uma
+  // data so por aluno nao representa isso, e a diretoria conta safra por aqui.
+  var alunoBranchDates = {};
   var alunoSelectedGroups = [];
   var wppSearchValue = "";
   var wppViewMode = "mentorado";
@@ -1860,7 +1870,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -1975,7 +1985,10 @@
     list.forEach(function(s){
       var deliveries = s.deliveries || [];
       var tags = deliveries.length
-        ? deliveries.map(function(d){ return '<span class="branch-tag' + (d.status !== "ativo" ? " inactive" : "") + '">' + d.label + '</span>'; }).join("")
+        ? deliveries.map(function(d){
+            var quando = d.entry_date ? ' title="entrou em ' + String(d.entry_date).slice(0, 10).split("-").reverse().join("/") + '"' : '';
+            return '<span class="branch-tag' + (d.status !== "ativo" ? " inactive" : "") + '"' + quando + '>' + d.label + '</span>';
+          }).join("")
         : '<span class="hint">—</span>';
       var csName = (s.staff && s.staff.full_name) || (s.legacy_cs_label ? s.legacy_cs_label + " (não vinculada)" : "Sem CS");
       if(s.cs2 && s.cs2.full_name){
@@ -2020,10 +2033,32 @@
       chip.textContent = b.name;
       chip.addEventListener("click", function(){
         var idx = alunoSelectedBranches.indexOf(b.name);
-        if(idx > -1) alunoSelectedBranches.splice(idx, 1); else alunoSelectedBranches.push(b.name);
+        if(idx > -1){ alunoSelectedBranches.splice(idx, 1); }
+        else {
+          alunoSelectedBranches.push(b.name);
+          if(!alunoBranchDates[b.name]) alunoBranchDates[b.name] = new Date().toISOString().slice(0, 10);
+        }
         renderAlunoBranchChecks();
       });
       wrap.appendChild(chip);
+    });
+    renderAlunoBranchDates();
+  }
+
+  function renderAlunoBranchDates(){
+    var wrap = $("alunoBranchDates");
+    if(!wrap) return;
+    wrap.innerHTML = "";
+    alunoSelectedBranches.forEach(function(nome){
+      var row = document.createElement("div");
+      row.className = "mentoria-data";
+      row.innerHTML = '<b>' + nome + '</b><span>entrou em</span>';
+      var inp = document.createElement("input");
+      inp.type = "date";
+      inp.value = alunoBranchDates[nome] || "";
+      inp.addEventListener("change", function(){ alunoBranchDates[nome] = inp.value || null; });
+      row.appendChild(inp);
+      wrap.appendChild(row);
     });
   }
 
@@ -2149,6 +2184,8 @@
     alunoEditingId = id;
     var activeDeliveries = (student.deliveries || []).filter(function(d){ return d.status === "ativo"; });
     alunoSelectedBranches = activeDeliveries.map(function(d){ return d.label; });
+    alunoBranchDates = {};
+    (student.deliveries || []).forEach(function(d){ if(d.entry_date) alunoBranchDates[d.label] = String(d.entry_date).slice(0, 10); });
     ensureBranchesLoaded(renderAlunoBranchChecks);
     var activeGroups = (student.student_whatsapp_groups || []).filter(function(g){ return g.status === "ativo"; });
     alunoSelectedGroups = activeGroups.map(function(g){ return g.label; });
@@ -2332,7 +2369,7 @@
   // planilha — não tinha como criar um do zero (nem um "aluno teste"). Cria
   // com o mínimo (nome + e-mail) e já abre a ficha completa em seguida, pra
   // marcar mentoria/status/CS na hora, sem precisar de uma segunda tela.
-  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)";
+  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)";
 
   $("novoAlunoBtn").addEventListener("click", function(){
     $("novoAlunoFieldName").value = "";
@@ -2430,10 +2467,14 @@
 
     existing.forEach(function(d){
       var stillSelected = alunoSelectedBranches.indexOf(d.label) > -1;
+      var dataNova = stillSelected ? (alunoBranchDates[d.label] || null) : undefined;
+      var dataAntes = d.entry_date ? String(d.entry_date).slice(0, 10) : null;
       if(stillSelected && d.status !== "ativo"){
-        tasks.push(sb.from("deliveries").update({ status: "ativo" }).eq("id", d.id));
+        tasks.push(sb.from("deliveries").update({ status: "ativo", entry_date: dataNova }).eq("id", d.id));
       } else if(!stillSelected && d.status === "ativo"){
         tasks.push(sb.from("deliveries").update({ status: "inativo" }).eq("id", d.id));
+      } else if(stillSelected && dataNova !== dataAntes){
+        tasks.push(sb.from("deliveries").update({ entry_date: dataNova }).eq("id", d.id));
       }
     });
 
@@ -2443,7 +2484,7 @@
       var branch = allBranches.find(function(b){ return b.name === name; });
       tasks.push(sb.from("deliveries").insert({
         student_id: student.id, branch_id: branch ? branch.id : null, label: name,
-        status: "ativo", source: "manual"
+        status: "ativo", source: "manual", entry_date: alunoBranchDates[name] || null
       }));
     });
 
@@ -6133,7 +6174,7 @@
     reader.readAsArrayBuffer(file);
   }
 
-  var IMP_CAMPOS_ALUNO = "id,full_name,email,phone,cpf,status,cs_id,birth_date,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id),student_whatsapp_groups(id,group_id,status),staff:cs_id(full_name)";
+  var IMP_CAMPOS_ALUNO = "id,full_name,email,phone,cpf,status,cs_id,birth_date,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id,entry_date),student_whatsapp_groups(id,group_id,status),staff:cs_id(full_name)";
 
   function impComparar(lido, st, temColunasNovas){
     // As colunas do v39 só entram no select se existirem; senão o PostgREST
