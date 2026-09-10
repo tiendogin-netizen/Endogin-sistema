@@ -1148,6 +1148,7 @@
         <div><label>CRM (médico)</label><input type="text" id="alunoFieldMedicalLicense" placeholder="00000/UF"></div>
 
         <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Ciclo da mentoria</label></div>
+        <p class="hint" id="alunoCicloNota" style="grid-column:1/-1;margin:-6px 0 4px;"></p>
         <div><label>Data de entrada</label><input type="date" id="alunoFieldEntryDate"></div>
         <div>
           <label>Data de vencimento</label>
@@ -1414,6 +1415,7 @@
   // O aluno pode ter entrado na Mae em janeiro e na Start em fevereiro: uma
   // data so por aluno nao representa isso, e a diretoria conta safra por aqui.
   var alunoBranchDates = {};
+  var alunoBranchRenewals = {};
   var alunoSelectedGroups = [];
   var wppSearchValue = "";
   var wppViewMode = "mentorado";
@@ -1870,7 +1872,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -2052,14 +2054,42 @@
     alunoSelectedBranches.forEach(function(nome){
       var row = document.createElement("div");
       row.className = "mentoria-data";
-      row.innerHTML = '<b>' + nome + '</b><span>entrou em</span>';
-      var inp = document.createElement("input");
-      inp.type = "date";
-      inp.value = alunoBranchDates[nome] || "";
-      inp.addEventListener("change", function(){ alunoBranchDates[nome] = inp.value || null; });
-      row.appendChild(inp);
+      row.innerHTML = '<b>' + nome + '</b>';
+
+      var l1 = document.createElement("span"); l1.textContent = "entrou em";
+      var e = document.createElement("input"); e.type = "date"; e.value = alunoBranchDates[nome] || "";
+      e.addEventListener("change", function(){ alunoBranchDates[nome] = e.value || null; atualizaCicloDerivado(); });
+
+      var l2 = document.createElement("span"); l2.textContent = "vence em";
+      var v = document.createElement("input"); v.type = "date"; v.value = alunoBranchRenewals[nome] || "";
+      v.addEventListener("change", function(){ alunoBranchRenewals[nome] = v.value || null; atualizaCicloDerivado(); });
+
+      row.appendChild(l1); row.appendChild(e); row.appendChild(l2); row.appendChild(v);
       wrap.appendChild(row);
     });
+    atualizaCicloDerivado();
+  }
+
+  // A data do aluno e DERIVADA das mentorias: primeira entrada e o vencimento
+  // mais proximo. E o que o banco tambem calcula (gatilho da v50), entao a
+  // tela so mostra o resultado — em dois lugares editaveis as datas acabariam
+  // discordando. Sem nenhuma mentoria marcada nao ha de onde derivar, e ai os
+  // campos voltam a ser editaveis, senao o aluno ficaria sem data nenhuma.
+  function atualizaCicloDerivado(){
+    var ent = $("alunoFieldEntryDate"), ven = $("alunoFieldRenewalDate"), nota = $("alunoCicloNota");
+    if(!ent || !ven) return;
+    var temMentoria = alunoSelectedBranches.length > 0;
+    ent.disabled = temMentoria; ven.disabled = temMentoria;
+    if(!temMentoria){
+      if(nota) nota.textContent = "Sem mentoria marcada: preencha as datas aqui.";
+      return;
+    }
+    var entradas = alunoSelectedBranches.map(function(n){ return alunoBranchDates[n]; }).filter(Boolean).sort();
+    var vencs    = alunoSelectedBranches.map(function(n){ return alunoBranchRenewals[n]; }).filter(Boolean).sort();
+    if(entradas.length) ent.value = entradas[0];
+    if(vencs.length) ven.value = vencs[0];
+    if(nota) nota.textContent = "Calculado pelas mentorias acima: primeira entrada e vencimento mais próximo." +
+      (vencs.length ? "" : " Nenhuma mentoria tem vencimento preenchido ainda.");
   }
 
   function renderAlunoGroupChecks(){
@@ -2185,7 +2215,11 @@
     var activeDeliveries = (student.deliveries || []).filter(function(d){ return d.status === "ativo"; });
     alunoSelectedBranches = activeDeliveries.map(function(d){ return d.label; });
     alunoBranchDates = {};
-    (student.deliveries || []).forEach(function(d){ if(d.entry_date) alunoBranchDates[d.label] = String(d.entry_date).slice(0, 10); });
+    alunoBranchRenewals = {};
+    (student.deliveries || []).forEach(function(d){
+      if(d.entry_date) alunoBranchDates[d.label] = String(d.entry_date).slice(0, 10);
+      if(d.renewal_date) alunoBranchRenewals[d.label] = String(d.renewal_date).slice(0, 10);
+    });
     ensureBranchesLoaded(renderAlunoBranchChecks);
     var activeGroups = (student.student_whatsapp_groups || []).filter(function(g){ return g.status === "ativo"; });
     alunoSelectedGroups = activeGroups.map(function(g){ return g.label; });
@@ -2319,8 +2353,6 @@
       phone: $("alunoFieldPhone").value.trim() || null,
       instagram: $("alunoFieldInstagram").value.trim() || null,
       medical_license: $("alunoFieldMedicalLicense").value.trim() || null,
-      entry_date: $("alunoFieldEntryDate").value || null,
-      renewal_date: $("alunoFieldRenewalDate").value || null,
       is_lifetime: $("alunoFieldLifetime").checked,
       is_delinquent: $("alunoFieldDelinquent").checked,
       delinquent_since: $("alunoFieldDelinquent").checked ? (student.is_delinquent ? student.delinquent_since : new Date().toISOString().slice(0, 10)) : null,
@@ -2338,6 +2370,12 @@
       referral_count: $("alunoFieldReferralCount").value.trim() || null,
       notes: $("alunoFieldNotes").value.trim() || null
     };
+    // com mentoria marcada quem manda nas datas e o gatilho do banco; sem
+    // mentoria, o que a pessoa digitou aqui e a unica fonte
+    if(!alunoSelectedBranches.length){
+      updates.entry_date = $("alunoFieldEntryDate").value || null;
+      updates.renewal_date = $("alunoFieldRenewalDate").value || null;
+    }
     if(currentStaff.isMasterLike){
       var csVal = $("alunoFieldCs").value;
       updates.cs_id = csVal || null;
@@ -2369,7 +2407,7 @@
   // planilha — não tinha como criar um do zero (nem um "aluno teste"). Cria
   // com o mínimo (nome + e-mail) e já abre a ficha completa em seguida, pra
   // marcar mentoria/status/CS na hora, sem precisar de uma segunda tela.
-  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)";
+  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)";
 
   $("novoAlunoBtn").addEventListener("click", function(){
     $("novoAlunoFieldName").value = "";
@@ -2467,14 +2505,16 @@
 
     existing.forEach(function(d){
       var stillSelected = alunoSelectedBranches.indexOf(d.label) > -1;
-      var dataNova = stillSelected ? (alunoBranchDates[d.label] || null) : undefined;
-      var dataAntes = d.entry_date ? String(d.entry_date).slice(0, 10) : null;
+      var entNova = stillSelected ? (alunoBranchDates[d.label] || null) : undefined;
+      var venNova = stillSelected ? (alunoBranchRenewals[d.label] || null) : undefined;
+      var entAntes = d.entry_date ? String(d.entry_date).slice(0, 10) : null;
+      var venAntes = d.renewal_date ? String(d.renewal_date).slice(0, 10) : null;
       if(stillSelected && d.status !== "ativo"){
-        tasks.push(sb.from("deliveries").update({ status: "ativo", entry_date: dataNova }).eq("id", d.id));
+        tasks.push(sb.from("deliveries").update({ status: "ativo", entry_date: entNova, renewal_date: venNova }).eq("id", d.id));
       } else if(!stillSelected && d.status === "ativo"){
         tasks.push(sb.from("deliveries").update({ status: "inativo" }).eq("id", d.id));
-      } else if(stillSelected && dataNova !== dataAntes){
-        tasks.push(sb.from("deliveries").update({ entry_date: dataNova }).eq("id", d.id));
+      } else if(stillSelected && (entNova !== entAntes || venNova !== venAntes)){
+        tasks.push(sb.from("deliveries").update({ entry_date: entNova, renewal_date: venNova }).eq("id", d.id));
       }
     });
 
@@ -2484,7 +2524,8 @@
       var branch = allBranches.find(function(b){ return b.name === name; });
       tasks.push(sb.from("deliveries").insert({
         student_id: student.id, branch_id: branch ? branch.id : null, label: name,
-        status: "ativo", source: "manual", entry_date: alunoBranchDates[name] || null
+        status: "ativo", source: "manual",
+        entry_date: alunoBranchDates[name] || null, renewal_date: alunoBranchRenewals[name] || null
       }));
     });
 
@@ -6174,7 +6215,7 @@
     reader.readAsArrayBuffer(file);
   }
 
-  var IMP_CAMPOS_ALUNO = "id,full_name,email,phone,cpf,status,cs_id,birth_date,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id,entry_date),student_whatsapp_groups(id,group_id,status),staff:cs_id(full_name)";
+  var IMP_CAMPOS_ALUNO = "id,full_name,email,phone,cpf,status,cs_id,birth_date,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id,entry_date,renewal_date),student_whatsapp_groups(id,group_id,status),staff:cs_id(full_name)";
 
   function impComparar(lido, st, temColunasNovas){
     // As colunas do v39 só entram no select se existirem; senão o PostgREST
