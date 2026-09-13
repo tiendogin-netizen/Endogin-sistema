@@ -1011,6 +1011,13 @@
             return;
           }
           currentStudent = r.data;
+          // Registra o acesso: a CS ve na ficha quando o aluno entrou pela
+          // primeira vez e quando foi a ultima. Nao bloqueia nada se falhar.
+          var agora = new Date().toISOString();
+          sb.from("students")
+            .update({ last_login_at: agora, first_login_at: currentStudent.first_login_at || agora })
+            .eq("id", currentStudent.id)
+            .then(function(){});
           if(!currentStudent.onboarding_completed_at){
             startOnboarding();
           } else if(!currentStudent.disc_completed_at){
@@ -1345,6 +1352,7 @@
       .select("id,title,duration_minutes,lesson_type,branch_id,link_url,cover_url,description")
       .eq("lesson_type", "trilha")
       .or(orParts.join(","))
+      .order("sort_order", { nullsFirst:false })
       .then(function(r){
         var lessons = r.data || [];
         if(!lessons.length){ jornada.trilha = { aulas: [], feitas: 0 }; return true; }

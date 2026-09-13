@@ -24,28 +24,45 @@ create policy lessons_select_student
   );
 
 -- ---------- (2) aulas preparatórias ----------
-insert into lessons (cademi_lesson_id, title, lesson_type, branch_id, link_url)
-values
-  ('7320282', 'Onboarding 3 — SND! Os três pilares da venda!', 'trilha', null,
-    'https://membros.mentoriaendogin.com.br/area/conteudo/aula/7320282'),
-  ('7320280', 'Agendamento 2.0 e 7 passos da venda!', 'trilha', null,
-    'https://membros.mentoriaendogin.com.br/area/conteudo/aula/7320280'),
-  ('7661640', 'Os passos 2, 3 e 4 como vocês nunca viram! Detalhando a técnica da casinha', 'trilha', null,
-    'https://membros.mentoriaendogin.com.br/area/conteudo/aula/7661640'),
-  ('9412205', 'Aula Ouro — Caixa-Preta: Do Zero ao Primeiro Milhão | Dr. Vinícius Carruego', 'trilha', null,
-    'https://membros.mentoriaendogin.com.br/area/conteudo/aula/9412205'),
-  ('7320401', 'Aula Ouro - Dr. Wilson - Programas de Acompanhamento na Prática', 'trilha', null,
-    'https://membros.mentoriaendogin.com.br/area/conteudo/aula/7320401')
-on conflict (cademi_lesson_id) do update set
-  title = excluded.title,
-  lesson_type = excluded.lesson_type,
-  link_url = excluded.link_url;
+alter table lessons add column if not exists sort_order int;
+
+-- Sem depender de constraint única: insere o que falta e atualiza o que já
+-- existe, pelo id da Cademi.
+with aulas(cademi_lesson_id, title, link_url, sort_order) as (values
+  ('7320282', 'Onboarding 3 — SND! Os três pilares da venda!',
+    'https://membros.mentoriaendogin.com.br/area/conteudo/aula/7320282', 1),
+  ('7320280', 'Agendamento 2.0 e 7 passos da venda!',
+    'https://membros.mentoriaendogin.com.br/area/conteudo/aula/7320280', 2),
+  ('7661640', 'Os passos 2, 3 e 4 como vocês nunca viram! Detalhando a técnica da casinha',
+    'https://membros.mentoriaendogin.com.br/area/conteudo/aula/7661640', 3),
+  ('9412205', 'Aula Ouro — Caixa-Preta: Do Zero ao Primeiro Milhão | Dr. Vinícius Carruego',
+    'https://membros.mentoriaendogin.com.br/area/conteudo/aula/9412205', 4),
+  ('7320401', 'Aula Ouro - Dr. Wilson - Programas de Acompanhamento na Prática',
+    'https://membros.mentoriaendogin.com.br/area/conteudo/aula/7320401', 5)
+), atualizadas as (
+  update lessons l
+     set title = a.title, lesson_type = 'trilha', branch_id = null,
+         link_url = a.link_url, sort_order = a.sort_order
+    from aulas a
+   where l.cademi_lesson_id = a.cademi_lesson_id
+  returning l.cademi_lesson_id
+)
+insert into lessons (cademi_lesson_id, title, lesson_type, branch_id, link_url, sort_order)
+select a.cademi_lesson_id, a.title, 'trilha', null, a.link_url, a.sort_order
+  from aulas a
+ where not exists (select 1 from lessons l where l.cademi_lesson_id = a.cademi_lesson_id);
 
 -- ---------- (3) veterano ----------
 alter table students add column if not exists veterano boolean not null default false;
 
 -- Ninguém nasce veterano: todo aluno começa como "novo" (trilha + 1x1 a
 -- fazer). Quem já passou por isso a Thaís marca na ficha, caso a caso.
+
+-- ---------- (4) quando o aluno entrou no Portal ----------
+-- O Portal grava no login: first_login_at só na primeira vez, last_login_at
+-- sempre. É o que a CS vê na ficha e na coluna "Jornada" da lista.
+alter table students add column if not exists first_login_at timestamptz;
+alter table students add column if not exists last_login_at  timestamptz;
 
 notify pgrst, 'reload schema';
 
