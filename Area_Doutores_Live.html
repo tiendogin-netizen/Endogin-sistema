@@ -237,6 +237,7 @@
       <nav class="nav" id="nav">
         <button class="on" data-v="panorama">Visão geral</button>
         <button data-v="atencao">Precisam de atenção</button>
+        <button data-v="disc">Perfil DISC</button>
       </nav>
       <div class="nav-grupo">CONTEÚDO</div>
       <nav class="nav" id="nav2">
@@ -343,6 +344,62 @@
     </section>
 
     <!-- ============ AULAS GRAVADAS ============ -->
+    <!-- ============ PERFIL DISC ============ -->
+    <section class="vista" id="v-disc">
+      <div class="topo">
+        <div class="caminho">DIRETORIA</div>
+        <h2>Perfil DISC</h2>
+        <p>O teste comportamental que cada mentorado responde no primeiro acesso ao Portal. <b>D</b> Dominância · <b>I</b> Influência · <b>S</b> Estabilidade · <b>C</b> Conformidade. Cada letra vai de −12 a +12; a dominante é a maior.</p>
+      </div>
+
+      <div class="kpis" id="kpisDisc"></div>
+
+      <div class="filtros">
+        <div style="flex:1;min-width:220px;"><label>Buscar</label><input type="text" id="discBusca" placeholder="nome ou e-mail" style="width:100%;"></div>
+        <div><label>Mentoria</label><select id="discMentoria"><option value="">Todas</option></select></div>
+        <div><label>CS</label><select id="discCs"><option value="">Todas</option></select></div>
+        <div><label>Perfil dominante</label>
+          <select id="discPerfil">
+            <option value="">Todos</option>
+            <option value="D">D — Dominância</option>
+            <option value="I">I — Influência</option>
+            <option value="S">S — Estabilidade</option>
+            <option value="C">C — Conformidade</option>
+          </select>
+        </div>
+        <div><label>Teste</label>
+          <select id="discSit">
+            <option value="">Todos</option>
+            <option value="sim">Já respondeu</option>
+            <option value="nao">Ainda não respondeu</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="graficos" style="margin-bottom:24px;">
+        <div class="painel">
+          <h4>Por perfil dominante</h4>
+          <p class="dica">Quantos mentorados têm cada perfil como o mais forte.</p>
+          <div class="tela-grafico"><canvas id="gDiscPerfis"></canvas></div>
+        </div>
+        <div class="painel">
+          <h4>Média das quatro dimensões</h4>
+          <p class="dica">O perfil médio da base no recorte escolhido.</p>
+          <div class="tela-grafico"><canvas id="gDiscMedias"></canvas></div>
+        </div>
+      </div>
+
+      <div id="discDetalhe" style="display:none;margin-bottom:24px;"></div>
+
+      <div class="secao-cab"><h3>Mentorados</h3><span class="nota" id="notaDisc"></span></div>
+      <div class="tab-rolagem">
+        <table>
+          <thead><tr><th>Mentorado</th><th>Mentoria</th><th>CS</th><th>Dominante</th><th>D</th><th>I</th><th>S</th><th>C</th><th>Quando</th></tr></thead>
+          <tbody id="tabDisc"></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="vista" id="v-cursos">
       <div class="topo">
         <div class="caminho">CONTEÚDO</div>
@@ -665,6 +722,7 @@
       // Chart.js mede o canvas na criação: dentro de uma aba escondida ele lê
       // zero e o gráfico nasce sem tamanho. Por isso o redesenho no clique.
       if(btn.getAttribute("data-v") === "panorama") setTimeout(desenhaPanorama, 30);
+      if(btn.getAttribute("data-v") === "disc") setTimeout(renderDisc, 30);
     });
   });
 
@@ -703,7 +761,7 @@
     carregando = true;
     $("btnAtualizar").disabled = true;
     Promise.all([
-      buscarTudo("students", "id,full_name,email,phone,status,temperature,renewal_date,renewal_status,is_lifetime,is_delinquent,entry_date,cs_id,staff:cs_id(full_name),deliveries(label,status,branch_id)"),
+      buscarTudo("students", "id,full_name,email,phone,status,temperature,renewal_date,renewal_status,is_lifetime,is_delinquent,entry_date,cs_id,staff:cs_id(full_name),deliveries(label,status,branch_id),disc_results(d_score,i_score,s_score,c_score,primary_profile,created_at)"),
       sb.from("branches").select("id,name").order("name"),
       // Os sinais de risco moram em tabelas separadas — sem elas a tela vira
       // uma lista de cadastro, e o que a diretoria precisa e enxergar quem
@@ -729,6 +787,7 @@
       carregaMateriais();
       carregaAoVivo();
       carregaRecados();
+      renderDisc();
       marcaAtualizacao();
     })["catch"](function(e){
       // sem isto uma falha de rede deixaria `carregando` travado em true e a
@@ -895,17 +954,27 @@
   }
 
   // ---------- mentorados ----------
-  function montaFiltros(){
-    branches.forEach(function(b){
-      $("filtroMentoria").insertAdjacentHTML("beforeend", '<option value="' + esc(b.name) + '">' + esc(b.name) + '</option>');
-      $("matMentoria").insertAdjacentHTML("beforeend", '<option value="' + esc(b.id) + '">' + esc(b.name) + '</option>');
-    });
+  // Roda a cada atualizacao automatica, entao precisa repovoar em vez de
+  // acrescentar — senao os seletores duplicam as opcoes a cada minuto.
+  function repovoa(id, itens, rotulo, valor){
+    var sel = $(id);
+    if(!sel) return;
+    var atual = sel.value;
+    sel.innerHTML = '<option value="">' + rotulo + '</option>' +
+      itens.map(function(x){ return '<option value="' + esc(valor(x)) + '">' + esc(x.name || x) + '</option>'; }).join("");
+    sel.value = atual;
+  }
 
+  function montaFiltros(){
     var css = {};
     alunos.forEach(function(a){ if(a.staff && a.staff.full_name) css[a.staff.full_name] = true; });
-    Object.keys(css).sort().forEach(function(n){
-      $("filtroCs").insertAdjacentHTML("beforeend", '<option value="' + esc(n) + '">' + esc(n) + '</option>');
-    });
+    var nomesCs = Object.keys(css).sort();
+
+    repovoa("filtroMentoria", branches, "Todas", function(b){ return b.name; });
+    repovoa("matMentoria", branches, "Todas as mentorias", function(b){ return b.id; });
+    repovoa("filtroCs", nomesCs, "Todas", function(n){ return n; });
+    repovoa("discMentoria", branches, "Todas", function(b){ return b.name; });
+    repovoa("discCs", nomesCs, "Todas", function(n){ return n; });
 
     ["buscaAluno","filtroMentoria","filtroCs"].forEach(function(id){
       $(id).addEventListener("input", renderAlunos);
@@ -1254,6 +1323,140 @@
       $("painelAula").style.display = "none";
       carregaAoVivo();
     });
+  });
+
+  // ---------- perfil DISC ----------
+  var DISC_COR = { D:"#d98a8a", I:"#e3bd76", S:"#8fc79f", C:"#8fb3e0" };
+  var DISC_NOME = { D:"Dominância", I:"Influência", S:"Estabilidade", C:"Conformidade" };
+  var DISC_RESUMO = {
+    D: "Direto, decidido, orientado a resultado. Gosta de desafio e de decidir rápido; impacienta-se com detalhe e com ritmo lento.",
+    I: "Comunicativo, entusiasmado, persuasivo. Gosta de gente e de reconhecimento; dispersa com rotina e com detalhe.",
+    S: "Paciente, leal, constante. Gosta de previsibilidade e de apoio; resiste a mudança brusca e a pressão.",
+    C: "Analítico, preciso, cuidadoso. Gosta de dado e de critério; desconfia de promessa vaga e de improviso."
+  };
+  var discSelecionado = null;
+
+  function discResultadoDe(a){
+    var lista = (a.disc_results || []).slice().sort(function(x, y){
+      return String(y.created_at || "").localeCompare(String(x.created_at || ""));
+    });
+    return lista[0] || null;
+  }
+
+  function desenhaRadar(id, valores){
+    var el = $(id);
+    if(!el || typeof Chart === "undefined") return;
+    if(graficos[id]) graficos[id].destroy();
+    graficos[id] = new Chart(el, {
+      type:"radar",
+      data:{ labels:["D","I","S","C"], datasets:[{
+        data: valores, backgroundColor:"rgba(201,151,75,.22)", borderColor:"#e3bd76", borderWidth:2, pointBackgroundColor:"#e3bd76"
+      }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+        scales:{ r:{ min:-12, max:12, ticks:{ display:false }, grid:{ color:"rgba(255,255,255,.08)" },
+                     angleLines:{ color:"rgba(255,255,255,.08)" }, pointLabels:{ color:"#f3f0e8", font:{ size:12, weight:"700", family:"Sora" } } } } }
+    });
+  }
+
+  function renderDisc(){
+    if(!$("tabDisc")) return;
+    var busca = ($("discBusca").value || "").trim().toLowerCase();
+    var fm = $("discMentoria").value, fc = $("discCs").value, fp = $("discPerfil").value, fs = $("discSit").value;
+
+    var pares = alunos.map(function(a){ return { a:a, r:discResultadoDe(a) }; }).filter(function(x){
+      var a = x.a, r = x.r;
+      if(fs === "sim" && !r) return false;
+      if(fs === "nao" && r) return false;
+      if(fp && (!r || r.primary_profile !== fp)) return false;
+      if(fm && mentoriasDe(a).indexOf(fm) === -1) return false;
+      if(fc && ((a.staff && a.staff.full_name) || "") !== fc) return false;
+      if(busca && ((a.full_name || "").toLowerCase() + " " + (a.email || "").toLowerCase()).indexOf(busca) === -1) return false;
+      return true;
+    });
+    var com = pares.filter(function(x){ return x.r; });
+
+    var porPerfil = { D:0, I:0, S:0, C:0 }, soma = { D:0, I:0, S:0, C:0 };
+    com.forEach(function(x){
+      porPerfil[x.r.primary_profile] = (porPerfil[x.r.primary_profile] || 0) + 1;
+      soma.D += Number(x.r.d_score) || 0; soma.I += Number(x.r.i_score) || 0;
+      soma.S += Number(x.r.s_score) || 0; soma.C += Number(x.r.c_score) || 0;
+    });
+    var maisComum = Object.keys(porPerfil).sort(function(x, y){ return porPerfil[y] - porPerfil[x]; })[0];
+    var n = com.length || 1;
+
+    $("kpisDisc").innerHTML = [
+      { rot:"Responderam o teste", num: com.length, sub:"de " + pares.length + " no recorte", cls: com.length ? "ok" : "alerta" },
+      { rot:"Ainda não responderam", num: pares.length - com.length, sub:"o teste é no primeiro acesso ao Portal", cls:"alerta" },
+      { rot:"Perfil mais comum", num: com.length ? maisComum : "—", sub: com.length ? DISC_NOME[maisComum] : "sem respostas ainda" },
+      { rot:"Cobertura", num: pares.length ? Math.round(com.length / pares.length * 100) + "<small>%</small>" : "—", sub:"da base com perfil conhecido" }
+    ].map(function(k){
+      return '<div class="kpi ' + (k.cls || "") + '"><div class="rot">' + k.rot + '</div><div class="num">' + k.num + '</div><div class="sub">' + esc(k.sub) + '</div></div>';
+    }).join("");
+
+    desenha("gDiscPerfis", "doughnut",
+      ["D · Dominância", "I · Influência", "S · Estabilidade", "C · Conformidade"],
+      [porPerfil.D, porPerfil.I, porPerfil.S, porPerfil.C]);
+    if(graficos.gDiscPerfis){ graficos.gDiscPerfis.data.datasets[0].backgroundColor = [DISC_COR.D, DISC_COR.I, DISC_COR.S, DISC_COR.C]; graficos.gDiscPerfis.update(); }
+    desenha("gDiscMedias", "bar", ["D", "I", "S", "C"],
+      [soma.D / n, soma.I / n, soma.S / n, soma.C / n].map(function(v){ return Math.round(v * 10) / 10; }),
+      { scales:{ x:{ grid:{ display:false }, ticks:{ color:"#6d7994" } }, y:{ suggestedMin:-12, suggestedMax:12, grid:{ color:"rgba(255,255,255,.06)" }, ticks:{ color:"#6d7994" } } } });
+    if(graficos.gDiscMedias){ graficos.gDiscMedias.data.datasets[0].backgroundColor = [DISC_COR.D, DISC_COR.I, DISC_COR.S, DISC_COR.C]; graficos.gDiscMedias.update(); }
+
+    $("notaDisc").textContent = pares.length + " mentorado(s)";
+    var ordenados = pares.slice().sort(function(x, y){
+      if(!!x.r !== !!y.r) return x.r ? -1 : 1;
+      return (x.a.full_name || "").localeCompare(y.a.full_name || "");
+    });
+
+    function barra(v, letra){
+      var pct = Math.round((Number(v) + 12) / 24 * 100);
+      return '<span class="num-col">' + (v > 0 ? "+" : "") + v + '</span><div class="barra" style="min-width:60px;"><i style="width:' + pct + '%;background:' + DISC_COR[letra] + ';"></i></div>';
+    }
+
+    $("tabDisc").innerHTML = ordenados.length ? ordenados.slice(0, 300).map(function(x){
+      var a = x.a, r = x.r;
+      var nome = '<span class="principal">' + esc(a.full_name) + '</span><span class="secundario">' + esc(a.email || "") + '</span>';
+      var base = '<td>' + nome + '</td><td>' + esc(mentoriasDe(a).join(", ") || "—") + '</td><td>' + esc((a.staff && a.staff.full_name) || "—") + '</td>';
+      if(!r) return '<tr style="opacity:.55;">' + base + '<td colspan="5"><span class="secundario">ainda não respondeu</span></td><td></td></tr>';
+      var p = r.primary_profile;
+      return '<tr class="disc-linha" data-id="' + a.id + '" style="cursor:pointer;' + (discSelecionado === a.id ? 'background:rgba(201,151,75,.07);' : '') + '">' + base +
+        '<td><span class="selo" style="border-color:' + DISC_COR[p] + ';color:' + DISC_COR[p] + ';">' + p + ' · ' + DISC_NOME[p] + '</span></td>' +
+        '<td>' + barra(r.d_score, "D") + '</td><td>' + barra(r.i_score, "I") + '</td><td>' + barra(r.s_score, "S") + '</td><td>' + barra(r.c_score, "C") + '</td>' +
+        '<td class="num-col">' + dataCurta(r.created_at) + '</td></tr>';
+    }).join("") : '<tr><td colspan="9" class="vazio">Nenhum mentorado nesse recorte.</td></tr>';
+
+    document.querySelectorAll("#tabDisc .disc-linha").forEach(function(tr){
+      tr.addEventListener("click", function(){
+        discSelecionado = discSelecionado === tr.getAttribute("data-id") ? null : tr.getAttribute("data-id");
+        renderDisc();
+      });
+    });
+
+    var box = $("discDetalhe");
+    var sel = alunos.find(function(a){ return a.id === discSelecionado; });
+    var rs = sel ? discResultadoDe(sel) : null;
+    if(!sel || !rs){ box.style.display = "none"; box.innerHTML = ""; return; }
+    var p = rs.primary_profile;
+    var ordem = ["D","I","S","C"].map(function(k){ return { k:k, v:Number(rs[k.toLowerCase() + "_score"]) || 0 }; }).sort(function(x, y){ return y.v - x.v; });
+    box.style.display = "";
+    box.innerHTML =
+      '<div class="painel" style="border-color:' + DISC_COR[p] + '55;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px;">' +
+          '<h4 style="margin:0;">' + esc(sel.full_name) + ' <span class="selo" style="border-color:' + DISC_COR[p] + ';color:' + DISC_COR[p] + ';margin-left:8px;">' + p + ' · ' + DISC_NOME[p] + '</span></h4>' +
+          '<button class="btn btn-ghost btn-mini" id="discFechar">Fechar</button></div>' +
+        '<div style="display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:22px;align-items:center;">' +
+          '<div style="position:relative;height:240px;"><canvas id="gDiscAluno"></canvas></div>' +
+          '<div><p style="margin:0 0 10px;font-size:13px;line-height:1.6;">' + DISC_RESUMO[p] + '</p>' +
+          '<p class="dica" style="margin:0;">Perfil secundário: <b style="color:' + DISC_COR[ordem[1].k] + ';">' + ordem[1].k + ' · ' + DISC_NOME[ordem[1].k] + '</b> — ' + DISC_RESUMO[ordem[1].k] + '</p></div>' +
+        '</div>' +
+      '</div>';
+    desenhaRadar("gDiscAluno", [rs.d_score, rs.i_score, rs.s_score, rs.c_score]);
+    $("discFechar").addEventListener("click", function(){ discSelecionado = null; renderDisc(); });
+  }
+
+  ["discBusca","discMentoria","discCs","discPerfil","discSit"].forEach(function(id){
+    var el = $(id);
+    if(el){ el.addEventListener("change", renderDisc); el.addEventListener("input", renderDisc); }
   });
 
   // ---------- recados ----------

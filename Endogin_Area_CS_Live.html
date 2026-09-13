@@ -463,7 +463,7 @@
         <button class="tab-btn" data-tab="dashboard"><i class="fa-solid fa-gauge-high"></i>Dashboard</button>
         <button class="tab-btn active" data-tab="alunos"><i class="fa-solid fa-users"></i>Alunos</button>
         <button class="tab-btn" data-tab="carteiras"><i class="fa-solid fa-chart-pie"></i>Carteiras CS</button>
-        <button class="tab-btn" data-tab="crm"><i class="fa-solid fa-bullseye"></i>CRM</button>
+        <button class="tab-btn" data-tab="disc"><i class="fa-solid fa-chart-pie"></i>Perfil DISC</button>
         <button class="tab-btn" data-tab="grupos"><i class="fa-brands fa-whatsapp"></i>Grupos WhatsApp</button>
         <button class="tab-btn" data-tab="aulas"><i class="fa-solid fa-graduation-cap"></i>Aulas</button>
         <button class="tab-btn" data-tab="calendario"><i class="fa-regular fa-calendar-days"></i>Calendário</button>
@@ -700,25 +700,59 @@
       </div>
     </div>
 
-    <!-- ================= CRM ================= -->
-    <div class="tab-panel" id="tab-crm">
-      <div class="card">
-        <div class="card-head"><h3><i class="fa-solid fa-chart-pie icn"></i>Painel de indicações</h3></div>
-        <div class="crm-stats-row">
-          <div class="crm-stat-card"><div class="crm-stat-num" id="crmStatTotal">—</div><div class="crm-stat-label">Total de indicações</div></div>
-          <div class="crm-stat-card"><div class="crm-stat-num" id="crmStatNovo">—</div><div class="crm-stat-label">Novos leads</div></div>
-          <div class="crm-stat-card"><div class="crm-stat-num" id="crmStatNegociacao">—</div><div class="crm-stat-label">Em negociação</div></div>
-          <div class="crm-stat-card"><div class="crm-stat-num" id="crmStatVendido">—</div><div class="crm-stat-label">Vendidos</div></div>
-        </div>
-        <div class="crm-chart-wrap"><canvas id="crmStatusChart" height="200"></canvas></div>
-      </div>
+    <!-- ================= PERFIL DISC ================= -->
+    <div class="tab-panel" id="tab-disc">
       <div class="card">
         <div class="card-head">
-          <h3><i class="fa-solid fa-chart-line icn"></i>CRM de indicações</h3>
-          <button class="btn-secondary" id="newReferralBtn"><i class="fa-solid fa-plus"></i> Nova indicação</button>
+          <h3><i class="fa-solid fa-chart-pie icn"></i>Perfil DISC dos alunos</h3>
+          <span class="hint" id="discResumo"></span>
         </div>
-        <div id="referralsLoading" class="loading-note">Carregando...</div>
-        <div id="referralsList"></div>
+        <p class="hint" style="margin:-8px 0 14px;">Resultado do teste que o aluno responde no primeiro acesso ao Portal. <b>D</b> Dominância · <b>I</b> Influência · <b>S</b> Estabilidade · <b>C</b> Conformidade. Cada letra vai de −12 a +12; a dominante é a maior. Você vê os alunos que já enxerga na aba Alunos.</p>
+
+        <div class="metric-row">
+          <div class="crm-stat-card"><div class="crm-stat-num" id="discStatRespondidos">—</div><div class="crm-stat-label">Responderam</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="discStatFaltam">—</div><div class="crm-stat-label">Ainda não responderam</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="discStatDominante">—</div><div class="crm-stat-label">Perfil mais comum</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="discStatPct">—</div><div class="crm-stat-label">Cobertura do teste</div></div>
+        </div>
+
+        <div class="filtros-alunos">
+          <div style="flex:1 1 200px;"><label>Buscar aluno</label><input type="text" class="search-input" id="discBusca" placeholder="nome ou e-mail" style="margin:0;"></div>
+          <div><label>Mentoria</label><select id="discFltMentoria"><option value="">Todas</option></select></div>
+          <div id="discFltCsWrap" style="display:none;"><label>CS</label><select id="discFltCs"><option value="">Todas</option></select></div>
+          <div><label>Perfil dominante</label>
+            <select id="discFltPerfil">
+              <option value="">Todos</option>
+              <option value="D">D — Dominância</option>
+              <option value="I">I — Influência</option>
+              <option value="S">S — Estabilidade</option>
+              <option value="C">C — Conformidade</option>
+            </select>
+          </div>
+          <div><label>Teste</label>
+            <select id="discFltSit">
+              <option value="">Todos</option>
+              <option value="sim">Já respondeu</option>
+              <option value="nao">Ainda não respondeu</option>
+            </select>
+          </div>
+          <span class="contagem" id="discContagem"></span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-bottom:18px;">
+          <div><h4 class="hint" style="margin:0 0 8px;text-transform:none;font-size:12.5px;">Distribuição por perfil dominante</h4><div style="position:relative;height:220px;"><canvas id="discChartPerfis"></canvas></div></div>
+          <div><h4 class="hint" style="margin:0 0 8px;text-transform:none;font-size:12.5px;">Média das quatro dimensões</h4><div style="position:relative;height:220px;"><canvas id="discChartMedias"></canvas></div></div>
+        </div>
+
+        <div id="discDetalhe" style="display:none;margin-bottom:18px;"></div>
+
+        <div class="carteira-table-wrap">
+          <table>
+            <thead><tr><th>Aluno</th><th>Mentoria</th><th>CS</th><th>Dominante</th><th>D</th><th>I</th><th>S</th><th>C</th><th>Respondeu em</th></tr></thead>
+            <tbody id="discBody"></tbody>
+          </table>
+        </div>
+        <p class="hint" id="discVazio" style="display:none;margin-top:12px;"></p>
       </div>
     </div>
 
@@ -1243,23 +1277,6 @@
   </div>
 </div>
 
-<!-- ================= MODAL: NOVA INDICAÇÃO ================= -->
-<div class="modal-overlay" id="referralModal">
-  <div class="modal-card">
-    <div class="modal-head"><b>Nova indicação</b><button class="modal-close" id="referralModalClose"><i class="fa-solid fa-xmark"></i></button></div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div style="grid-column:1/-1;"><label>Aluno que indicou</label><select id="referralFieldStudent"></select></div>
-        <div style="grid-column:1/-1;"><label>Nome de quem foi indicado</label><input type="text" id="referralFieldName"></div>
-        <div><label>Contato</label><input type="text" id="referralFieldContact" placeholder="telefone/whatsapp"></div>
-        <div><label>E-mail</label><input type="email" id="referralFieldEmail"></div>
-      </div>
-      <div class="err-msg" id="referralModalErr"></div>
-    </div>
-    <div class="modal-foot"><span></span><button class="btn-primary" id="referralSaveBtn">Salvar</button></div>
-  </div>
-</div>
-
 <!-- ================= MODAL: AGENDAR SESSÃO 1x1 ================= -->
 <div class="modal-overlay" id="sessionModal">
   <div class="modal-card">
@@ -1507,7 +1524,6 @@
         // da base inteira a partir das abas do arquivo.
         $("importAlunosCard").style.display = "block";
         loadStaffAndBranches();
-        loadReferrals();
         loadSessions();
         loadTrilha();
         loadFeedbacks();
@@ -1544,6 +1560,9 @@
       }
       if(btn.getAttribute("data-tab") === "aulas"){
         startAulasChatIfNeeded();
+      }
+      if(btn.getAttribute("data-tab") === "disc"){
+        setTimeout(renderDisc, 30);
       }
       if(btn.getAttribute("data-tab") === "progresso"){
         startProgressoIfNeeded();
@@ -1881,7 +1900,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile,created_at)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -2456,7 +2475,7 @@
   // planilha — não tinha como criar um do zero (nem um "aluno teste"). Cria
   // com o mínimo (nome + e-mail) e já abre a ficha completa em seguida, pra
   // marcar mentoria/status/CS na hora, sem precisar de uma segunda tela.
-  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(primary_profile)";
+  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile,created_at)";
 
   $("novoAlunoBtn").addEventListener("click", function(){
     $("novoAlunoFieldName").value = "";
@@ -3257,84 +3276,218 @@
     link.click();
   }
 
-  // ---------------- CRM (indicações) ----------------
-  function loadReferrals(){
-    $("referralsLoading").style.display = "block";
-    sb.from("referrals").select("*").order("created_at", { ascending: false }).then(function(r){
-      $("referralsLoading").style.display = "none";
-      if(r.error){ $("referralsLoading").textContent = "Erro: " + r.error.message; $("referralsLoading").style.display = "block"; return; }
-      renderReferrals(r.data || []);
-    });
-  }
-  var crmChartInstance = null;
-  function renderCrmStats(list){
-    var counts = { novo:0, em_negociacao:0, vendido:0, perdido:0 };
-    list.forEach(function(r){ if(counts.hasOwnProperty(r.status)) counts[r.status]++; else counts.novo++; });
-    $("crmStatTotal").textContent = list.length;
-    $("crmStatNovo").textContent = counts.novo;
-    $("crmStatNegociacao").textContent = counts.em_negociacao;
-    $("crmStatVendido").textContent = counts.vendido;
+  // ---------------- Perfil DISC ----------------
+  // Os resultados vem embutidos em allStudents (disc_results), entao a lista
+  // respeita exatamente o que a pessoa ja enxerga na aba Alunos — CS ve os
+  // seus, master ve todos. Um aluno pode ter refeito o teste: vale o ultimo.
+  var DISC_COR = { D:"#d98a8a", I:"#e3bd76", S:"#8fc79f", C:"#8fb3e0" };
+  var DISC_NOME = { D:"Dominância", I:"Influência", S:"Estabilidade", C:"Conformidade" };
+  var DISC_RESUMO = {
+    D: "Direto, decidido, orientado a resultado. Gosta de desafio e de decidir rápido; impacienta-se com detalhe e com ritmo lento.",
+    I: "Comunicativo, entusiasmado, persuasivo. Gosta de gente e de reconhecimento; dispersa com rotina e com detalhe.",
+    S: "Paciente, leal, constante. Gosta de previsibilidade e de apoio; resiste a mudança brusca e a pressão.",
+    C: "Analítico, preciso, cuidadoso. Gosta de dado e de critério; desconfia de promessa vaga e de improviso."
+  };
+  var discFiltro = { busca:"", mentoria:"", cs:"", perfil:"", sit:"" };
+  var discCharts = {};
+  var discSelecionado = null;
 
-    var ctx = document.getElementById("crmStatusChart");
-    if(!ctx || typeof Chart === "undefined") return;
-    var data = [counts.novo, counts.em_negociacao, counts.vendido, counts.perdido];
-    if(crmChartInstance){ crmChartInstance.destroy(); }
-    crmChartInstance = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        labels: ["Novo", "Em negociação", "Vendido", "Perdido"],
-        datasets: [{ data: data, backgroundColor: ["#5b8def", "#c9974b", "#3fae6a", "#b3475a"], borderWidth: 0 }]
-      },
-      options: {
-        plugins: { legend: { position: "bottom", labels: { color: "#c9c9d4", font: { size: 11 } } } }
+  function discResultadoDe(s){
+    var lista = (s.disc_results || []).slice().sort(function(a, b){
+      return String(b.created_at || "").localeCompare(String(a.created_at || ""));
+    });
+    return lista[0] || null;
+  }
+
+  function discPreencheFiltros(){
+    var m = $("discFltMentoria");
+    if(m && m.options.length - 1 !== allBranches.length){
+      var atual = m.value;
+      m.innerHTML = '<option value="">Todas</option>' + allBranches.map(function(b){ return '<option value="' + b.id + '">' + b.name + '</option>'; }).join("");
+      m.value = atual;
+    }
+    var wrap = $("discFltCsWrap"), c = $("discFltCs");
+    if(wrap && c && currentStaff.isMasterLike){
+      wrap.style.display = "";
+      var csAtivas = allStaff.filter(function(x){ return x.role === "cs" && x.is_active; });
+      if(c.options.length - 1 !== csAtivas.length){
+        var atualC = c.value;
+        c.innerHTML = '<option value="">Todas</option>' + csAtivas.map(function(x){ return '<option value="' + x.id + '">' + x.full_name + '</option>'; }).join("");
+        c.value = atualC;
       }
+    }
+  }
+
+  function discGrafico(id, tipo, labels, dados, cores, opcoes){
+    var el = $(id);
+    if(!el || typeof Chart === "undefined") return;
+    if(discCharts[id]) discCharts[id].destroy();
+    var base = {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend: tipo === "bar" ? { display:false } : { position:"bottom", labels:{ color:"#aab4c9", font:{ size:11 }, boxWidth:10, padding:12 } },
+        tooltip:{ backgroundColor:"#0e1a29", borderColor:"rgba(255,255,255,.14)", borderWidth:1, titleColor:"#f3f0e8", bodyColor:"#aab4c9" }
+      },
+      scales: tipo === "bar" ? {
+        x:{ grid:{ display:false }, ticks:{ color:"#aab4c9", font:{ size:11 } } },
+        y:{ grid:{ color:"rgba(255,255,255,.06)" }, ticks:{ color:"#6d7994", font:{ size:10.5 } }, suggestedMin:-12, suggestedMax:12 }
+      } : (tipo === "radar" ? {
+        r:{ min:-12, max:12, ticks:{ display:false }, grid:{ color:"rgba(255,255,255,.08)" }, angleLines:{ color:"rgba(255,255,255,.08)" }, pointLabels:{ color:"#f3f0e8", font:{ size:12, weight:"700" } } }
+      } : {})
+    };
+    discCharts[id] = new Chart(el, {
+      type: tipo,
+      data:{ labels: labels, datasets:[{
+        data: dados,
+        backgroundColor: tipo === "radar" ? "rgba(201,151,75,.22)" : cores,
+        borderColor: tipo === "radar" ? "#e3bd76" : (tipo === "bar" ? cores : "#101d2e"),
+        borderWidth: tipo === "radar" ? 2 : (tipo === "bar" ? 0 : 2),
+        borderRadius: tipo === "bar" ? 5 : 0,
+        pointBackgroundColor: "#e3bd76"
+      }]},
+      options: Object.assign(base, opcoes || {})
     });
   }
 
-  function renderReferrals(list){
-    renderCrmStats(list);
-    var wrap = $("referralsList");
-    if(!list.length){ wrap.innerHTML = '<div class="empty-note">Nenhuma indicação registrada ainda.</div>'; return; }
-    wrap.innerHTML = "";
-    list.forEach(function(ref){
-      var row = document.createElement("div");
-      row.className = "list-row";
-      row.innerHTML =
-        '<div class="list-main"><b>' + ref.referred_name + '</b><span>indicado por ' + studentName(ref.referrer_student_id) + ' — ' + fmtDate(ref.created_at) + '</span></div>' +
-        '<div class="list-side"><select data-referral-id="' + ref.id + '">' +
-          ["novo","em_negociacao","vendido","perdido"].map(function(st){
-            return '<option value="' + st + '"' + (st === ref.status ? " selected" : "") + '>' + st.replace("_"," ") + '</option>';
-          }).join("") +
-        '</select></div>';
-      wrap.appendChild(row);
+  function discPassa(s, r){
+    var f = discFiltro;
+    if(f.sit === "sim" && !r) return false;
+    if(f.sit === "nao" && r) return false;
+    if(f.perfil && (!r || r.primary_profile !== f.perfil)) return false;
+    if(f.mentoria && !(s.deliveries || []).some(function(d){ return d.status === "ativo" && d.branch_id === f.mentoria; })) return false;
+    if(f.cs){
+      var responde = s.cs_id === f.cs || s.cs_id_2 === f.cs ||
+        (s.deliveries || []).some(function(d){ return d.status === "ativo" && d.cs_id === f.cs; });
+      if(!responde) return false;
+    }
+    if(f.busca){
+      var alvo = (s.full_name || "").toLowerCase() + " " + (s.email || "").toLowerCase();
+      if(alvo.indexOf(f.busca) === -1) return false;
+    }
+    return true;
+  }
+
+  function renderDisc(){
+    if(!$("discBody")) return;
+    discPreencheFiltros();
+
+    var pares = allStudents.map(function(s){ return { s:s, r:discResultadoDe(s) }; });
+    var visiveis = pares.filter(function(x){ return discPassa(x.s, x.r); });
+    var comResultado = visiveis.filter(function(x){ return x.r; });
+
+    // KPIs sobre o recorte filtrado
+    var porPerfil = { D:0, I:0, S:0, C:0 };
+    var soma = { D:0, I:0, S:0, C:0 };
+    comResultado.forEach(function(x){
+      porPerfil[x.r.primary_profile] = (porPerfil[x.r.primary_profile] || 0) + 1;
+      soma.D += Number(x.r.d_score) || 0; soma.I += Number(x.r.i_score) || 0;
+      soma.S += Number(x.r.s_score) || 0; soma.C += Number(x.r.c_score) || 0;
     });
-    wrap.querySelectorAll("[data-referral-id]").forEach(function(sel){
-      sel.addEventListener("change", function(){
-        sb.from("referrals").update({ status: sel.value }).eq("id", sel.getAttribute("data-referral-id")).then(function(){ loadReferrals(); });
+    var maisComum = Object.keys(porPerfil).sort(function(a, b){ return porPerfil[b] - porPerfil[a]; })[0];
+    $("discStatRespondidos").textContent = comResultado.length;
+    $("discStatFaltam").textContent = visiveis.length - comResultado.length;
+    $("discStatDominante").textContent = comResultado.length ? (maisComum + " · " + DISC_NOME[maisComum]) : "—";
+    $("discStatPct").textContent = visiveis.length ? Math.round(comResultado.length / visiveis.length * 100) + "%" : "—";
+    $("discResumo").textContent = comResultado.length + " de " + visiveis.length + " com teste respondido";
+    $("discContagem").textContent = visiveis.length === allStudents.length ? allStudents.length + " aluno(s)" : visiveis.length + " de " + allStudents.length;
+
+    var n = comResultado.length || 1;
+    discGrafico("discChartPerfis", "doughnut",
+      ["D · Dominância", "I · Influência", "S · Estabilidade", "C · Conformidade"],
+      [porPerfil.D, porPerfil.I, porPerfil.S, porPerfil.C],
+      [DISC_COR.D, DISC_COR.I, DISC_COR.S, DISC_COR.C]);
+    discGrafico("discChartMedias", "bar", ["D", "I", "S", "C"],
+      [soma.D / n, soma.I / n, soma.S / n, soma.C / n].map(function(v){ return Math.round(v * 10) / 10; }),
+      [DISC_COR.D, DISC_COR.I, DISC_COR.S, DISC_COR.C]);
+
+    // tabela: quem respondeu primeiro, depois quem falta, ambos por nome
+    var ordenados = visiveis.slice().sort(function(a, b){
+      if(!!a.r !== !!b.r) return a.r ? -1 : 1;
+      return (a.s.full_name || "").localeCompare(b.s.full_name || "");
+    });
+
+    function barra(v, letra){
+      var pct = Math.round((Number(v) + 12) / 24 * 100);
+      return '<div style="min-width:64px;"><span style="font-family:var(--eg-mono,monospace);font-size:11px;">' + (v > 0 ? "+" : "") + v + '</span>' +
+        '<div style="height:3px;border-radius:2px;background:rgba(255,255,255,.07);margin-top:3px;"><i style="display:block;height:100%;width:' + pct + '%;background:' + DISC_COR[letra] + ';border-radius:2px;"></i></div></div>';
+    }
+
+    $("discBody").innerHTML = ordenados.map(function(x){
+      var s = x.s, r = x.r;
+      var mentorias = (s.deliveries || []).filter(function(d){ return d.status === "ativo"; }).map(function(d){ return d.label; }).join(", ") || "—";
+      var cs = csPorMentoriaHtml(s);
+      var quando = r && r.created_at ? new Date(r.created_at).toLocaleDateString("pt-BR") : "";
+      if(!r){
+        return '<tr style="opacity:.55;"><td><b>' + s.full_name + '</b><br><span class="hint">' + (s.email || "") + '</span></td>' +
+          '<td>' + mentorias + '</td><td>' + cs + '</td>' +
+          '<td colspan="5"><span class="hint">ainda não respondeu o teste</span></td><td></td></tr>';
+      }
+      var p = r.primary_profile;
+      return '<tr class="disc-linha" data-id="' + s.id + '" style="cursor:pointer;' + (discSelecionado === s.id ? 'background:rgba(201,151,75,.08);' : '') + '">' +
+        '<td><b>' + s.full_name + '</b><br><span class="hint">' + (s.email || "") + '</span></td>' +
+        '<td>' + mentorias + '</td><td>' + cs + '</td>' +
+        '<td><span class="branch-tag" style="border-color:' + DISC_COR[p] + ';color:' + DISC_COR[p] + ';">' + p + ' · ' + DISC_NOME[p] + '</span></td>' +
+        '<td>' + barra(r.d_score, "D") + '</td><td>' + barra(r.i_score, "I") + '</td><td>' + barra(r.s_score, "S") + '</td><td>' + barra(r.c_score, "C") + '</td>' +
+        '<td class="hint">' + quando + '</td></tr>';
+    }).join("");
+
+    var vazio = $("discVazio");
+    if(!visiveis.length){ vazio.style.display = ""; vazio.textContent = "Nenhum aluno nesse recorte."; }
+    else if(!comResultado.length){ vazio.style.display = ""; vazio.textContent = "Nenhum desses alunos respondeu o teste ainda. O teste é respondido no primeiro acesso ao Portal — aluno sem login não tem como responder."; }
+    else vazio.style.display = "none";
+
+    document.querySelectorAll(".disc-linha").forEach(function(tr){
+      tr.addEventListener("click", function(){
+        discSelecionado = discSelecionado === tr.getAttribute("data-id") ? null : tr.getAttribute("data-id");
+        renderDisc();
+        renderDiscDetalhe();
       });
     });
+    renderDiscDetalhe();
   }
-  $("newReferralBtn").addEventListener("click", function(){
-    $("referralModalErr").textContent = "";
-    $("referralFieldName").value = ""; $("referralFieldContact").value = ""; $("referralFieldEmail").value = "";
-    $("referralModal").classList.add("open");
-  });
-  $("referralModalClose").addEventListener("click", function(){ $("referralModal").classList.remove("open"); });
-  $("referralSaveBtn").addEventListener("click", function(){
-    var studentId = $("referralFieldStudent").value;
-    var name = $("referralFieldName").value.trim();
-    if(!studentId || !name){ $("referralModalErr").textContent = "Escolha o aluno e o nome de quem foi indicado."; return; }
-    sb.from("referrals").insert({
-      referrer_student_id: studentId, referred_name: name,
-      referred_contact: $("referralFieldContact").value.trim() || null,
-      referred_email: $("referralFieldEmail").value.trim() || null,
-      status: "novo"
-    }).then(function(r){
-      if(r.error){ $("referralModalErr").textContent = "Erro: " + r.error.message; return; }
-      $("referralModal").classList.remove("open");
-      loadReferrals();
+
+  // O detalhe de um aluno: radar com as quatro dimensoes e o que isso muda
+  // na conversa da CS com ele — que e o uso pratico do DISC aqui.
+  function renderDiscDetalhe(){
+    var box = $("discDetalhe");
+    if(!box) return;
+    var s = allStudents.find(function(x){ return x.id === discSelecionado; });
+    var r = s ? discResultadoDe(s) : null;
+    if(!s || !r){ box.style.display = "none"; box.innerHTML = ""; return; }
+    var p = r.primary_profile;
+    var ordem = ["D","I","S","C"].map(function(k){ return { k:k, v:Number(r[k.toLowerCase() + "_score"]) || 0 }; })
+      .sort(function(a, b){ return b.v - a.v; });
+    var secundario = ordem[1].k;
+    box.style.display = "";
+    box.innerHTML =
+      '<div class="card" style="margin:0;border-color:' + DISC_COR[p] + '55;">' +
+        '<div class="card-head"><h3 style="font-size:14px;">' + s.full_name + ' <span class="branch-tag" style="border-color:' + DISC_COR[p] + ';color:' + DISC_COR[p] + ';margin-left:8px;">' + p + ' · ' + DISC_NOME[p] + '</span></h3>' +
+          '<button class="btn-secondary" id="discFecharDetalhe" style="width:auto;">Fechar</button></div>' +
+        '<div style="display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:22px;align-items:center;">' +
+          '<div style="position:relative;height:240px;"><canvas id="discChartAluno"></canvas></div>' +
+          '<div>' +
+            '<p style="margin:0 0 10px;font-size:13px;line-height:1.6;">' + DISC_RESUMO[p] + '</p>' +
+            '<p class="hint" style="margin:0 0 12px;">Perfil secundário: <b style="color:' + DISC_COR[secundario] + ';">' + secundario + ' · ' + DISC_NOME[secundario] + '</b> — ' + DISC_RESUMO[secundario] + '</p>' +
+            '<div style="padding:12px 14px;border-radius:10px;background:rgba(201,151,75,.08);border:1px solid var(--eg-border);">' +
+              '<b style="font-size:12px;color:var(--eg-gold-100);">Como falar com ' + (s.full_name || "").split(" ")[0] + '</b>' +
+              '<p style="margin:6px 0 0;font-size:12.5px;line-height:1.55;color:var(--eg-text-secondary);">' + (DISC_COMM_TIP[p] || "") + '</p>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    discGrafico("discChartAluno", "radar", ["D", "I", "S", "C"],
+      [r.d_score, r.i_score, r.s_score, r.c_score], null);
+    $("discFecharDetalhe").addEventListener("click", function(){ discSelecionado = null; renderDisc(); });
+  }
+
+  ["discFltMentoria","discFltCs","discFltPerfil","discFltSit"].forEach(function(id){
+    var el = $(id);
+    if(el) el.addEventListener("change", function(){
+      discFiltro[{ discFltMentoria:"mentoria", discFltCs:"cs", discFltPerfil:"perfil", discFltSit:"sit" }[id]] = el.value;
+      renderDisc();
     });
   });
+  if($("discBusca")) $("discBusca").addEventListener("input", function(){ discFiltro.busca = this.value.trim().toLowerCase(); renderDisc(); });
 
   // ---------------- Sessões 1x1 ----------------
   function loadSessions(){
@@ -4818,6 +4971,7 @@
   // alteracao em aluno passa por aqui e as tres refazem a conta.
   function atualizaDerivados(){
     loadAlunos();
+    discSelecionado = null;
     loadCarteiras();
     dashKpisLoaded = false;
     loadDashKpis();
