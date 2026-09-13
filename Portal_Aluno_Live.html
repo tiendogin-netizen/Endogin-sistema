@@ -490,7 +490,28 @@
 
   .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
   .book-card-inner{display:flex;gap:22px;align-items:center;}
-  .book-cover-img{width:140px;flex-shrink:0;border-radius:8px;box-shadow:0 16px 40px rgba(0,0,0,0.45);display:block;}
+  /* O mockup vem recortado (PNG transparente), entao nao e um retangulo: a
+     sombra e um brilho por baixo, nao uma caixa. Flutua de leve e inclina no
+     hover, como um objeto na mesa. */
+  .book-mock{
+    position:relative;flex:0 0 220px;display:flex;align-items:center;justify-content:center;
+    padding:8px 0;perspective:900px;
+  }
+  .book-mock::before{
+    content:"";position:absolute;left:12%;right:12%;bottom:6px;height:22px;border-radius:50%;
+    background:radial-gradient(ellipse at center, rgba(201,151,75,.45), rgba(201,151,75,0) 70%);
+    filter:blur(8px);
+  }
+  .book-mock img{
+    width:100%;height:auto;display:block;position:relative;
+    filter:drop-shadow(0 24px 34px rgba(0,0,0,.65)) drop-shadow(0 0 28px rgba(201,151,75,.18));
+    transform:rotateY(-6deg);animation:livroFlutua 6s ease-in-out infinite;
+    transition:transform .5s var(--eg-ease);
+  }
+  .book-mock:hover img{transform:rotateY(0deg) translateY(-4px) scale(1.03);}
+  @keyframes livroFlutua{0%,100%{translate:0 0;}50%{translate:0 -6px;}}
+  @media (prefers-reduced-motion:reduce){ .book-mock img{animation:none;} }
+  @media (max-width:860px){ .book-mock{flex-basis:auto;width:min(100%,300px);margin:0 auto;} }
   .book-cover-placeholder{width:140px;height:190px;flex-shrink:0;border-radius:8px;background:linear-gradient(150deg,var(--eg-gold-700),var(--eg-gold-500));display:flex;align-items:center;justify-content:center;color:#221708;font-size:28px;box-shadow:0 16px 40px rgba(0,0,0,0.45);}
   .book-info{flex:1;min-width:0;}
   .book-info h3{margin:10px 0 4px;font-size:18px;font-weight:700;}
@@ -815,7 +836,7 @@
         <div class="grid-2">
           <div class="card2" style="margin-bottom:0;">
             <div class="book-card-inner">
-              <div class="book-cover-placeholder"><i class="fa-solid fa-book"></i></div>
+              <div class="book-mock"><img src="/assets/livro-codigo-endogin.png" alt="O Código Endogin — livro dos fundadores" loading="lazy"></div>
               <div class="book-info">
                 <span class="badge gold">Lançamento dos fundadores</span>
                 <h3>O Código Endogin</h3>
