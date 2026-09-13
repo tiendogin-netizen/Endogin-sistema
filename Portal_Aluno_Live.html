@@ -1062,17 +1062,31 @@
   $("obPhotoInput").addEventListener("change", function(e){
     var file = e.target.files && e.target.files[0];
     if(!file) return;
+    // A foto vai pro banco como data-URL. Do tamanho original (foto de
+    // celular tem 3-8 MB) o update passa do statement timeout do Postgres e
+    // o aluno trava no "Concluir cadastro". Aqui ela vira um quadrado de
+    // 480px em JPEG — uns 40 KB — antes de sair do navegador.
     var reader = new FileReader();
     reader.onload = function(ev){
-      obPhotoData = ev.target.result;
-      $("obPhotoDrop").style.backgroundImage = "url(" + obPhotoData + ")";
-      $("obPhotoPlaceholder").style.display = "none";
+      var img = new Image();
+      img.onload = function(){
+        var LADO = 480, c = document.createElement("canvas");
+        c.width = LADO; c.height = LADO;
+        var lado = Math.min(img.width, img.height);
+        c.getContext("2d").drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, LADO, LADO);
+        obPhotoData = c.toDataURL("image/jpeg", 0.82);
+        $("obPhotoDrop").style.backgroundImage = "url(" + obPhotoData + ")";
+        $("obPhotoPlaceholder").style.display = "none";
+      };
+      img.onerror = function(){ $("obErr").textContent = "Não consegui ler essa imagem. Tente outra (JPG ou PNG)."; };
+      img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   });
 
   function finishOnboarding(skipRest){
     $("obErr").textContent = "";
+    $("obFinishBtn").disabled = true; $("obFinishBtn").textContent = "Salvando…";
     var updates = { onboarding_completed_at: new Date().toISOString() };
     if(!skipRest){
       if(obPhotoData) updates.photo_url = obPhotoData;
@@ -1080,7 +1094,11 @@
       if(birth) updates.birth_date = birth;
     }
     sb.from("students").update(updates).eq("id", currentStudent.id).then(function(r){
-      if(r.error){ $("obErr").textContent = "Erro ao salvar: " + r.error.message; return; }
+      if(r.error){
+        $("obFinishBtn").disabled = false; $("obFinishBtn").textContent = "Concluir cadastro";
+        $("obErr").textContent = "Erro ao salvar: " + r.error.message;
+        return;
+      }
       var tasks = [];
       if(obNpsScore !== null){
         tasks.push(sb.from("nps_responses").insert({ student_id: currentStudent.id, score: obNpsScore, source: "primeiro_acesso" }));
