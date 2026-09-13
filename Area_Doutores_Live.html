@@ -301,6 +301,32 @@
       </div>
 
       <div class="secao">
+        <div class="secao-cab"><h3>Movimento da base</h3><span class="nota" id="notaMovimento">entradas, vencimentos, carteiras e temperatura</span></div>
+        <div class="graficos">
+          <div class="painel">
+            <h4>Entradas por mês</h4>
+            <p class="dica">Quantos mentorados entraram em cada mês, últimos 12 meses.</p>
+            <div class="tela-grafico"><canvas id="gEntradas"></canvas></div>
+          </div>
+          <div class="painel">
+            <h4>Vencimentos por mês</h4>
+            <p class="dica">Quantos contratos vencem em cada um dos próximos 6 meses — é a agenda de renovação.</p>
+            <div class="tela-grafico"><canvas id="gVencimentos"></canvas></div>
+          </div>
+          <div class="painel">
+            <h4>Mentorados por CS</h4>
+            <p class="dica">Tamanho da carteira de cada CS, só ativos.</p>
+            <div class="tela-grafico"><canvas id="gPorCs"></canvas></div>
+          </div>
+          <div class="painel">
+            <h4>Temperatura por mentoria</h4>
+            <p class="dica">Quente, morno e frio dentro de cada braço. Barra vermelha alta é onde a renovação está em risco.</p>
+            <div class="tela-grafico"><canvas id="gTempMentoria"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="secao">
         <div class="secao-cab"><h3>Vencimentos</h3><span class="nota">próximos 60 dias</span></div>
         <div class="tab-rolagem">
           <table>
@@ -648,6 +674,39 @@
     });
   }
 
+  // Varias series na mesma barra (empilhada). O desenha() so faz uma serie.
+  function desenhaEmpilhado(id, labels, series){
+    var el = $(id);
+    if(!el || typeof Chart === "undefined") return;
+    if(graficos[id]) graficos[id].destroy();
+    graficos[id] = new Chart(el, {
+      type:"bar",
+      data:{ labels: labels, datasets: series.map(function(sr){
+        return { label: sr.nome, data: sr.dados, backgroundColor: sr.cor, borderWidth:0, borderRadius:3, stack:"s" };
+      })},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ position:"bottom", labels:{ color:"#aab4c9", font:{ size:11, family:"Montserrat" }, boxWidth:10, padding:12 } },
+          tooltip:{ backgroundColor:"#0e1a29", borderColor:"rgba(255,255,255,.14)", borderWidth:1, titleColor:"#f3f0e8", bodyColor:"#aab4c9", padding:10 }
+        },
+        scales:{
+          x:{ stacked:true, grid:{ display:false }, ticks:{ color:"#6d7994", font:{ size:10.5, family:"Montserrat" } } },
+          y:{ stacked:true, grid:{ color:"rgba(255,255,255,.06)" }, ticks:{ color:"#6d7994", font:{ size:10.5, family:"JetBrains Mono" }, precision:0 }, beginAtZero:true }
+        }
+      }
+    });
+  }
+
+  var MESES_CURTOS = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  function chaveMes(d){ return d.getFullYear() + "-" + (d.getMonth() + 1 < 10 ? "0" : "") + (d.getMonth() + 1); }
+  function rotuloMes(chave){ var p = chave.split("-"); return MESES_CURTOS[parseInt(p[1], 10) - 1] + "/" + p[0].slice(2); }
+  function mesDe(iso){
+    if(!iso) return null;
+    var p = String(iso).slice(0, 10).split("-");
+    return p.length === 3 ? p[0] + "-" + p[1] : null;
+  }
+
   // Antes qualquer falha virava "e-mail ou senha incorretos", o que mandava a
   // pessoa ficar redigitando a senha certa. As causas sao diferentes e o
   // conserto de cada uma tambem: senha errada se resolve digitando de novo,
@@ -934,6 +993,42 @@
     $("notaBase").textContent = semTemp
       ? semTemp + " sem temperatura preenchida"
       : "temperatura preenchida em toda a base";
+
+    // ---- movimento da base ----
+    // Entradas: ultimos 12 meses, contando pela data de entrada do aluno.
+    var hoje = new Date();
+    var mesesPassados = [], mesesFuturos = [];
+    for(var k = 11; k >= 0; k--) mesesPassados.push(chaveMes(new Date(hoje.getFullYear(), hoje.getMonth() - k, 1)));
+    for(var f = 0; f < 6; f++) mesesFuturos.push(chaveMes(new Date(hoje.getFullYear(), hoje.getMonth() + f, 1)));
+
+    var entradasPorMes = {}; mesesPassados.forEach(function(m){ entradasPorMes[m] = 0; });
+    alunos.forEach(function(a){ var m = mesDe(a.entry_date); if(m && entradasPorMes.hasOwnProperty(m)) entradasPorMes[m]++; });
+    desenha("gEntradas", "bar", mesesPassados.map(rotuloMes), mesesPassados.map(function(m){ return entradasPorMes[m]; }));
+
+    var vencPorMes = {}; mesesFuturos.forEach(function(m){ vencPorMes[m] = 0; });
+    alunos.forEach(function(a){
+      if(a.is_lifetime || a.status === "inativo" || a.status === "cancelado") return;
+      var m = mesDe(a.renewal_date); if(m && vencPorMes.hasOwnProperty(m)) vencPorMes[m]++;
+    });
+    desenha("gVencimentos", "bar", mesesFuturos.map(rotuloMes), mesesFuturos.map(function(m){ return vencPorMes[m]; }));
+
+    var porCs = contaPor(ativos, function(a){ return (a.staff && a.staff.full_name) ? a.staff.full_name.split(" ")[0] : "Sem CS"; });
+    var csOrd = Object.keys(porCs).sort(function(x, y){ return porCs[y] - porCs[x]; });
+    desenha("gPorCs", "bar", csOrd, csOrd.map(function(c){ return porCs[c]; }));
+
+    // temperatura por mentoria: uma barra por braco, empilhada em quente/morno/frio
+    var mentoriasTodas = {};
+    ativos.forEach(function(a){ mentoriasDe(a).forEach(function(m){ mentoriasTodas[m] = true; }); });
+    var listaM = Object.keys(mentoriasTodas).sort();
+    function contaTemp(m, t){ return ativos.filter(function(a){ return mentoriasDe(a).indexOf(m) > -1 && temperatura(a.temperature) === t; }).length; }
+    desenhaEmpilhado("gTempMentoria", listaM, [
+      { nome:"Quente", cor:"#d98a8a", dados: listaM.map(function(m){ return contaTemp(m, "Quente"); }) },
+      { nome:"Morno",  cor:"#e3bd76", dados: listaM.map(function(m){ return contaTemp(m, "Morno"); }) },
+      { nome:"Frio",   cor:"#8fb3e0", dados: listaM.map(function(m){ return contaTemp(m, "Frio"); }) }
+    ]);
+    var totalEntradas12 = mesesPassados.reduce(function(sum, m){ return sum + entradasPorMes[m]; }, 0);
+    var totalVenc6 = mesesFuturos.reduce(function(sum, m){ return sum + vencPorMes[m]; }, 0);
+    $("notaMovimento").textContent = totalEntradas12 + " entradas em 12 meses · " + totalVenc6 + " vencimentos nos próximos 6";
 
     var proximos = alunos.filter(function(a){
       if(a.is_lifetime || !a.renewal_date) return false;
