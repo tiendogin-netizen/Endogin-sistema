@@ -761,7 +761,7 @@
     carregando = true;
     $("btnAtualizar").disabled = true;
     Promise.all([
-      buscarTudo("students", "id,full_name,email,phone,status,temperature,renewal_date,renewal_status,is_lifetime,is_delinquent,entry_date,cs_id,staff:cs_id(full_name),deliveries(label,status,branch_id),disc_results(d_score,i_score,s_score,c_score,primary_profile,created_at)"),
+      buscarTudo("students", "id,full_name,email,phone,status,temperature,renewal_date,renewal_status,is_lifetime,is_delinquent,entry_date,cs_id,disc_completed_at,staff:cs_id(full_name),deliveries(label,status,branch_id),disc_results(d_score,i_score,s_score,c_score,primary_profile)"),
       sb.from("branches").select("id,name").order("name"),
       // Os sinais de risco moram em tabelas separadas — sem elas a tela vira
       // uma lista de cadastro, e o que a diretoria precisa e enxergar quem
@@ -1337,10 +1337,10 @@
   var discSelecionado = null;
 
   function discResultadoDe(a){
-    var lista = (a.disc_results || []).slice().sort(function(x, y){
-      return String(y.created_at || "").localeCompare(String(x.created_at || ""));
-    });
-    return lista[0] || null;
+    // disc_results nao tem created_at; se o aluno refez o teste, vale o
+    // ultimo registro na ordem em que veio
+    var lista = (a.disc_results || []);
+    return lista.length ? lista[lista.length - 1] : null;
   }
 
   function desenhaRadar(id, valores){
@@ -1422,7 +1422,7 @@
       return '<tr class="disc-linha" data-id="' + a.id + '" style="cursor:pointer;' + (discSelecionado === a.id ? 'background:rgba(201,151,75,.07);' : '') + '">' + base +
         '<td><span class="selo" style="border-color:' + DISC_COR[p] + ';color:' + DISC_COR[p] + ';">' + p + ' · ' + DISC_NOME[p] + '</span></td>' +
         '<td>' + barra(r.d_score, "D") + '</td><td>' + barra(r.i_score, "I") + '</td><td>' + barra(r.s_score, "S") + '</td><td>' + barra(r.c_score, "C") + '</td>' +
-        '<td class="num-col">' + dataCurta(r.created_at) + '</td></tr>';
+        '<td class="num-col">' + dataCurta(a.disc_completed_at) + '</td></tr>';
     }).join("") : '<tr><td colspan="9" class="vazio">Nenhum mentorado nesse recorte.</td></tr>';
 
     document.querySelectorAll("#tabDisc .disc-linha").forEach(function(tr){
