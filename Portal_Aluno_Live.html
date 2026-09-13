@@ -497,6 +497,69 @@
   .book-authors{margin:0 0 12px;font-size:12px;color:var(--eg-gold-300);font-weight:600;}
   .book-desc{margin:0 0 16px;font-size:12.5px;color:var(--eg-text-secondary);line-height:1.6;}
   .book-price{font-size:11px;color:var(--eg-text-muted);}
+  /* ---------- galeria do Curso Endogin 3 ---------- */
+  .galeria{
+    position:fixed;inset:0;z-index:200;display:none;flex-direction:column;
+    background:rgba(6,10,18,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  }
+  .galeria.aberta{display:flex;animation:fadeSlideUp .35s var(--eg-ease) both;}
+  .galeria-cab{
+    display:flex;align-items:center;gap:14px;padding:18px 26px;flex-shrink:0;
+    border-bottom:1px solid rgba(201,151,75,.22);
+    background:linear-gradient(90deg, rgba(201,151,75,.10), transparent 60%);
+  }
+  .galeria-cab .eyebrow{font-family:var(--eg-mono);font-size:10px;letter-spacing:.18em;color:var(--eg-gold-300);text-transform:uppercase;}
+  .galeria-cab h3{font-family:'Sora',sans-serif;font-size:18px;font-weight:700;margin:2px 0 0;letter-spacing:-.01em;}
+  .galeria-cab .sub{font-size:12px;color:var(--eg-text-muted);margin:3px 0 0;}
+  .galeria-fechar{
+    margin-left:auto;width:42px;height:42px;border-radius:50%;flex:none;cursor:pointer;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--eg-text-primary);font-size:16px;
+    transition:background .25s var(--eg-ease),border-color .25s var(--eg-ease),transform .25s var(--eg-ease);
+  }
+  .galeria-fechar:hover{background:rgba(201,151,75,.18);border-color:var(--eg-gold-500);transform:rotate(90deg);}
+  .galeria-grade{
+    flex:1;overflow-y:auto;padding:22px 26px 34px;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;align-content:start;
+  }
+  .galeria-foto{
+    position:relative;aspect-ratio:4/5;border-radius:14px;overflow:hidden;cursor:zoom-in;
+    border:1px solid rgba(255,255,255,.08);background:var(--eg-bg-2) center/cover no-repeat;
+    transition:transform .4s var(--eg-ease),border-color .4s var(--eg-ease),box-shadow .4s var(--eg-ease);
+    animation:fadeSlideUp .5s var(--eg-ease) both;
+  }
+  .galeria-foto:hover{transform:translateY(-4px) scale(1.015);border-color:var(--eg-gold-500);box-shadow:0 26px 50px -20px rgba(0,0,0,.9), 0 0 0 3px rgba(201,151,75,.14);}
+  .galeria-foto::after{content:"";position:absolute;inset:0;background:linear-gradient(to top, rgba(6,10,18,.55), transparent 45%);opacity:.7;transition:opacity .3s;}
+  .galeria-foto:hover::after{opacity:1;}
+  .galeria-foto .n{position:absolute;left:12px;bottom:11px;z-index:1;font-family:var(--eg-mono);font-size:10px;letter-spacing:.14em;color:var(--eg-gold-100);}
+  .galeria-foto .lupa{
+    position:absolute;right:11px;bottom:9px;z-index:1;width:30px;height:30px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:11px;color:#20160a;
+    background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));opacity:0;transform:translateY(6px);
+    transition:opacity .3s var(--eg-ease),transform .3s var(--eg-ease);
+  }
+  .galeria-foto:hover .lupa{opacity:1;transform:none;}
+
+  /* visualizador de uma foto */
+  .visor{position:fixed;inset:0;z-index:210;display:none;align-items:center;justify-content:center;background:rgba(4,7,13,.96);}
+  .visor.aberto{display:flex;}
+  .visor img{max-width:min(92vw,1100px);max-height:86vh;border-radius:12px;box-shadow:0 40px 90px -30px rgba(0,0,0,1);animation:fadeSlideUp .3s var(--eg-ease) both;}
+  .visor-btn{
+    position:absolute;top:50%;transform:translateY(-50%);width:50px;height:50px;border-radius:50%;cursor:pointer;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:var(--eg-text-primary);font-size:16px;
+    transition:background .25s var(--eg-ease),border-color .25s var(--eg-ease);
+  }
+  .visor-btn:hover{background:rgba(201,151,75,.2);border-color:var(--eg-gold-500);}
+  .visor-btn.ant{left:22px;} .visor-btn.prox{right:22px;}
+  .visor-fechar{position:absolute;top:18px;right:22px;}
+  .visor-conta{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-family:var(--eg-mono);font-size:11px;letter-spacing:.14em;color:var(--eg-gold-300);}
+  @media (max-width:640px){
+    .galeria-cab{padding:14px 16px;}
+    .galeria-grade{padding:14px 14px 28px;grid-template-columns:repeat(2,1fr);gap:10px;}
+    .visor-btn{width:42px;height:42px;font-size:14px;}
+    .visor-btn.ant{left:8px;} .visor-btn.prox{right:8px;}
+    .visor img{max-width:96vw;max-height:78vh;}
+  }
+
   .course-card{position:relative;overflow:hidden;padding:0;}
   .course-card-bg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0.28;}
   .course-card-bg.placeholder{background:linear-gradient(135deg,var(--eg-navy-line),var(--eg-bg-2));}
@@ -767,7 +830,7 @@
           </div>
 
           <div class="card2 course-card" style="margin-bottom:0;">
-            <div class="course-card-bg placeholder"></div>
+            <div class="course-card-bg" style="background-image:url('/assets/curso3/foto-07.jpg');background-position:center 30%;"></div>
             <div class="course-card-content">
               <span class="badge gold">Curso Endogin 3 · como foi</span>
               <h3>750+ médicos no Curso Endogin 3</h3>
@@ -779,7 +842,7 @@
               </div>
               <div class="btn-row">
                 <button class="btn-primary">Garantir vaga no Curso 4</button>
-                <button class="btn-secondary">Ver como foi</button>
+                <button class="btn-secondary" id="verComoFoiBtn"><i class="fa-regular fa-images"></i> Ver como foi</button>
               </div>
             </div>
           </div>
@@ -1598,6 +1661,67 @@
       });
   }
 
+  // ---------------- galeria do Curso Endogin 3 ----------------
+  // As fotos vivem em /assets/curso3 em dois tamanhos: -min para a grade (uns
+  // 50 KB cada) e a cheia para o visor (150-350 KB). Os originais tinham 12 a
+  // 32 MB cada; nao ha como servir isso numa galeria.
+  var CURSO3_FOTOS = 9;
+  var visorAtual = 0;
+
+  function galeriaMonta(){
+    var grade = $("galeriaGrade");
+    if(!grade || grade.children.length) return;
+    for(var i = 1; i <= CURSO3_FOTOS; i++){
+      var n = (i < 10 ? "0" : "") + i;
+      var el = document.createElement("div");
+      el.className = "galeria-foto";
+      el.style.backgroundImage = "url(/assets/curso3/foto-" + n + "-min.jpg)";
+      el.style.animationDelay = (i * 45) + "ms";
+      el.innerHTML = '<span class="n">' + n + ' / ' + (CURSO3_FOTOS < 10 ? "0" : "") + CURSO3_FOTOS + '</span><span class="lupa"><i class="fa-solid fa-magnifying-glass-plus"></i></span>';
+      el.setAttribute("data-i", i);
+      el.addEventListener("click", function(){ visorAbre(parseInt(this.getAttribute("data-i"), 10)); });
+      grade.appendChild(el);
+    }
+  }
+  function galeriaAbre(){ galeriaMonta(); $("galeriaCurso3").classList.add("aberta"); document.body.style.overflow = "hidden"; }
+  function galeriaFecha(){ $("galeriaCurso3").classList.remove("aberta"); document.body.style.overflow = ""; }
+  function visorMostra(i){
+    visorAtual = ((i - 1 + CURSO3_FOTOS) % CURSO3_FOTOS) + 1;
+    var n = (visorAtual < 10 ? "0" : "") + visorAtual;
+    $("visorImg").src = "/assets/curso3/foto-" + n + ".jpg";
+    $("visorConta").textContent = n + " / " + (CURSO3_FOTOS < 10 ? "0" : "") + CURSO3_FOTOS;
+    // pre-carrega a proxima pra troca ficar instantanea
+    var prox = new Image(); prox.src = "/assets/curso3/foto-" + ((visorAtual % CURSO3_FOTOS) + 1 < 10 ? "0" : "") + ((visorAtual % CURSO3_FOTOS) + 1) + ".jpg";
+  }
+  function visorAbre(i){ visorMostra(i); $("galeriaVisor").classList.add("aberto"); }
+  function visorFecha(){ $("galeriaVisor").classList.remove("aberto"); }
+
+  if($("verComoFoiBtn")){
+    $("verComoFoiBtn").addEventListener("click", galeriaAbre);
+    $("galeriaFechar").addEventListener("click", galeriaFecha);
+    $("visorFechar").addEventListener("click", visorFecha);
+    $("visorAnt").addEventListener("click", function(){ visorMostra(visorAtual - 1); });
+    $("visorProx").addEventListener("click", function(){ visorMostra(visorAtual + 1); });
+    $("galeriaVisor").addEventListener("click", function(e){ if(e.target === this) visorFecha(); });
+    document.addEventListener("keydown", function(e){
+      if($("galeriaVisor").classList.contains("aberto")){
+        if(e.key === "Escape") visorFecha();
+        else if(e.key === "ArrowLeft") visorMostra(visorAtual - 1);
+        else if(e.key === "ArrowRight") visorMostra(visorAtual + 1);
+      } else if($("galeriaCurso3").classList.contains("aberta") && e.key === "Escape"){
+        galeriaFecha();
+      }
+    });
+    // deslizar no celular
+    var toqueX = null;
+    $("galeriaVisor").addEventListener("touchstart", function(e){ toqueX = e.touches[0].clientX; }, { passive:true });
+    $("galeriaVisor").addEventListener("touchend", function(e){
+      if(toqueX === null) return;
+      var dx = e.changedTouches[0].clientX - toqueX; toqueX = null;
+      if(Math.abs(dx) > 40) visorMostra(visorAtual + (dx < 0 ? 1 : -1));
+    }, { passive:true });
+  }
+
   // ---------------- chatbot de aulas — SEM transcrição, só ajuda o aluno a
   // achar a aula certa pelo título/módulo/curso. Busca local (sem custo de
   // IA): quebra a pergunta em palavras e cruza com o catálogo. ----------------
@@ -1857,5 +1981,25 @@
     });
   });
 </script>
+<!-- ===================== GALERIA: Curso Endogin 3 ===================== -->
+<div class="galeria" id="galeriaCurso3" role="dialog" aria-label="Fotos do Curso Endogin 3">
+  <div class="galeria-cab">
+    <div>
+      <div class="eyebrow">Curso Endogin 3 · Alphaville-SP</div>
+      <h3>Como foi</h3>
+      <p class="sub">Três dias, 750+ médicos, Dr. Caio e Dr. Vinícius no palco. Clique numa foto para ampliar.</p>
+    </div>
+    <button class="galeria-fechar" id="galeriaFechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="galeria-grade" id="galeriaGrade"></div>
+</div>
+<div class="visor" id="galeriaVisor">
+  <button class="visor-btn ant" id="visorAnt" aria-label="Anterior"><i class="fa-solid fa-chevron-left"></i></button>
+  <img id="visorImg" alt="">
+  <button class="visor-btn prox" id="visorProx" aria-label="Próxima"><i class="fa-solid fa-chevron-right"></i></button>
+  <button class="visor-btn visor-fechar" id="visorFechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+  <div class="visor-conta" id="visorConta"></div>
+</div>
+
 </body>
 </html>
