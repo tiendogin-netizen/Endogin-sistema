@@ -281,6 +281,54 @@
   .aula-item.ok .aula-n{color:var(--eg-text-muted);}
   .aula-acao.ok{color:var(--eg-green);}
 
+  /* ---- as aulas obrigatorias, como cards com capa ----
+     Eram uma lista de texto dentro do painel da etapa. Como e a unica coisa
+     que o aluno novo PRECISA fazer, vira a coisa mais visivel da tela. */
+  .trilha-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-top:14px;}
+  .trilha-card{
+    display:block;position:relative;border-radius:14px;overflow:hidden;text-decoration:none;color:inherit;
+    border:1px solid rgba(255,255,255,.08);
+    background:linear-gradient(155deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+    transition:transform .35s var(--eg-ease),border-color .35s var(--eg-ease),box-shadow .35s var(--eg-ease);
+  }
+  a.trilha-card:hover{transform:translateY(-3px);border-color:var(--eg-border-strong);box-shadow:0 22px 44px -20px rgba(0,0,0,.85);}
+  .trilha-capa{aspect-ratio:16/9;position:relative;background:linear-gradient(135deg,#1c2f54 0%,#0e1a29 100%);background-size:cover;background-position:center;}
+  .trilha-capa .n{position:absolute;left:11px;top:9px;font-family:var(--eg-mono);font-size:10.5px;letter-spacing:.12em;color:var(--eg-gold-100);background:rgba(8,13,23,.72);padding:3px 8px;border-radius:6px;}
+  .trilha-capa .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .trilha-capa .play i{
+    width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:#20160a;
+    background:linear-gradient(145deg,var(--eg-gold-300),var(--eg-gold-700));box-shadow:0 10px 24px -8px rgba(201,151,75,.75);
+    transition:transform .3s var(--eg-ease);
+  }
+  a.trilha-card:hover .play i{transform:scale(1.08);}
+  .trilha-corpo{padding:12px 13px 13px;}
+  .trilha-t{font-family:'Sora',sans-serif;font-size:12.5px;font-weight:600;line-height:1.35;margin:0 0 6px;}
+  .trilha-m{font-size:11px;color:var(--eg-text-muted);display:flex;justify-content:space-between;gap:8px;}
+  .trilha-m .acao{color:var(--eg-gold-300);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:10px;}
+  .trilha-card.feita{border-color:rgba(143,199,159,.35);}
+  .trilha-card.feita .trilha-capa::after{content:"";position:absolute;inset:0;background:rgba(8,13,23,.5);}
+  .trilha-card.feita .selo-ok{position:absolute;right:9px;top:9px;z-index:1;background:var(--eg-green);color:#0b1a12;font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:6px;letter-spacing:.08em;}
+  .trilha-card.feita .play i{background:var(--eg-green);color:#0b1a12;box-shadow:none;}
+  .trilha-card.agora{border-color:var(--eg-gold-500);box-shadow:0 0 0 3px rgba(201,151,75,.14);}
+  .trilha-card.agora .trilha-m .acao{animation:softPulse 2.4s ease-in-out infinite;}
+
+  /* ---- mural de recados: acima da linha do tempo, com destaque ---- */
+  .mural{
+    margin:0 0 28px;padding:18px 20px;border-radius:16px;border:1px solid var(--eg-border);
+    background:linear-gradient(155deg,rgba(201,151,75,.10) 0%,rgba(255,255,255,.012) 100%);
+    box-shadow:0 16px 40px -22px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .mural-cab{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .mural-cab i{color:var(--eg-gold-300);font-size:14px;}
+  .mural-cab h3{font-family:'Sora',sans-serif;font-size:14px;font-weight:600;margin:0;}
+  .mural-cab .qtd{margin-left:auto;font-family:var(--eg-mono);font-size:10.5px;letter-spacing:.06em;color:var(--eg-text-muted);}
+  .mural-item{padding:12px 14px;border-radius:10px;background:rgba(8,13,23,.38);border:1px solid var(--eg-navy-line);margin-bottom:8px;}
+  .mural-item:last-child{margin-bottom:0;}
+  .mural-item b{font-size:13px;}
+  .mural-item p{margin:4px 0 0;font-size:12.5px;color:var(--eg-text-secondary);white-space:pre-wrap;line-height:1.55;}
+  .mural-item a{color:var(--eg-gold-300);font-size:12px;display:inline-block;margin-top:6px;margin-right:12px;}
+  .mural-quando{float:right;font-family:var(--eg-mono);font-size:10px;letter-spacing:.06em;color:var(--eg-text-muted);}
+
   .mentores{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;}
   .mentor-chip{display:flex;align-items:center;gap:9px;}
   .mentor-chip .av{
@@ -677,18 +725,17 @@
           <div class="percurso-track"><i id="percursoFill"></i></div>
         </div>
 
+        <div class="mural" id="mural" style="display:none;">
+          <div class="mural-cab"><i class="fa-solid fa-bullhorn"></i><h3>Recados da mentoria</h3><span class="qtd" id="muralQtd"></span></div>
+          <div id="recadosList"></div>
+        </div>
+
         <ol class="linha" id="linhaTempo"></ol>
 
-        <div class="grid-2col">
-          <section>
-            <div class="bloco-head"><h3>Seus cursos</h3><span class="bloco-meta">Cademí</span></div>
-            <div id="courseProgressList"><p class="vazio">Assim que você começar a assistir as aulas gravadas, o seu progresso em cada curso aparece aqui.</p></div>
-          </section>
-          <section>
-            <div class="bloco-head"><h3>Recados da mentoria</h3></div>
-            <div id="recadosList"><p class="vazio">Nenhum recado por aqui ainda.</p></div>
-          </section>
-        </div>
+        <section>
+          <div class="bloco-head"><h3>Seus cursos</h3><span class="bloco-meta">Cademí</span></div>
+          <div id="courseProgressList"><p class="vazio">Assim que você começar a assistir as aulas gravadas, o seu progresso em cada curso aparece aqui.</p></div>
+        </section>
       </div>
 
       <!-- ================= PÁGINA: CALENDÁRIO ================= -->
@@ -1193,7 +1240,7 @@
     var orParts = ["branch_id.is.null"];
     if(branchIds.length){ orParts.push("branch_id.in.(" + branchIds.join(",") + ")"); }
     return sb.from("lessons")
-      .select("id,title,duration_minutes,lesson_type,branch_id,link_url")
+      .select("id,title,duration_minutes,lesson_type,branch_id,link_url,cover_url,description")
       .eq("lesson_type", "trilha")
       .or(orParts.join(","))
       .then(function(r){
@@ -1207,7 +1254,7 @@
             (pr.data || []).forEach(function(p){ doneMap[p.lesson_id] = p.completed; });
             var doneCount = lessons.filter(function(l){ return doneMap[l.id]; }).length;
             jornada.trilha = {
-              aulas: lessons.map(function(l){ return { titulo: l.title, minutos: l.duration_minutes, link: l.link_url, feita: !!doneMap[l.id] }; }),
+              aulas: lessons.map(function(l){ return { titulo: l.title, minutos: l.duration_minutes, link: l.link_url, capa: l.cover_url, descricao: l.description, feita: !!doneMap[l.id] }; }),
               feitas: doneCount
             };
             return doneCount === lessons.length;
@@ -1273,22 +1320,34 @@
     if(!t || !t.aulas.length){
       return '<div class="etapa-painel"><p>Sua CS ainda não liberou as aulas de introdução da sua mentoria. Assim que ela liberar, elas aparecem aqui.</p></div>';
     }
+    // a proxima a assistir e a primeira ainda nao feita: ganha o destaque
+    var proxima = -1;
+    t.aulas.forEach(function(a, i){ if(proxima === -1 && !a.feita) proxima = i; });
+
     return '<div class="etapa-painel">' +
-      '<p>Assista na ordem — cada aula usa a anterior. A última libera sua sessão com os fundadores.</p>' +
+      '<p>Assista na ordem — cada aula usa a anterior. A última libera sua sessão com os fundadores. <b>' + t.feitas + ' de ' + t.aulas.length + '</b> feitas.</p>' +
+      '<div class="trilha-grid">' +
       t.aulas.map(function(a, i){
         var n = (i + 1 < 10 ? "0" : "") + (i + 1);
-        var acao = a.feita
-          ? '<span class="aula-acao ok">Feita</span>'
-          : (a.link
-              ? '<a class="aula-acao link" href="' + esc(a.link) + '" target="_blank" rel="noopener">Assistir</a>'
-              : '<span class="aula-acao">A assistir</span>');
-        return '<div class="aula-item' + (a.feita ? " ok" : "") + '">' +
-          '<span class="aula-n">' + n + '</span>' +
-          '<div><p class="aula-t">' + esc(a.titulo) + '</p>' +
-          (a.minutos ? '<p class="aula-m">' + a.minutos + ' min</p>' : '') + '</div>' +
-          acao +
-        '</div>';
+        var classes = "trilha-card" + (a.feita ? " feita" : "") + (i === proxima ? " agora" : "");
+        var capa = a.capa ? ' style="background-image:url(' + esc(a.capa) + ');"' : '';
+        var tag = a.link ? "a" : "div";
+        var href = a.link ? ' href="' + esc(a.link) + '" target="_blank" rel="noopener"' : '';
+        var acao = a.feita ? "Concluída" : (i === proxima ? "Assistir agora" : "Assistir");
+        return '<' + tag + ' class="' + classes + '"' + href + '>' +
+          '<div class="trilha-capa"' + capa + '>' +
+            '<span class="n">AULA ' + n + '</span>' +
+            (a.feita ? '<span class="selo-ok">FEITA</span>' : '') +
+            '<span class="play"><i class="fa-solid ' + (a.feita ? "fa-check" : "fa-play") + '"></i></span>' +
+          '</div>' +
+          '<div class="trilha-corpo">' +
+            '<p class="trilha-t">' + esc(a.titulo) + '</p>' +
+            '<div class="trilha-m"><span>' + (a.minutos ? a.minutos + ' min' : '') + '</span>' +
+              (a.link ? '<span class="acao">' + acao + '</span>' : '') + '</div>' +
+          '</div>' +
+        '</' + tag + '>';
       }).join("") +
+      '</div>' +
     '</div>';
   }
 
@@ -1504,24 +1563,38 @@
 
   // ---------------- recados (mensagem/link/documento da CS) ----------------
   function recadoItemHtml(a){
-    return '<div class="cal-item" style="align-items:flex-start;">' +
-      '<div class="cal-icn"><i class="fa-solid fa-bullhorn"></i></div>' +
-      '<div class="cal-info">' +
-        '<b>' + (a.title || "Recado") + '</b>' +
-        '<span style="display:block;white-space:pre-wrap;margin:4px 0;color:var(--eg-text-secondary);">' + a.message + '</span>' +
-        (a.link_url ? '<a href="' + a.link_url + '" target="_blank" rel="noopener" style="display:block;color:var(--eg-gold-300);font-size:11.5px;margin-bottom:2px;"><i class="fa-solid fa-link"></i> ' + a.link_url + '</a>' : '') +
-        (a.attachment_url ? '<a href="' + a.attachment_url + '" target="_blank" rel="noopener" style="display:block;color:var(--eg-gold-300);font-size:11.5px;"><i class="fa-solid fa-paperclip"></i> ' + (a.attachment_name || "anexo") + '</a>' : '') +
-      '</div>' +
+    var quando = a.created_at ? new Date(a.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"short" }) : "";
+    return '<div class="mural-item">' +
+      '<span class="mural-quando">' + esc(quando) + '</span>' +
+      '<b>' + esc(a.title || "Recado") + '</b>' +
+      '<p>' + esc(a.message || "") + '</p>' +
+      (a.link_url ? '<a href="' + esc(a.link_url) + '" target="_blank" rel="noopener"><i class="fa-solid fa-link"></i> Abrir link</a>' : '') +
+      (a.attachment_url ? '<a href="' + esc(a.attachment_url) + '" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> ' + esc(a.attachment_name || "anexo") + '</a>' : '') +
     '</div>';
   }
 
+  // Antes carregava TODO recado, inclusive o de outra mentoria e o vencido.
+  // Agora so o que e para o aluno: "todas as mentorias" ou uma das dele, e
+  // ainda dentro do prazo. O mural inteiro some quando nao ha nada — um
+  // quadro vazio chama atencao para o nada.
   function loadRecados(){
     sb.from("announcements")
-      .select("id,title,message,link_url,attachment_url,attachment_name,created_at")
+      .select("id,title,message,link_url,attachment_url,attachment_name,all_branches,expires_at,created_at,announcement_branches(branch_id)")
       .order("created_at", { ascending: false })
       .then(function(r){
-        if(r.error || !r.data || !r.data.length) return;
-        $("recadosList").innerHTML = r.data.map(recadoItemHtml).join("");
+        var mural = $("mural");
+        if(r.error || !r.data){ mural.style.display = "none"; return; }
+        var agora = Date.now();
+        var meus = currentBranchIds || [];
+        var lista = r.data.filter(function(a){
+          if(a.expires_at && new Date(a.expires_at).getTime() < agora) return false;
+          if(a.all_branches) return true;
+          return (a.announcement_branches || []).some(function(x){ return meus.indexOf(x.branch_id) > -1; });
+        });
+        if(!lista.length){ mural.style.display = "none"; return; }
+        mural.style.display = "";
+        $("muralQtd").textContent = lista.length === 1 ? "1 recado" : lista.length + " recados";
+        $("recadosList").innerHTML = lista.map(recadoItemHtml).join("");
       });
   }
 

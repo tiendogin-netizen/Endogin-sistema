@@ -1341,6 +1341,7 @@
           <select id="lessonFieldType">
             <option value="semanal">Aula semanal (repete toda semana)</option>
             <option value="evento">Encontro (data única)</option>
+            <option value="trilha">Aula obrigatória (trilha de boas-vindas)</option>
           </select>
         </div>
         <div><label>Mentoria</label><select id="lessonFieldBranch"><option value="">Todas as mentorias</option></select></div>
@@ -4103,9 +4104,15 @@
   }
 
   function toggleLessonTypeFields(){
-    var isEvento = $("lessonFieldType").value === "evento";
-    $("lessonWeekdayWrap").style.display = isEvento ? "none" : "block";
+    var tipo = $("lessonFieldType").value;
+    var isEvento = tipo === "evento", isTrilha = tipo === "trilha";
+    // aula obrigatoria nao tem dia nem horario: o aluno assiste quando quiser,
+    // na ordem — o que importa nela e capa, titulo e link
+    $("lessonWeekdayWrap").style.display = (isEvento || isTrilha) ? "none" : "block";
     $("lessonDateWrap").style.display = isEvento ? "block" : "none";
+    var hora = $("lessonFieldTime").closest("div"), zoom = $("lessonFieldZoomId").closest("div");
+    if(hora) hora.style.display = isTrilha ? "none" : "";
+    if(zoom) zoom.style.display = isTrilha ? "none" : "";
   }
   $("lessonFieldType").addEventListener("change", toggleLessonTypeFields);
 
@@ -4165,7 +4172,7 @@
       branch_id: $("lessonFieldBranch").value || null,
       weekday: type === "semanal" ? $("lessonFieldWeekday").value : null,
       event_date: type === "evento" ? $("lessonFieldDate").value : null,
-      scheduled_time: $("lessonFieldTime").value || null,
+      scheduled_time: type === "trilha" ? null : ($("lessonFieldTime").value || null),
       duration_minutes: $("lessonFieldDuration").value ? parseInt($("lessonFieldDuration").value, 10) : null,
       category: $("lessonFieldCategory").value || null,
       cover_url: $("lessonFieldCover").value.trim() || null,
@@ -4482,7 +4489,7 @@
     Promise.all([
       sb.from("lessons")
         .select("id,title,lesson_type,branch_id,weekday,event_date,scheduled_time,duration_minutes,category,cover_url,description,link_url,zoom_meeting_id")
-        .in("lesson_type", ["semanal", "evento"]),
+        .in("lesson_type", ["semanal", "evento", "trilha"]),
       // clique em "Assistir/entrar" no Portal do Aluno — não é presença
       // confirmada pelo Zoom, é só engajamento medido pela própria
       // plataforma, mas já dá um número útil enquanto a integração com o
@@ -4517,9 +4524,13 @@
     var when = l.lesson_type === "evento"
       ? [fmtEventDate(l.event_date), timePart].filter(Boolean).join(" · ")
       : [LESSON_WEEKDAY_LABEL[l.weekday] || l.weekday, timePart].filter(Boolean).join(" · ");
+    var capa = l.lesson_type === "trilha"
+      ? '<span style="display:inline-block;width:64px;height:36px;border-radius:6px;margin-right:10px;vertical-align:middle;background:#152436 center/cover no-repeat' + (l.cover_url ? ' url(' + l.cover_url + ')' : '') + ';border:1px solid var(--eg-navy-line);" title="' + (l.cover_url ? "capa" : "sem capa — clique no lápis") + '"></span>'
+      : '';
+    var etiqueta = l.lesson_type === "trilha" ? "Obrigatória" : (l.lesson_type === "evento" ? "Encontro" : "Aula semanal");
     return '<div class="wpp-row">' +
-      '<div>' +
-        '<span class="wpp-group-tag">' + (l.lesson_type === "evento" ? "Encontro" : "Aula semanal") + '</span> ' +
+      '<div>' + capa +
+        '<span class="wpp-group-tag">' + etiqueta + '</span> ' +
         (l.category ? '<span class="wpp-group-tag" style="opacity:0.7;">' + l.category + '</span> ' : '') +
         '<b>' + l.title + '</b>' +
         '<div class="hint">' + (when || "sem horário definido") + (l.duration_minutes ? " · " + l.duration_minutes + " min" : "") + " · " + (branch ? branch.name : "Todas as mentorias") + '</div>' +
@@ -4546,22 +4557,31 @@
 
     var blocos = [];
 
+    // As aulas obrigatorias (trilha de boas-vindas) ficam num bloco proprio:
+    // nao tem dia nem hora, e sao o que todo aluno novo precisa assistir antes
+    // do 1x1. E aqui que se poe a capa e o link de cada uma.
+    var trilha = allLessons.filter(function(l){ return l.lesson_type === "trilha"; });
+    if(trilha.length){
+      blocos.push({ nome: "Aulas obrigatórias — trilha de boas-vindas", aulas: trilha, trilha: true });
+    }
+    var semTrilha = allLessons.filter(function(l){ return l.lesson_type !== "trilha"; });
+
     // "Todas as mentorias" primeiro, porque e o grupo que precisa de atencao:
     // aula sem mentoria aparece pra base inteira.
-    var semMentoria = allLessons.filter(function(l){ return !l.branch_id; }).sort(calendarioOrdena);
+    var semMentoria = semTrilha.filter(function(l){ return !l.branch_id; }).sort(calendarioOrdena);
     if(semMentoria.length){
       blocos.push({ nome: "Todas as mentorias", aulas: semMentoria, alerta: true });
     }
 
     allBranches.slice().sort(function(a, b){ return (a.name || "").localeCompare(b.name || ""); }).forEach(function(b){
-      var doBraco = allLessons.filter(function(l){ return l.branch_id === b.id; }).sort(calendarioOrdena);
+      var doBraco = semTrilha.filter(function(l){ return l.branch_id === b.id; }).sort(calendarioOrdena);
       if(doBraco.length) blocos.push({ nome: b.name, aulas: doBraco });
     });
 
     // aula presa a uma mentoria que nao existe mais nao pode sumir da tela
     var conhecidas = {};
     allBranches.forEach(function(b){ conhecidas[b.id] = true; });
-    var orfas = allLessons.filter(function(l){ return l.branch_id && !conhecidas[l.branch_id]; }).sort(calendarioOrdena);
+    var orfas = semTrilha.filter(function(l){ return l.branch_id && !conhecidas[l.branch_id]; }).sort(calendarioOrdena);
     if(orfas.length) blocos.push({ nome: "Mentoria não encontrada", aulas: orfas, alerta: true });
 
     var aviso = semMentoria.length
@@ -4572,9 +4592,10 @@
 
     wrap.innerHTML = aviso + blocos.map(function(g, i){
       return '<div style="' + (i ? "margin-top:22px;padding-top:16px;border-top:1px solid var(--eg-navy-line);" : "") + '">' +
-          '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">' +
+          '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap;">' +
             '<b style="font-size:13.5px;' + (g.alerta ? "color:var(--eg-gold-300);" : "") + '">' + g.nome + '</b>' +
             '<span class="hint">' + g.aulas.length + ' aula(s)</span>' +
+            (g.trilha ? '<span class="hint" style="flex-basis:100%;">Aparecem no Portal para todo aluno novo, como cards com capa. Clique no lápis para colocar a capa (link da imagem) e o link da aula. A ordem é a de cadastro.</span>' : '') +
           '</div>' +
           g.aulas.map(calendarioLinha).join("") +
         '</div>';
