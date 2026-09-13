@@ -579,21 +579,20 @@
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>Movimentações recentes</h3></div>
-        <p class="hint" style="margin:-8px 0 6px;">⚠ Dados de exemplo — os nomes abaixo são fictícios e não vêm do banco.</p>
+        <div class="card-head"><h3>Movimentações recentes</h3><span class="hint" id="dashMovResumo"></span></div>
+        <p class="hint" style="margin:-8px 0 6px;">O que mexeu na sua carteira: quem entrou nos últimos 30 dias, quem vence nos próximos 60 e quem está em risco (vencido, inadimplente ou frio). Clique na linha para abrir a ficha.</p>
         <div class="filter-row" style="margin:-8px 0 14px;">
           <span class="filter-chip selected" data-dash-filter="todos">Todos</span>
-          <span class="filter-chip" data-dash-filter="onboarding">Onboarding</span>
-          <span class="filter-chip" data-dash-filter="renovacao">Renovações</span>
+          <span class="filter-chip" data-dash-filter="onboarding">Entradas</span>
+          <span class="filter-chip" data-dash-filter="renovacao">Vencimentos</span>
           <span class="filter-chip" data-dash-filter="risco">Em risco</span>
         </div>
         <div class="carteira-table-wrap">
           <table>
-            <thead><tr><th>Aluna</th><th>Mentoria</th><th>Status</th><th>Data</th><th>CS responsável</th><th></th></tr></thead>
+            <thead><tr><th>Aluno</th><th>O que aconteceu</th><th>Mentoria</th><th>Status</th><th>Data</th><th>CS responsável</th></tr></thead>
             <tbody id="dashMovTableBody"></tbody>
           </table>
         </div>
-        <p class="hint" style="text-align:center;margin-top:14px;font-style:italic;">Dados de exemplo — posso ligar essa lista às movimentações reais dos alunos quando você quiser.</p>
       </div>
     </div>
 
@@ -1804,13 +1803,48 @@
   }
   var dashChartInstance = null;
   var dashLoaded = false;
-  var DASH_MOV_EXEMPLO = [
-    { nome:"Karine Ribeiro Antunes", mentoria:"Endogin Mãe", status:"ativo", data:"04/09/2026", cs:"Thais", tipo:"onboarding" },
-    { nome:"Laura Esther", mentoria:"Mentores Masters", status:"onboarding", data:"03/09/2026", cs:"Thais", tipo:"onboarding" },
-    { nome:"Alicia Fernandes", mentoria:"Endogin Scale", status:"ativo", data:"01/09/2026", cs:"Bruna", tipo:"renovacao" },
-    { nome:"Patrícia Gomes", mentoria:"Endogin Ativação", status:"inativo", data:"29/08/2026", cs:"Bruna", tipo:"risco" },
-    { nome:"Fernanda Lima", mentoria:"Endogin Mãe", status:"ativo", data:"27/08/2026", cs:"Thais", tipo:"renovacao" }
-  ];
+  var dashMovFiltro = "todos";
+
+  // Movimentacoes reais, calculadas de allStudents (o recorte que a pessoa
+  // ve). Nao existe uma tabela de eventos: o que ha sao as datas do cadastro,
+  // e cada uma conta uma coisa —
+  //   entrada:    entry_date (ou created_at) nos ultimos 30 dias
+  //   vencimento: renewal_date nos proximos 60 dias, ou status de renovacao em andamento
+  //   risco:      contrato vencido, inadimplente ou temperatura fria (so quem esta ativo)
+  function dashMovimentacoes(){
+    var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    var itens = [];
+    function dias(iso){
+      if(!iso) return null;
+      var d = new Date(String(iso).slice(0, 10) + "T00:00:00");
+      return isNaN(d.getTime()) ? null : Math.round((d.getTime() - hoje.getTime()) / 86400000);
+    }
+    allStudents.forEach(function(s){
+      var inativo = s.status === "inativo" || s.status === "cancelado";
+      var dEnt = dias(s.entry_date || (s.created_at ? String(s.created_at).slice(0, 10) : null));
+      if(dEnt !== null && dEnt <= 0 && dEnt >= -30){
+        itens.push({ s:s, tipo:"onboarding", data:(s.entry_date || String(s.created_at).slice(0, 10)), ordem:-dEnt,
+          texto: dEnt === 0 ? "Entrou hoje" : "Entrou há " + (-dEnt) + " dia(s)" });
+      }
+      var dVen = s.is_lifetime ? null : dias(s.renewal_date);
+      var rs = String(s.renewal_status || "").toLowerCase();
+      var emTratativa = rs.indexOf("negocia") > -1 || rs.indexOf("a vencer") > -1;
+      if(!inativo && dVen !== null && dVen >= 0 && dVen <= 60){
+        itens.push({ s:s, tipo:"renovacao", data:s.renewal_date, ordem:dVen,
+          texto:(dVen === 0 ? "Vence hoje" : "Vence em " + dVen + " dia(s)") + (emTratativa ? " · " + s.renewal_status : "") });
+      } else if(!inativo && emTratativa){
+        itens.push({ s:s, tipo:"renovacao", data:s.renewal_date || null, ordem:61, texto:"Renovação: " + s.renewal_status });
+      }
+      if(!inativo){
+        var motivos = [];
+        if(dVen !== null && dVen < 0) motivos.push("contrato vencido há " + (-dVen) + " dia(s)");
+        if(s.is_delinquent) motivos.push("inadimplente");
+        if(String(s.temperature || "").toLowerCase().indexOf("fri") > -1) motivos.push("temperatura fria");
+        if(motivos.length) itens.push({ s:s, tipo:"risco", data:s.renewal_date || null, ordem:(dVen !== null && dVen < 0) ? -dVen : 999, texto:motivos.join(" · ") });
+      }
+    });
+    return itens;
+  }
   // KPIs do topo, do banco de verdade.
   //
   // "Ativo" segue exatamente a mesma regra da aba Carteiras CS
@@ -1884,10 +1918,7 @@
   function renderDashboard(){
     loadDashKpis();
     renderDashGraficos();
-    if(!dashLoaded){
-      renderDashMovTable("todos");
-      dashLoaded = true;
-    }
+    renderDashMovTable();
   }
 
   // Os graficos do Dashboard saem de allStudents — o mesmo recorte da aba
@@ -1933,20 +1964,38 @@
     ], { titulo:"Alunos" });
   }
   function renderDashMovTable(filter){
-    var rows = DASH_MOV_EXEMPLO.filter(function(r){ return filter === "todos" || r.tipo === filter; });
+    dashMovFiltro = filter || dashMovFiltro;
     var body = $("dashMovTableBody");
     if(!body) return;
+    var todas = dashMovimentacoes();
+    var rows = todas.filter(function(r){ return dashMovFiltro === "todos" || r.tipo === dashMovFiltro; });
+    // dentro de cada tipo, o mais urgente primeiro (entrada mais recente,
+    // vencimento mais proximo, risco mais antigo)
+    var peso = { risco:0, renovacao:1, onboarding:2 };
+    rows.sort(function(a, b){ return (peso[a.tipo] - peso[b.tipo]) || (a.ordem - b.ordem) || (a.s.full_name || "").localeCompare(b.s.full_name || ""); });
+    var contagem = { onboarding:0, renovacao:0, risco:0 };
+    todas.forEach(function(r){ contagem[r.tipo]++; });
+    if($("dashMovResumo")) $("dashMovResumo").textContent = contagem.onboarding + " entrada(s) · " + contagem.renovacao + " vencimento(s) · " + contagem.risco + " em risco";
+
     if(!rows.length){ body.innerHTML = '<tr><td colspan="6" class="empty-note">Nenhuma movimentação nessa categoria.</td></tr>'; return; }
-    body.innerHTML = rows.map(function(r){
-      return "<tr>" +
-        "<td><b>" + r.nome + "</b></td>" +
-        "<td><span class=\"branch-tag\">" + r.mentoria + "</span></td>" +
-        "<td><span class=\"status-pill " + r.status + "\">" + r.status + "</span></td>" +
-        "<td>" + r.data + "</td>" +
-        "<td>" + r.cs + "</td>" +
-        "<td style=\"text-align:right;\"><i class=\"fa-solid fa-ellipsis\" style=\"color:var(--eg-text-muted);cursor:pointer;\"></i></td>" +
-      "</tr>";
-    }).join("");
+    var COR = { onboarding:"var(--eg-green)", renovacao:"var(--eg-gold-300)", risco:"var(--eg-red)" };
+    var ROT = { onboarding:"Entrada", renovacao:"Vencimento", risco:"Risco" };
+    body.innerHTML = rows.slice(0, 40).map(function(r){
+      var s = r.s;
+      var mentorias = (s.deliveries || []).filter(function(d){ return d.status === "ativo"; }).map(function(d){ return '<span class="branch-tag">' + d.label + '</span>'; }).join("") || '<span class="hint">—</span>';
+      var data = r.data ? String(r.data).slice(0, 10).split("-").reverse().join("/") : "—";
+      return '<tr class="dash-mov-linha" data-id="' + s.id + '" style="cursor:pointer;">' +
+        '<td><b>' + s.full_name + '</b><br><span class="hint">' + (s.email || "") + '</span></td>' +
+        '<td><span style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:' + COR[r.tipo] + ';">' + ROT[r.tipo] + '</span><br><span style="font-size:12px;">' + r.texto + '</span></td>' +
+        '<td>' + mentorias + '</td>' +
+        '<td><span class="status-pill ' + s.status + '">' + s.status + '</span></td>' +
+        '<td>' + data + '</td>' +
+        '<td>' + csPorMentoriaHtml(s) + '</td>' +
+      '</tr>';
+    }).join("") + (rows.length > 40 ? '<tr><td colspan="6" class="hint" style="text-align:center;">Mostrando 40 de ' + rows.length + '. Use a aba Alunos com filtros para ver o resto.</td></tr>' : "");
+    body.querySelectorAll(".dash-mov-linha").forEach(function(tr){
+      tr.addEventListener("click", function(){ openAlunoModal(tr.getAttribute("data-id")); });
+    });
   }
   document.querySelectorAll("#dashPeriodToggle .toggle-btn").forEach(function(btn){
     btn.addEventListener("click", function(){
@@ -2128,7 +2177,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -2138,7 +2187,7 @@
       applyAlunosFilter();
       // o Dashboard desenha a partir desta lista: sempre que ela chega, os
       // graficos acompanham (se a aba estiver aberta)
-      if($("tab-dashboard") && $("tab-dashboard").classList.contains("active")) renderDashGraficos();
+      if($("tab-dashboard") && $("tab-dashboard").classList.contains("active")){ renderDashGraficos(); renderDashMovTable(); }
       renderAniversarios(allStudents);
       populateStudentSelects();
       renderGruposTab();
@@ -2706,7 +2755,7 @@
   // planilha — não tinha como criar um do zero (nem um "aluno teste"). Cria
   // com o mínimo (nome + e-mail) e já abre a ficha completa em seguida, pra
   // marcar mentoria/status/CS na hora, sem precisar de uma segunda tela.
-  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)";
+  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)";
 
   $("novoAlunoBtn").addEventListener("click", function(){
     $("novoAlunoFieldName").value = "";
