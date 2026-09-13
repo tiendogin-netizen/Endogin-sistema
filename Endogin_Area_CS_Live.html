@@ -434,6 +434,38 @@
     .modal-foot{flex-wrap:wrap;gap:10px;}
     .modal-foot .btn-primary{width:100%;}
   }
+
+  /* ---- graficos EG (SVG puro): rosca animada e linha com brilho ---- */
+  .eg-donut{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
+  .eg-donut-svg{position:relative;flex:0 0 auto;}
+  .eg-donut-svg svg{display:block;overflow:visible;transform:rotate(-90deg);}
+  .eg-donut-svg circle.seg{transition:stroke-dashoffset 1.1s cubic-bezier(.16,1,.3,1),filter .2s ease,transform .2s ease;transform-box:fill-box;transform-origin:center;cursor:pointer;}
+  .eg-donut-svg circle.seg.ativo{filter:drop-shadow(0 0 6px currentColor) brightness(1.1);transform:scale(1.03);}
+  .eg-donut-centro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;padding:0 26px;}
+  .eg-donut-centro .rot{font-size:11px;color:#8792a8;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .eg-donut-centro .num{font-family:'Sora',sans-serif;font-size:30px;font-weight:700;line-height:1.1;color:#f3f0e8;transition:transform .2s ease;}
+  .eg-donut-centro .pct{font-size:13px;color:#e3bd76;font-weight:600;}
+  .eg-donut-legenda{flex:1 1 150px;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .eg-donut-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 9px;border-radius:8px;cursor:pointer;transition:background .2s ease,transform .2s ease;}
+  .eg-donut-item:hover,.eg-donut-item.ativo{background:rgba(255,255,255,.05);transform:translateX(2px);}
+  .eg-donut-item .l{display:flex;align-items:center;gap:9px;font-size:12px;color:#f3f0e8;min-width:0;}
+  .eg-donut-item .l span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .eg-donut-item i.b{width:10px;height:10px;border-radius:50%;flex:none;}
+  .eg-donut-item b{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#8792a8;white-space:nowrap;}
+  .eg-linha{position:relative;width:100%;}
+  .eg-linha svg{display:block;width:100%;height:auto;overflow:visible;}
+  .eg-linha .dica{position:absolute;pointer-events:none;background:#0e1a29;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:8px 10px;font-size:11.5px;box-shadow:0 12px 30px rgba(0,0,0,.6);transform:translate(-50%,-118%);white-space:nowrap;opacity:0;transition:opacity .15s;z-index:2;}
+  .eg-linha .dica b{display:block;font-size:14px;color:#f3f0e8;font-family:'Sora',sans-serif;}
+  .eg-linha .dica span{color:#8792a8;}
+  .eg-hero{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 28px;margin-bottom:6px;}
+  .eg-hero .rot{font-size:12px;color:#8792a8;font-weight:600;width:100%;}
+  .eg-hero .num{font-family:'Sora',sans-serif;font-size:36px;font-weight:700;line-height:1;color:#f3f0e8;}
+  .eg-hero .var{font-size:13px;font-weight:600;color:#8fc79f;}
+  .eg-hero .var.neg{color:#d98a8a;}
+  .eg-hero .var small{font-weight:500;color:#8792a8;margin-left:4px;}
+  .eg-stats{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:12px;color:#8792a8;margin:10px 0 4px;}
+  .eg-stats b{color:#f3f0e8;font-family:'JetBrains Mono',monospace;font-weight:600;}
+  .eg-stats b.ouro{color:#e3bd76;} .eg-stats b.azul{color:#8fb3e0;} .eg-stats b.verde{color:#8fc79f;}
 </style>
 </head>
 <body>
@@ -524,16 +556,25 @@
 
       <div class="card">
         <div class="card-head">
-          <h3>Novos alunos e renovações</h3>
+          <h3>Entradas na base</h3>
           <div class="toggle-group" id="dashPeriodToggle">
-            <button class="toggle-btn active" data-period="90">Últimos 3 meses</button>
-            <button class="toggle-btn" data-period="30">Últimos 30 dias</button>
-            <button class="toggle-btn" data-period="7">Últimos 7 dias</button>
+            <button class="toggle-btn active" data-period="12">12 meses</button>
+            <button class="toggle-btn" data-period="6">6 meses</button>
+            <button class="toggle-btn" data-period="3">3 meses</button>
           </div>
         </div>
-        <p class="hint" style="margin:-8px 0 12px;">⚠ Dados de exemplo — este gráfico ainda não está ligado ao banco. Comparativo entre novas entradas e renovações no período selecionado.</p>
-        <div class="crm-chart-wrap" style="max-width:none;">
-          <canvas id="dashTrendChart" height="90"></canvas>
+        <p class="hint" style="margin:-8px 0 12px;">Quantos alunos entraram em cada mês, pela data de entrada do cadastro — os alunos que você enxerga.</p>
+        <div class="eg-hero" id="dashHero"></div>
+        <div class="eg-stats" id="dashStats"></div>
+        <div id="dashLinha"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Situação da carteira</h3></div>
+        <p class="hint" style="margin:-8px 0 14px;">Passe o mouse numa fatia ou na legenda para ver o detalhe.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px;">
+          <div><p class="hint" style="margin:0 0 8px;font-weight:700;">Por status</p><div id="dashDonutStatus"></div></div>
+          <div><p class="hint" style="margin:0 0 8px;font-weight:700;">Por temperatura</p><div id="dashDonutTemp"></div></div>
         </div>
       </div>
 
@@ -1584,6 +1625,183 @@
   // movimentações ainda são dados de EXEMPLO e estão marcados como tal na
   // tela — misturar número real com número inventado sem avisar é como a
   // aba passou a mostrar "1.234 alunos ativos" pra uma operação de ~479.
+
+  // ================= graficos EG (SVG puro) =================
+  // Rosca animada com centro interativo e legenda; linha suave com brilho.
+  // Sao os dois modelos que o Luiz mandou (React/Recharts/Framer), refeitos
+  // sem biblioteca — o sistema nao tem bundler e nao vai ganhar um por causa
+  // de dois graficos.
+  function donutEG(el, dados, opts){
+    el = typeof el === "string" ? document.getElementById(el) : el;
+    if(!el) return;
+    opts = opts || {};
+    var size = opts.size || 196, sw = opts.stroke || 22;
+    var r = size / 2 - sw / 2, circ = 2 * Math.PI * r;
+    var validos = dados.filter(function(d){ return d.value > 0; });
+    var total = validos.reduce(function(s, d){ return s + d.value; }, 0);
+    if(el.className.indexOf("eg-donut") === -1) el.className += " eg-donut";
+    el.innerHTML = "";
+    if(!total){ el.innerHTML = '<p style="margin:0;font-size:12px;color:#8792a8;">Sem dados neste recorte.</p>'; return; }
+
+    var ns = "http://www.w3.org/2000/svg";
+    var wrap = document.createElement("div"); wrap.className = "eg-donut-svg";
+    wrap.style.width = size + "px"; wrap.style.height = size + "px";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("width", size); svg.setAttribute("height", size); svg.setAttribute("viewBox", "0 0 " + size + " " + size);
+    var base = document.createElementNS(ns, "circle");
+    base.setAttribute("cx", size / 2); base.setAttribute("cy", size / 2); base.setAttribute("r", r);
+    base.setAttribute("fill", "transparent"); base.setAttribute("stroke", "rgba(255,255,255,.06)"); base.setAttribute("stroke-width", sw);
+    svg.appendChild(base);
+
+    // pequena folga entre fatias: com ponta arredondada, encostadas ficam borradas
+    var gap = validos.length > 1 ? Math.min(6, circ * 0.012) : 0;
+    var acumulado = 0, segs = [];
+    validos.forEach(function(d, i){
+      var len = d.value / total * circ;
+      var c = document.createElementNS(ns, "circle");
+      c.setAttribute("cx", size / 2); c.setAttribute("cy", size / 2); c.setAttribute("r", r);
+      c.setAttribute("fill", "transparent"); c.setAttribute("stroke", d.color); c.setAttribute("stroke-width", sw);
+      c.setAttribute("stroke-linecap", "round");
+      c.setAttribute("stroke-dasharray", Math.max(0.5, len - gap) + " " + circ);
+      c.setAttribute("stroke-dashoffset", circ);       // nasce escondida e "desenha" ate o alvo
+      c.setAttribute("data-alvo", -acumulado);
+      c.style.color = d.color; c.classList.add("seg"); c.style.transitionDelay = (i * 70) + "ms";
+      svg.appendChild(c); segs.push({ el: c, d: d });
+      acumulado += len;
+    });
+    wrap.appendChild(svg);
+    var centro = document.createElement("div"); centro.className = "eg-donut-centro"; wrap.appendChild(centro);
+    var leg = document.createElement("div"); leg.className = "eg-donut-legenda";
+    el.appendChild(wrap); el.appendChild(leg);
+
+    var fmt = opts.formata || function(v){ return v; };
+    function mostra(d){
+      var v = d ? d.value : total;
+      centro.innerHTML = '<span class="rot">' + (d ? d.label : (opts.titulo || "Total")) + '</span>' +
+        '<span class="num">' + fmt(v) + '</span>' +
+        (d ? '<span class="pct">' + Math.round(d.value / total * 100) + '%</span>' : '');
+      segs.forEach(function(s){ s.el.classList.toggle("ativo", !!d && s.d === d); });
+      leg.querySelectorAll(".eg-donut-item").forEach(function(it, i){ it.classList.toggle("ativo", !!d && validos[i] === d); });
+    }
+    validos.forEach(function(d, i){
+      var it = document.createElement("div"); it.className = "eg-donut-item";
+      it.innerHTML = '<span class="l"><i class="b" style="background:' + d.color + '"></i><span>' + d.label + '</span></span>' +
+        '<b>' + fmt(d.value) + ' · ' + Math.round(d.value / total * 100) + '%</b>';
+      it.addEventListener("mouseenter", function(){ mostra(d); });
+      it.addEventListener("mouseleave", function(){ mostra(null); });
+      segs[i].el.addEventListener("mouseenter", function(){ mostra(d); });
+      segs[i].el.addEventListener("mouseleave", function(){ mostra(null); });
+      leg.appendChild(it);
+    });
+    mostra(null);
+    // dois frames: o primeiro garante que o estado "escondido" foi pintado,
+    // senao a transicao nao acontece e as fatias aparecem de uma vez
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      segs.forEach(function(s){ s.el.setAttribute("stroke-dashoffset", s.el.getAttribute("data-alvo")); });
+    }); });
+  }
+
+  function linhaEG(el, pontos, opts){
+    el = typeof el === "string" ? document.getElementById(el) : el;
+    if(!el) return;
+    opts = opts || {};
+    var cor = opts.cor || "#e3bd76";
+    var W = 720, H = opts.altura || 240, padL = 46, padR = 18, padT = 24, padB = 34;
+    if(el.className.indexOf("eg-linha") === -1) el.className += " eg-linha";
+    el.innerHTML = "";
+    if(!pontos.length){ el.innerHTML = '<p style="margin:0;font-size:12px;color:#8792a8;">Sem dados.</p>'; return; }
+
+    var ys = pontos.map(function(p){ return p.y; });
+    var maxY = Math.max.apply(null, ys), minY = Math.min.apply(null, ys);
+    if(maxY === minY) maxY = minY + 1;
+    var span = maxY - minY;
+    var topo = maxY + span * 0.18, base = minY === 0 ? 0 : Math.max(0, minY - span * 0.18);
+    var n = pontos.length, iw = W - padL - padR, ih = H - padT - padB;
+    function X(i){ return padL + (n === 1 ? iw / 2 : i * iw / (n - 1)); }
+    function Y(v){ return padT + ih - (v - base) / (topo - base) * ih; }
+    var pts = pontos.map(function(p, i){ return [X(i), Y(p.y)]; });
+
+    // curva monotona (Catmull-Rom -> Bezier): passa por todos os pontos sem
+    // inventar picos entre eles
+    function caminho(P){
+      if(P.length < 2) return "M" + P[0][0] + " " + P[0][1];
+      var d = "M" + P[0][0] + " " + P[0][1];
+      for(var i = 0; i < P.length - 1; i++){
+        var p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
+        d += " C" + (p1[0] + (p2[0] - p0[0]) / 6) + " " + (p1[1] + (p2[1] - p0[1]) / 6) + "," +
+             (p2[0] - (p3[0] - p1[0]) / 6) + " " + (p2[1] - (p3[1] - p1[1]) / 6) + "," + p2[0] + " " + p2[1];
+      }
+      return d;
+    }
+    var linha = caminho(pts);
+    var area = linha + " L" + pts[n - 1][0] + " " + (padT + ih) + " L" + pts[0][0] + " " + (padT + ih) + " Z";
+    var uid = "eg" + Math.random().toString(36).slice(2, 8);
+    var fmtY = opts.formataY || function(v){ return Math.round(v); };
+
+    var grade = "";
+    for(var g = 0; g <= 4; g++){
+      var yy = padT + ih * g / 4, val = topo - (topo - base) * g / 4;
+      grade += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy + '" stroke="rgba(255,255,255,.09)" stroke-dasharray="4 8"/>' +
+        '<text x="' + (padL - 9) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="10.5" fill="' + cor + '" opacity=".8" font-family="JetBrains Mono, monospace">' + fmtY(val) + '</text>';
+    }
+    var rotulos = "", passo = Math.max(1, Math.ceil(n / 7));
+    pontos.forEach(function(p, i){
+      if(i % passo === 0 || i === n - 1)
+        rotulos += '<text x="' + X(i) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="11" fill="' + cor + '" opacity=".8" font-family="Montserrat, sans-serif">' + p.x + '</text>';
+    });
+    // destaque: maximo, minimo e o ultimo ponto — os que contam uma historia
+    var iMax = ys.indexOf(Math.max.apply(null, ys)), iMin = ys.indexOf(minY);
+    var marcados = [iMax, iMin, n - 1].filter(function(v, i, a){ return a.indexOf(v) === i; });
+    var pontosSvg = marcados.map(function(i){
+      return '<circle cx="' + pts[i][0] + '" cy="' + pts[i][1] + '" r="6" fill="' + cor + '" stroke="#fff" stroke-width="2" filter="url(#' + uid + 'ds)"/>';
+    }).join("");
+
+    el.innerHTML =
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" style="aspect-ratio:' + W + '/' + H + ';">' +
+      '<defs>' +
+        '<linearGradient id="' + uid + 'g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="' + cor + '" stop-opacity=".16"/><stop offset="100%" stop-color="' + cor + '" stop-opacity="0"/></linearGradient>' +
+        '<pattern id="' + uid + 'p" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,.13)"/></pattern>' +
+        '<filter id="' + uid + 'ds" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="1" dy="2" stdDeviation="2.5" flood-color="rgba(0,0,0,.8)"/></filter>' +
+        '<filter id="' + uid + 'gl" x="-20%" y="-60%" width="140%" height="220%"><feDropShadow dx="0" dy="7" stdDeviation="14" flood-color="' + cor + '" flood-opacity=".5"/></filter>' +
+      '</defs>' +
+      '<rect x="' + padL + '" y="' + padT + '" width="' + iw + '" height="' + ih + '" fill="url(#' + uid + 'p)"/>' + grade +
+      '<path d="' + area + '" fill="url(#' + uid + 'g)"/>' +
+      '<path d="' + linha + '" fill="none" stroke="' + cor + '" stroke-width="2.5" stroke-linecap="round" filter="url(#' + uid + 'gl)"/>' +
+      pontosSvg + rotulos + '</svg><div class="dica"></div>';
+
+    var dica = el.querySelector(".dica"), svg = el.querySelector("svg"), ns = "http://www.w3.org/2000/svg";
+    var cursor = document.createElementNS(ns, "line");
+    cursor.setAttribute("stroke", cor); cursor.setAttribute("stroke-dasharray", "4 4"); cursor.setAttribute("stroke-opacity", ".6");
+    cursor.setAttribute("y1", padT); cursor.setAttribute("y2", padT + ih); cursor.style.opacity = 0; svg.appendChild(cursor);
+    var ponto = document.createElementNS(ns, "circle");
+    ponto.setAttribute("r", 6); ponto.setAttribute("fill", cor); ponto.setAttribute("stroke", "#fff"); ponto.setAttribute("stroke-width", 2);
+    ponto.style.opacity = 0; svg.appendChild(ponto);
+    svg.addEventListener("mousemove", function(e){
+      var rect = svg.getBoundingClientRect(), x = (e.clientX - rect.left) / rect.width * W, i = 0, best = 1e9;
+      pts.forEach(function(p, k){ var d = Math.abs(p[0] - x); if(d < best){ best = d; i = k; } });
+      cursor.setAttribute("x1", pts[i][0]); cursor.setAttribute("x2", pts[i][0]); cursor.style.opacity = 1;
+      ponto.setAttribute("cx", pts[i][0]); ponto.setAttribute("cy", pts[i][1]); ponto.style.opacity = 1;
+      dica.innerHTML = '<span>' + pontos[i].x + (pontos[i].nota ? ' · ' + pontos[i].nota : '') + '</span><b>' + fmtY(pontos[i].y) + (opts.unidade ? ' ' + opts.unidade : '') + '</b>';
+      dica.style.left = (pts[i][0] / W * rect.width) + "px"; dica.style.top = (pts[i][1] / H * rect.height) + "px"; dica.style.opacity = 1;
+    });
+    svg.addEventListener("mouseleave", function(){ cursor.style.opacity = 0; ponto.style.opacity = 0; dica.style.opacity = 0; });
+  }
+
+  // entradas por mes, nos ultimos N meses, a partir da data de entrada
+  function serieEntradasPorMes(lista, meses){
+    var hoje = new Date(), chaves = [], mapa = {};
+    var M = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+    for(var k = meses - 1; k >= 0; k--){
+      var d = new Date(hoje.getFullYear(), hoje.getMonth() - k, 1);
+      var ch = d.getFullYear() + "-" + (d.getMonth() + 1 < 10 ? "0" : "") + (d.getMonth() + 1);
+      chaves.push(ch); mapa[ch] = 0;
+    }
+    lista.forEach(function(s){
+      var v = s.entry_date ? String(s.entry_date).slice(0, 7) : null;
+      if(v && mapa.hasOwnProperty(v)) mapa[v]++;
+    });
+    return chaves.map(function(ch){ var p = ch.split("-"); return { x: M[parseInt(p[1], 10) - 1] + "/" + p[0].slice(2), y: mapa[ch] }; });
+  }
   var dashChartInstance = null;
   var dashLoaded = false;
   var DASH_MOV_EXEMPLO = [
@@ -1593,11 +1811,6 @@
     { nome:"Patrícia Gomes", mentoria:"Endogin Ativação", status:"inativo", data:"29/08/2026", cs:"Bruna", tipo:"risco" },
     { nome:"Fernanda Lima", mentoria:"Endogin Mãe", status:"ativo", data:"27/08/2026", cs:"Thais", tipo:"renovacao" }
   ];
-  function dashPeriodData(days){
-    if(days === 7) return { labels:["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"], novos:[2,3,1,4,2,0,1], renov:[1,0,2,1,1,0,0] };
-    if(days === 30) return { labels:["Sem 1","Sem 2","Sem 3","Sem 4"], novos:[18,22,15,31], renov:[9,11,8,14] };
-    return { labels:["Abr","Mai","Jun","Jul","Ago","Set"], novos:[62,71,58,80,74,86], renov:[30,34,29,38,41,44] };
-  }
   // KPIs do topo, do banco de verdade.
   //
   // "Ativo" segue exatamente a mesma regra da aba Carteiras CS
@@ -1667,38 +1880,57 @@
     });
   }
 
+  var dashMeses = 12;
   function renderDashboard(){
     loadDashKpis();
-    var ctx = document.getElementById("dashTrendChart");
-    if(ctx && typeof Chart !== "undefined"){
-      var d = dashPeriodData(90);
-      var gCtx = ctx.getContext("2d");
-      var goldFill = gCtx.createLinearGradient(0, 0, 0, 220);
-      goldFill.addColorStop(0, "rgba(201,151,75,0.35)");
-      goldFill.addColorStop(1, "rgba(201,151,75,0)");
-      if(dashChartInstance){ dashChartInstance.destroy(); }
-      dashChartInstance = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: d.labels,
-          datasets: [
-            { label:"Novos alunos", data:d.novos, borderColor:"#c9974b", backgroundColor:goldFill, fill:true, tension:0.35, pointRadius:0, borderWidth:2 },
-            { label:"Renovações", data:d.renov, borderColor:"#5b8def", backgroundColor:"transparent", fill:false, tension:0.35, pointRadius:0, borderWidth:2, borderDash:[4,3] }
-          ]
-        },
-        options: {
-          plugins: { legend: { position:"bottom", labels:{ color:"#c9c9d4", font:{ size:11 } } } },
-          scales: {
-            x: { grid:{ color:"rgba(255,255,255,0.06)" }, ticks:{ color:"#6d7994", font:{ size:11 } } },
-            y: { grid:{ color:"rgba(255,255,255,0.06)" }, ticks:{ color:"#6d7994", font:{ size:11 } } }
-          }
-        }
-      });
-    }
+    renderDashGraficos();
     if(!dashLoaded){
       renderDashMovTable("todos");
       dashLoaded = true;
     }
+  }
+
+  // Os graficos do Dashboard saem de allStudents — o mesmo recorte da aba
+  // Alunos, ja limitado pela RLS. Antes aqui havia numeros inventados.
+  function renderDashGraficos(){
+    if(!$("dashLinha")) return;
+    var serie = serieEntradasPorMes(allStudents, dashMeses);
+    var totalPeriodo = serie.reduce(function(a, p){ return a + p.y; }, 0);
+    var ult = serie[serie.length - 1] ? serie[serie.length - 1].y : 0;
+    var ant = serie[serie.length - 2] ? serie[serie.length - 2].y : 0;
+    var varPct = ant ? Math.round((ult - ant) / ant * 100) : null;
+    var melhor = serie.slice().sort(function(a, b){ return b.y - a.y; })[0];
+    var ativos = allStudents.filter(function(s){ return s.status === "ativo"; }).length;
+
+    $("dashHero").innerHTML =
+      '<span class="rot">Entradas no período</span>' +
+      '<span class="num">' + totalPeriodo + '</span>' +
+      (varPct === null ? '' : '<span class="var' + (varPct < 0 ? " neg" : "") + '"><i class="fa-solid ' + (varPct < 0 ? "fa-arrow-trend-down" : "fa-arrow-trend-up") + '"></i> ' + (varPct > 0 ? "+" : "") + varPct + '%<small>este mês vs. anterior</small></span>');
+    $("dashStats").innerHTML =
+      '<span>Este mês: <b class="ouro">' + ult + '</b></span>' +
+      '<span>Melhor mês: <b class="verde">' + (melhor ? melhor.x + " · " + melhor.y : "—") + '</b></span>' +
+      '<span>Ativos hoje: <b class="azul">' + ativos + '</b></span>';
+    linhaEG("dashLinha", serie, { cor:"#e3bd76", altura:230, unidade:"aluno(s)" });
+
+    var porStatus = {};
+    allStudents.forEach(function(s){ var k = s.status || "sem status"; porStatus[k] = (porStatus[k] || 0) + 1; });
+    var CORES_STATUS = { ativo:"#8fc79f", onboarding:"#e3bd76", em_reonboarding:"#c9974b", trancado:"#8fb3e0", inativo:"#6d7994", cancelado:"#d98a8a" };
+    donutEG("dashDonutStatus", Object.keys(porStatus).map(function(k){
+      return { label: k.replace("_", " "), value: porStatus[k], color: CORES_STATUS[k] || "#b294c9" };
+    }).sort(function(a, b){ return b.value - a.value; }), { titulo:"Alunos" });
+
+    var porTemp = { Quente:0, Morno:0, Frio:0, "Sem temperatura":0 };
+    allStudents.forEach(function(s){
+      var t = (s.temperature || "").toLowerCase();
+      if(t.indexOf("quent") > -1) porTemp.Quente++; else if(t.indexOf("morn") > -1) porTemp.Morno++;
+      else if(t.indexOf("fri") > -1) porTemp.Frio++; else porTemp["Sem temperatura"]++;
+    });
+    donutEG("dashDonutTemp", [
+      { label:"Quente", value: porTemp.Quente, color:"#d98a8a" },
+      { label:"Morno",  value: porTemp.Morno,  color:"#e3bd76" },
+      { label:"Frio",   value: porTemp.Frio,   color:"#8fb3e0" },
+      { label:"Sem temperatura", value: porTemp["Sem temperatura"], color:"#4a5670" }
+    ], { titulo:"Alunos" });
   }
   function renderDashMovTable(filter){
     var rows = DASH_MOV_EXEMPLO.filter(function(r){ return filter === "todos" || r.tipo === filter; });
@@ -1720,13 +1952,8 @@
     btn.addEventListener("click", function(){
       document.querySelectorAll("#dashPeriodToggle .toggle-btn").forEach(function(b){ b.classList.remove("active"); });
       btn.classList.add("active");
-      var ctx = document.getElementById("dashTrendChart");
-      if(!ctx || typeof Chart === "undefined") return;
-      var d = dashPeriodData(Number(btn.getAttribute("data-period")));
-      dashChartInstance.data.labels = d.labels;
-      dashChartInstance.data.datasets[0].data = d.novos;
-      dashChartInstance.data.datasets[1].data = d.renov;
-      dashChartInstance.update();
+      dashMeses = Number(btn.getAttribute("data-period")) || 12;
+      renderDashGraficos();
     });
   });
   document.querySelectorAll("[data-dash-filter]").forEach(function(chip){
@@ -1909,6 +2136,9 @@
       if(r.error){ $("alunosLoading").textContent = "Erro ao carregar: " + r.error.message; $("alunosLoading").style.display = "block"; return; }
       allStudents = r.data || [];
       applyAlunosFilter();
+      // o Dashboard desenha a partir desta lista: sempre que ela chega, os
+      // graficos acompanham (se a aba estiver aberta)
+      if($("tab-dashboard") && $("tab-dashboard").classList.contains("active")) renderDashGraficos();
       renderAniversarios(allStudents);
       populateStudentSelects();
       renderGruposTab();
@@ -4993,6 +5223,7 @@
   function atualizaDerivados(){
     loadAlunos();
     discSelecionado = null;
+
     loadCarteiras();
     dashKpisLoaded = false;
     loadDashKpis();
