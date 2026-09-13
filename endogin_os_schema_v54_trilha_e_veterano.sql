@@ -44,11 +44,8 @@ on conflict (cademi_lesson_id) do update set
 -- ---------- (3) veterano ----------
 alter table students add column if not exists veterano boolean not null default false;
 
--- Preenchimento inicial: quem entrou ANTES desta data já passou pela trilha e
--- pelo 1x1 fora do Portal. Troque a data se a régua for outra.
-update students
-   set veterano = true
- where coalesce(entry_date, created_at::date) < date '2026-08-01';
+-- Ninguém nasce veterano: todo aluno começa como "novo" (trilha + 1x1 a
+-- fazer). Quem já passou por isso a Thaís marca na ficha, caso a caso.
 
 notify pgrst, 'reload schema';
 
