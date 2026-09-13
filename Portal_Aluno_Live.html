@@ -1482,6 +1482,11 @@
     var feitasAulas = t ? t.feitas : 0;
     var trilhaOk = totalAulas > 0 && feitasAulas === totalAulas;
     var sessaoOk = !!(s && s.status === "realizada");
+    // Veterano: ja esta na mentoria ha tempo, passou pela trilha e pelo 1x1
+    // fora do Portal. Essas duas etapas ficam dispensadas — boas-vindas e
+    // DISC continuam valendo pra todo mundo. Quem marca e a CS, na ficha.
+    var veterano = !!currentStudent.veterano;
+    if(veterano){ trilhaOk = true; sessaoOk = true; }
 
     return [
       {
@@ -1499,18 +1504,24 @@
       {
         nome: "Trilha de boas-vindas",
         feita: trilhaOk,
+        rotulo: veterano ? "Dispensada" : null,
         contador: totalAulas ? feitasAulas + " de " + totalAulas : null,
-        nota: "As aulas que preparam você para a conversa com os fundadores.",
-        painel: painelTrilha
+        nota: veterano
+          ? "Você já está na mentoria há mais tempo — essa etapa não se aplica. As aulas seguem disponíveis em Conteúdos."
+          : "As aulas que preparam você para a conversa com os fundadores.",
+        painel: veterano ? null : painelTrilha
       },
       {
         nome: "Sessão 1x1 com os fundadores",
         feita: sessaoOk,
-        quando: sessaoOk ? s.scheduled_at : null,
-        nota: trilhaOk
-          ? "Sua conversa individual com o Dr. Caio e o Dr. Vinícius."
-          : "Abre assim que você fechar a trilha de boas-vindas.",
-        painel: trilhaOk ? painelSessao : null
+        rotulo: veterano && !(s && s.status === "realizada") ? "Dispensada" : null,
+        quando: (s && s.status === "realizada") ? s.scheduled_at : null,
+        nota: veterano
+          ? "Você já passou por essa etapa antes do Portal."
+          : (trilhaOk
+              ? "Sua conversa individual com o Dr. Caio e o Dr. Vinícius."
+              : "Abre assim que você fechar a trilha de boas-vindas."),
+        painel: (trilhaOk && !veterano) ? painelSessao : null
       },
       {
         nome: "Mentoria em andamento",
@@ -1531,7 +1542,7 @@
     alvo.innerHTML = etapas.map(function(e, i){
       var estado = e.feita ? "feita" : (i === atual ? "agora" : "depois");
       var direita = e.feita
-        ? (fmtDiaMes(e.quando) || "Concluída")
+        ? (e.rotulo || fmtDiaMes(e.quando) || "Concluída")
         : (e.contador || "");
       return '<li class="etapa ' + estado + '">' +
         '<span class="ponto">' + (e.feita ? '<i class="fa-solid fa-check"></i>' : "") + '</span>' +
