@@ -2368,7 +2368,7 @@
   }
 
   function discBadge(student){
-    var profile = student.disc_results && student.disc_results[0] && student.disc_results[0].primary_profile;
+    var profile = (discResultadoDe(student) || {}).primary_profile;
     if(!profile) return "";
     return ' <span class="disc-badge" title="Perfil comportamental (DISC) — visível só pra equipe">DISC: ' + (DISC_PROFILE_LABEL[profile] || profile) + '</span>';
   }
@@ -2552,7 +2552,7 @@
     if(!el) return;
     var j = jornadaDe(student);
     var sess = sessaoPorAluno[student.id];
-    var disc = student.disc_results && student.disc_results[0] && student.disc_results[0].primary_profile;
+    var disc = (discResultadoDe(student) || {}).primary_profile;
     var total = trilhaLessons.length, feitas = trilhaFeitasPorAluno[student.id] || 0;
     function item(rot, val, ok){
       return '<div><div class="hint" style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;">' + rot + '</div>' +
@@ -2696,7 +2696,7 @@
     $("alunoModalWa").innerHTML = waLinkHtml(student.phone);
     var discEl = $("alunoModalDisc");
     if(discEl){
-      var profile = student.disc_results && student.disc_results[0] && student.disc_results[0].primary_profile;
+      var profile = (discResultadoDe(student) || {}).primary_profile;
       discEl.innerHTML = profile
         ? 'Perfil comportamental (DISC): <b>' + (DISC_PROFILE_LABEL[profile] || profile) + '</b>' +
           (DISC_COMM_TIP[profile] ? '<br><span class="hint">' + DISC_COMM_TIP[profile] + '</span>' : '')
@@ -3690,10 +3690,13 @@
   var discSelecionado = null;
 
   function discResultadoDe(s){
-    // disc_results nao tem created_at; se o aluno refez o teste, vale o
-    // ultimo registro na ordem em que veio
-    var lista = (s.disc_results || []);
-    return lista.length ? lista[lista.length - 1] : null;
+    // O PostgREST manda o embed como OBJETO quando a relacao e 1-pra-1
+    // (student_id e unico em disc_results) e como LISTA quando e 1-pra-N.
+    // Aceita os dois — antes so a lista, e o objeto virava "sem resultado".
+    var r = s.disc_results;
+    if(!r) return null;
+    if(Array.isArray(r)) return r.length ? r[r.length - 1] : null;
+    return r;
   }
 
   function discPreencheFiltros(){

@@ -1673,7 +1673,7 @@
   function discResultadoDe(a){
     // disc_results nao tem created_at; se o aluno refez o teste, vale o
     // ultimo registro na ordem em que veio
-    var lista = (a.disc_results || []);
+    var lista = a.disc_results ? (Array.isArray(a.disc_results) ? a.disc_results : [a.disc_results]) : [];
     return lista.length ? lista[lista.length - 1] : null;
   }
 
