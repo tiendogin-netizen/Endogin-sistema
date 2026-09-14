@@ -4256,10 +4256,22 @@
   });
 
   // ---------------- Recados (mensagem/link/documento por mentoria) ----------------
+  // Mentorias que a CS pode mandar recado: as que ela atende. Antes vinha
+  // so de staff_branches, que (a) so carrega quando a aba Equipe CS abre e
+  // (b) nem toda CS tem preenchido — o seletor aparecia vazio. Agora junta
+  // staff_branches com as mentorias dos alunos dela (deliveries.cs_id e
+  // cs_id principal), que e a fonte que o v52 mantem.
   function branchesForRecadoPicker(){
     if(currentStaff.isMasterLike) return allBranches;
-    var mine = staffBranchMap[currentStaff.id] || [];
-    return allBranches.filter(function(b){ return mine.indexOf(b.name) > -1; });
+    var nomes = {};
+    (staffBranchMap[currentStaff.id] || []).forEach(function(n){ nomes[n] = true; });
+    allStudents.forEach(function(st){
+      (st.deliveries || []).forEach(function(d){
+        if(d.status !== "ativo") return;
+        if(d.cs_id === currentStaff.id || (!d.cs_id && st.cs_id === currentStaff.id)) nomes[d.label] = true;
+      });
+    });
+    return allBranches.filter(function(b){ return nomes[b.name]; });
   }
 
   function renderRecadoBranchChecks(){
@@ -4275,7 +4287,16 @@
       });
       wrap.appendChild(allChip);
     }
-    branchesForRecadoPicker().forEach(function(b){
+    var opcoes = branchesForRecadoPicker();
+    if(!opcoes.length && !currentStaff.isMasterLike){
+      var aviso = document.createElement("p");
+      aviso.className = "hint";
+      aviso.textContent = allStudents.length
+        ? "Nenhuma mentoria vinculada a você. Peça pra Thaís te vincular em Equipe CS, ou colocar você como CS responsável na mentoria dos seus alunos."
+        : "Carregando suas mentorias… se continuar vazio, abra a aba Alunos e volte.";
+      wrap.appendChild(aviso);
+    }
+    opcoes.forEach(function(b){
       var chip = document.createElement("span");
       chip.className = "branch-chip" + (recadoSelectedBranches.indexOf(b.name) > -1 ? " selected" : "");
       if(recadoAllBranches) chip.style.opacity = "0.4";
@@ -4294,9 +4315,15 @@
     // se por algum motivo allBranches ainda não carregou (ex: clicou rápido
     // demais depois do login), busca de novo na hora, direto, em vez de
     // deixar a lista de mentorias aparecer vazia.
-    if(allBranches && allBranches.length){ renderRecadoBranchChecks(); return; }
-    sb.from("branches").select("id,name").order("name").then(function(r){
-      allBranches = r.data || [];
+    renderRecadoBranchChecks();
+    var pB = (allBranches && allBranches.length) ? Promise.resolve(null) : sb.from("branches").select("id,name").order("name");
+    var pS = (staffBranchMap[currentStaff.id] || currentStaff.isMasterLike) ? Promise.resolve(null) : sb.from("staff_branches").select("staff_id,branch_id").eq("staff_id", currentStaff.id);
+    Promise.all([pB, pS]).then(function(rs){
+      if(rs[0] && rs[0].data) allBranches = rs[0].data;
+      if(rs[1] && rs[1].data){
+        var porId = {}; allBranches.forEach(function(b){ porId[b.id] = b.name; });
+        staffBranchMap[currentStaff.id] = rs[1].data.map(function(r){ return porId[r.branch_id]; }).filter(Boolean);
+      }
       renderRecadoBranchChecks();
     });
   }
