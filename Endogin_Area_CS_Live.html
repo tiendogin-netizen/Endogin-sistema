@@ -671,12 +671,25 @@
               <option value="vitalicio">Vitalícios</option>
             </select>
           </div>
+          <div>
+            <label>Jornada no Portal</label>
+            <select id="fltJornada">
+              <option value="">Qualquer</option>
+              <option value="sem_acesso">Sem login criado</option>
+              <option value="nao_entrou">Tem login, nunca entrou</option>
+              <option value="boas_vindas">Falta boas-vindas</option>
+              <option value="disc">Falta DISC</option>
+              <option value="trilha">Trilha em andamento</option>
+              <option value="sessao">1x1 pendente</option>
+              <option value="completa">Jornada completa</option>
+            </select>
+          </div>
           <button class="limpar" id="fltLimpar" type="button">Limpar filtros</button>
           <span class="contagem" id="fltContagem"></span>
         </div>
         <div id="alunosLoading" class="loading-note">Carregando alunos...</div>
         <table id="alunosTable" style="display:none;">
-          <thead><tr><th>Aluno</th><th>Contato</th><th>Mentorias</th><th>Status</th><th>CS</th><th></th></tr></thead>
+          <thead><tr><th>Aluno</th><th>Contato</th><th>Mentorias</th><th>Status</th><th>Jornada</th><th>CS</th><th></th></tr></thead>
           <tbody id="alunosBody"></tbody>
         </table>
       </div>
@@ -1176,7 +1189,9 @@
     </div>
     <div class="modal-body">
       <div id="alunoTrilhaCard" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--eg-navy-line);">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--eg-text-muted);margin-bottom:8px;">Trilha do aluno</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--eg-text-muted);margin-bottom:8px;">Jornada no Portal</div>
+        <div id="alunoJornadaResumo" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 14px;margin-bottom:12px;"></div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--eg-text-muted);margin:14px 0 8px;">Etapas — clique pra marcar/desmarcar</div>
         <div id="alunoTrilhaWrap"><p class="hint">Carregando...</p></div>
       </div>
       <div id="alunoCursoProgressCard" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--eg-navy-line);">
@@ -1243,7 +1258,15 @@
         </div>
         <div style="grid-column:1/-1;"><label>Nota da renovação</label><input type="text" id="alunoFieldRenewalNote" placeholder="ex: tentando contato, mensalidade pendente..."></div>
 
-        <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Sessão 1:1</label></div>
+        <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Jornada inicial e sessão 1:1</label></div>
+        <div style="grid-column:1/-1;">
+          <label>Jornada no Portal</label>
+          <select id="alunoFieldVeterano">
+            <option value="0">Aluno novo — faz boas-vindas, DISC, trilha de aulas obrigatórias e 1x1</option>
+            <option value="1">Veterano — faz boas-vindas e DISC; trilha e 1x1 ficam dispensados</option>
+          </select>
+          <p class="hint" style="margin:4px 0 0;">Veterano é quem já passou pela trilha e pelo 1x1 antes do Portal. Aluno que acabou de entrar fica como novo.</p>
+        </div>
         <div><label>Status do 1:1</label><input type="text" id="alunoFieldOneOnOneStatus" placeholder="ex: Pendente, Concluído"></div>
         <div><label>Data do 1:1</label><input type="text" id="alunoFieldOneOnOneDate" placeholder="data ou observação livre"></div>
         <div style="grid-column:1/-1;"><label>Resumo pós 1:1</label><input type="text" id="alunoFieldOneOnOneSummary"></div>
@@ -2065,7 +2088,65 @@
   // ---------------- filtros e ordenacao da lista de alunos ----------------
   // Tudo aqui roda sobre allStudents, que a RLS ja limitou ao que a pessoa
   // pode ver. Filtro e ordenacao nao ampliam acesso: so reorganizam.
-  var alunosFiltro = { status:"", mentoria:"", temp:"", venc:"", ordem:"nome_az" };
+  var alunosFiltro = { status:"", mentoria:"", temp:"", venc:"", jornada:"", ordem:"nome_az" };
+
+  // ---- jornada do aluno no Portal ----
+  // O que a CS precisa saber de relance: o aluno ja entrou? fez boas-vindas
+  // e DISC? em que pe esta a trilha (5 aulas obrigatorias)? e o 1x1?
+  // Trilha e 1x1 vem de duas consultas leves (lesson_progress so das aulas
+  // da trilha, e mentoring_sessions), guardadas por aluno.
+  var trilhaLessons = [];            // aulas lesson_type = 'trilha'
+  var trilhaFeitasPorAluno = {};     // student_id -> quantas concluidas
+  var sessaoPorAluno = {};           // student_id -> {status, scheduled_at} (a mais recente)
+
+  function carregaJornada(){
+    return sb.from("lessons").select("id,title,link_url,cover_url").eq("lesson_type", "trilha").order("sort_order", { nullsFirst:false }).then(function(lr){
+      trilhaLessons = lr.data || [];
+      var ids = trilhaLessons.map(function(l){ return l.id; });
+      var pProg = ids.length
+        ? buscarTudo("lesson_progress", "student_id,lesson_id,completed", function(q){ return q.in("lesson_id", ids); })
+        : Promise.resolve({ data: [] });
+      var pSess = buscarTudo("mentoring_sessions", "student_id,status,scheduled_at,created_at");
+      return Promise.all([pProg, pSess]).then(function(rs){
+        trilhaFeitasPorAluno = {};
+        (rs[0].data || []).forEach(function(p){
+          if(p.completed) trilhaFeitasPorAluno[p.student_id] = (trilhaFeitasPorAluno[p.student_id] || 0) + 1;
+        });
+        sessaoPorAluno = {};
+        (rs[1].data || []).forEach(function(m){
+          if(m.status === "cancelada") return;
+          var atual = sessaoPorAluno[m.student_id];
+          if(!atual || String(m.created_at) > String(atual.created_at)) sessaoPorAluno[m.student_id] = m;
+        });
+      });
+    });
+  }
+
+  // Etapa em que o aluno esta. Veterano pula trilha e 1x1 (ver v54).
+  function jornadaDe(s){
+    var total = trilhaLessons.length, feitas = trilhaFeitasPorAluno[s.id] || 0;
+    var sess = sessaoPorAluno[s.id];
+    if(!s.auth_user_id) return { etapa:"sem_acesso", texto:"Sem login", cor:"var(--eg-text-muted)" };
+    if(!s.first_login_at && !s.onboarding_completed_at) return { etapa:"nao_entrou", texto:"Nunca entrou", cor:"var(--eg-red)" };
+    if(!s.onboarding_completed_at) return { etapa:"boas_vindas", texto:"Falta boas-vindas", cor:"var(--eg-gold-300)" };
+    if(!s.disc_completed_at) return { etapa:"disc", texto:"Falta DISC", cor:"var(--eg-gold-300)" };
+    if(s.veterano) return { etapa:"completa", texto:"Veterano · completa", cor:"var(--eg-green)" };
+    if(!total || feitas < total) return { etapa:"trilha", texto:"Trilha " + feitas + "/" + (total || "?"), cor:"var(--eg-gold-300)" };
+    if(!sess) return { etapa:"sessao", texto:"1x1 a agendar", cor:"var(--eg-gold-300)" };
+    if(sess.status === "realizada") return { etapa:"completa", texto:"Completa", cor:"var(--eg-green)" };
+    if(sess.status === "a_agendar") return { etapa:"sessao", texto:"1x1 pedido", cor:"var(--eg-gold-300)" };
+    return { etapa:"sessao", texto:"1x1 marcado", cor:"var(--eg-blue, #8fb3e0)" };
+  }
+  function jornadaBadge(s){
+    var j = jornadaDe(s);
+    return '<span style="display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:3px 8px;border-radius:999px;border:1px solid ' + j.cor + ';color:' + j.cor + ';white-space:nowrap;">' + j.texto + '</span>';
+  }
+  function dataHoraCurta(iso){
+    if(!iso) return "—";
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
+  }
 
   // temperatura e texto livre no cadastro ("Quente", "quente ", "QUENTE!"):
   // normaliza pelo radical, igual a exportacao ja faz
@@ -2087,6 +2168,7 @@
 
   function passaFiltros(s){
     if(alunosFiltro.status && s.status !== alunosFiltro.status) return false;
+    if(alunosFiltro.jornada && jornadaDe(s).etapa !== alunosFiltro.jornada) return false;
     if(alunosFiltro.mentoria){
       var tem = (s.deliveries || []).some(function(d){ return d.status === "ativo" && d.branch_id === alunosFiltro.mentoria; });
       if(!tem) return false;
@@ -2158,15 +2240,15 @@
     renderAlunos(filtered);
   }
 
-  [["fltOrdem","ordem"],["fltStatus","status"],["fltMentoria","mentoria"],["fltTemp","temp"],["fltVenc","venc"]]
+  [["fltOrdem","ordem"],["fltStatus","status"],["fltMentoria","mentoria"],["fltTemp","temp"],["fltVenc","venc"],["fltJornada","jornada"]]
     .forEach(function(par){
       var el = $(par[0]);
       if(el) el.addEventListener("change", function(){ alunosFiltro[par[1]] = el.value; applyAlunosFilter(); });
     });
   if($("fltLimpar")){
     $("fltLimpar").addEventListener("click", function(){
-      alunosFiltro = { status:"", mentoria:"", temp:"", venc:"", ordem:"nome_az" };
-      ["fltStatus","fltMentoria","fltTemp","fltVenc"].forEach(function(id){ $(id).value = ""; });
+      alunosFiltro = { status:"", mentoria:"", temp:"", venc:"", jornada:"", ordem:"nome_az" };
+      ["fltStatus","fltMentoria","fltTemp","fltVenc","fltJornada"].forEach(function(id){ $(id).value = ""; });
       $("fltOrdem").value = "nome_az";
       $("alunosSearch").value = ""; alunosSearchValue = "";
       applyAlunosFilter();
@@ -2177,7 +2259,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -2185,6 +2267,8 @@
       if(r.error){ $("alunosLoading").textContent = "Erro ao carregar: " + r.error.message; $("alunosLoading").style.display = "block"; return; }
       allStudents = r.data || [];
       applyAlunosFilter();
+      // trilha e 1x1 chegam logo depois e a coluna "Jornada" se refaz
+      carregaJornada().then(applyAlunosFilter);
       // o Dashboard desenha a partir desta lista: sempre que ela chega, os
       // graficos acompanham (se a aba estiver aberta)
       if($("tab-dashboard") && $("tab-dashboard").classList.contains("active")){ renderDashGraficos(); renderDashMovTable(); }
@@ -2331,6 +2415,7 @@
         '<td>' + telefoneBonito(s.phone) + waLinkHtml(s.phone) + '</td>' +
         '<td>' + tags + '</td>' +
         '<td><span class="status-pill ' + s.status + '">' + s.status + '</span></td>' +
+        '<td>' + jornadaBadge(s) + '</td>' +
         '<td>' + csName + '</td>' +
         '<td><button class="row-edit-btn" data-aluno-id="' + s.id + '"><i class="fa-solid fa-pen"></i> Editar</button></td>';
       body.appendChild(tr);
@@ -2462,18 +2547,46 @@
   // (trilha) com link direto, pra CS confirmar antes do 1x1 sem precisar
   // abrir outra tela. completed em lesson_progress vem do webhook da
   // Cademi — aqui é só leitura.
+  function renderAlunoJornadaResumo(student){
+    var el = $("alunoJornadaResumo");
+    if(!el) return;
+    var j = jornadaDe(student);
+    var sess = sessaoPorAluno[student.id];
+    var disc = student.disc_results && student.disc_results[0] && student.disc_results[0].primary_profile;
+    var total = trilhaLessons.length, feitas = trilhaFeitasPorAluno[student.id] || 0;
+    function item(rot, val, ok){
+      return '<div><div class="hint" style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;">' + rot + '</div>' +
+        '<div style="font-size:12.5px;font-weight:600;color:' + (ok === true ? "var(--eg-green)" : ok === false ? "var(--eg-red)" : "var(--eg-text-primary)") + ';">' + val + '</div></div>';
+    }
+    el.innerHTML =
+      item("Situação", jornadaBadge(student)) +
+      item("Login", student.auth_user_id ? "criado" : "não criado", !!student.auth_user_id) +
+      item("Primeiro acesso", dataHoraCurta(student.first_login_at), student.first_login_at ? true : (student.auth_user_id ? false : undefined)) +
+      item("Último acesso", dataHoraCurta(student.last_login_at)) +
+      item("Boas-vindas", student.onboarding_completed_at ? dataHoraCurta(student.onboarding_completed_at) : "pendente", !!student.onboarding_completed_at) +
+      item("DISC", student.disc_completed_at ? dataHoraCurta(student.disc_completed_at) + (disc ? " · " + (DISC_PROFILE_LABEL[disc] || disc) : "") : "pendente", !!student.disc_completed_at) +
+      item("Trilha", student.veterano ? "dispensada" : (total ? feitas + " de " + total + " aulas" : "sem aulas cadastradas"), student.veterano ? undefined : (total ? feitas === total : false)) +
+      item("Sessão 1x1", student.veterano && !(sess && sess.status === "realizada") ? "dispensada"
+        : !sess ? "a agendar"
+        : sess.status === "realizada" ? "realizada" + (sess.scheduled_at ? " · " + dataHoraCurta(sess.scheduled_at) : "")
+        : sess.status === "a_agendar" ? "pedida" + (sess.scheduled_at ? " pra " + dataHoraCurta(sess.scheduled_at) : "")
+        : sess.status + (sess.scheduled_at ? " · " + dataHoraCurta(sess.scheduled_at) : ""),
+        sess && sess.status === "realizada" ? true : undefined);
+  }
+
   function loadAlunoTrilha(student){
     var wrap = $("alunoTrilhaWrap");
     wrap.innerHTML = '<p class="hint">Carregando...</p>';
+    renderAlunoJornadaResumo(student);
     var onboardingSteps = [
       { done: Boolean(student.onboarding_completed_at), title: "Cadastro inicial (NPS + foto/aniversário)", kind: "onboarding" },
       { done: Boolean(student.disc_completed_at), title: "Perfil comportamental (DISC)", kind: "disc" }
     ];
-    sb.from("lessons").select("id,title,link_url").eq("lesson_type", "trilha").then(function(lr){
+    sb.from("lessons").select("id,title,link_url").eq("lesson_type", "trilha").order("sort_order", { nullsFirst:false }).then(function(lr){
       var lessons = lr.data || [];
       if(!lessons.length){
         wrap.innerHTML = renderTrilhaItems(onboardingSteps.map(trilhaStepHtml)) +
-          '<p class="hint" style="margin-top:8px;">Nenhuma aula preparatória cadastrada ainda (confere se rodou a migration v29).</p>';
+          '<p class="hint" style="margin-top:8px;">Nenhuma aula obrigatória cadastrada ainda (a migration v54 cria as 5).</p>';
         wireTrilhaChecks(student);
         return;
       }
@@ -2526,7 +2639,9 @@
             student_id: student.id, lesson_id: lessonId, completed: newDone, last_synced_at: nowIso
           }, { onConflict: "student_id,lesson_id" }).then(function(r){
             if(r.error){ alert("Erro: " + r.error.message); return; }
+            trilhaFeitasPorAluno[student.id] = Math.max(0, (trilhaFeitasPorAluno[student.id] || 0) + (newDone ? 1 : -1));
             loadAlunoTrilha(student);
+            applyAlunosFilter();
           });
         }
       });
@@ -2616,6 +2731,7 @@
       });
     })();
     $("alunoFieldOneOnOneStatus").value = student.one_on_one_status || "";
+    $("alunoFieldVeterano").value = student.veterano ? "1" : "0";
     $("alunoFieldOneOnOneDate").value = student.one_on_one_date || "";
     $("alunoFieldOneOnOneSummary").value = student.one_on_one_summary || "";
     loadAlunoTrilha(student);
@@ -2711,6 +2827,7 @@
       renewal_owner_id: $("alunoFieldRenewalOwner").value || null,
       renewal_note: $("alunoFieldRenewalNote").value.trim() || null,
       one_on_one_status: $("alunoFieldOneOnOneStatus").value.trim() || null,
+      veterano: $("alunoFieldVeterano").value === "1",
       one_on_one_date: $("alunoFieldOneOnOneDate").value.trim() || null,
       one_on_one_summary: $("alunoFieldOneOnOneSummary").value.trim() || null,
       dietary_restriction: $("alunoFieldDietary").value.trim() || null,
@@ -2755,7 +2872,7 @@
   // planilha — não tinha como criar um do zero (nem um "aluno teste"). Cria
   // com o mínimo (nome + e-mail) e já abre a ficha completa em seguida, pra
   // marcar mentoria/status/CS na hora, sem precisar de uma segunda tela.
-  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)";
+  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)";
 
   $("novoAlunoBtn").addEventListener("click", function(){
     $("novoAlunoFieldName").value = "";
