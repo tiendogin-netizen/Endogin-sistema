@@ -496,6 +496,7 @@
         <button class="tab-btn active" data-tab="alunos"><i class="fa-solid fa-users"></i>Alunos</button>
         <button class="tab-btn" data-tab="carteiras"><i class="fa-solid fa-chart-pie"></i>Carteiras CS</button>
         <button class="tab-btn" data-tab="disc"><i class="fa-solid fa-chart-pie"></i>Perfil DISC</button>
+        <button class="tab-btn" data-tab="eventos"><i class="fa-solid fa-ticket"></i>Eventos</button>
         <button class="tab-btn" data-tab="grupos"><i class="fa-brands fa-whatsapp"></i>Grupos WhatsApp</button>
         <button class="tab-btn" data-tab="aulas"><i class="fa-solid fa-graduation-cap"></i>Aulas</button>
         <button class="tab-btn" data-tab="calendario"><i class="fa-regular fa-calendar-days"></i>Calendário</button>
@@ -810,6 +811,57 @@
     </div>
 
     <!-- ================= GRUPOS WHATSAPP ================= -->
+    <div class="tab-panel" id="tab-eventos">
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-ticket icn"></i><span id="evNome">Evento</span></h3>
+          <span class="hint" id="evResumo"></span>
+        </div>
+        <p class="hint" style="margin:-8px 0 14px;" id="evDescricao"></p>
+
+        <div class="metric-row">
+          <div class="crm-stat-card"><div class="crm-stat-num" id="evStatBase">—</div><div class="crm-stat-label">Alunos da mentoria</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="evStatConfirmados" style="color:var(--eg-green);">—</div><div class="crm-stat-label">Confirmados</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="evStatNaoVao" style="color:var(--eg-red);">—</div><div class="crm-stat-label">Não vão</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="evStatFaltam" style="color:var(--eg-gold-300);">—</div><div class="crm-stat-label">Ainda não responderam</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="evStatConjuges">—</div><div class="crm-stat-label">Levam cônjuge</div></div>
+          <div class="crm-stat-card"><div class="crm-stat-num" id="evStatRestricoes">—</div><div class="crm-stat-label">Restrição alimentar</div></div>
+        </div>
+
+        <div class="filter-row" style="margin:14px 0 6px;align-items:center;">
+          <span class="filter-chip selected" data-ev-filtro="todos">Todos</span>
+          <span class="filter-chip" data-ev-filtro="confirmado">Confirmados</span>
+          <span class="filter-chip" data-ev-filtro="nao_vai">Não vão</span>
+          <span class="filter-chip" data-ev-filtro="sem_resposta">Sem resposta</span>
+          <span class="filter-chip" data-ev-filtro="conjuge">Com cônjuge</span>
+          <span class="filter-chip" data-ev-filtro="restricao">Com restrição alimentar</span>
+          <span class="filter-chip" data-ev-filtro="necessidade">Necessidade especial</span>
+          <input type="text" id="evBusca" placeholder="nome ou e-mail" style="max-width:220px;margin-left:auto;">
+          <button class="btn-secondary" id="evAtualizar" type="button"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+          <button class="btn-secondary" id="evExportar" type="button"><i class="fa-solid fa-file-csv"></i> Exportar lista</button>
+        </div>
+        <p class="hint" id="evContagem" style="margin:0 0 10px;"></p>
+
+        <div class="carteira-table-wrap">
+          <table>
+            <thead><tr><th>Aluno</th><th>Credencial</th><th>Vai?</th><th>Cônjuge</th><th>Restrição alimentar</th><th>Necessidade especial</th><th>Respondeu em</th><th>CS</th><th></th></tr></thead>
+            <tbody id="evBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" id="evSemParCard" style="display:none;">
+        <div class="card-head"><h3><i class="fa-solid fa-link-slash icn"></i>Respostas sem aluno encontrado</h3><span class="hint" id="evSemParResumo"></span></div>
+        <p class="hint" style="margin:-8px 0 12px;">Chegaram pelo formulário mas o e-mail e o telefone não bateram com nenhum cadastro. Escolha o aluno certo pra cada uma — o sistema lembra.</p>
+        <div class="carteira-table-wrap">
+          <table>
+            <thead><tr><th>Como veio no formulário</th><th>Vai?</th><th>Ligar ao aluno</th></tr></thead>
+            <tbody id="evSemParBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div class="tab-panel" id="tab-grupos">
       <div class="card">
         <div class="card-head"><h3><i class="fa-brands fa-whatsapp icn"></i>Mentorados &amp; Grupos</h3></div>
@@ -1627,6 +1679,9 @@
       }
       if(btn.getAttribute("data-tab") === "disc"){
         setTimeout(renderDisc, 30);
+      }
+      if(btn.getAttribute("data-tab") === "eventos"){
+        carregaEvento();
       }
       if(btn.getAttribute("data-tab") === "progresso"){
         startProgressoIfNeeded();
@@ -3672,6 +3727,184 @@
     link.download = filename;
     link.click();
   }
+
+  // ---------------- Eventos (confirmação de presença via Google Forms) ----------------
+  // As respostas chegam sozinhas em event_rsvps (script no formulario ->
+  // forms-webhook). Aqui: a base e a mentoria do evento (quem a pessoa
+  // enxerga na aba Alunos — CS ve os dela, Thais ve todos), cruzada com as
+  // respostas. Recarrega ao abrir a aba, a cada 60s enquanto aberta, e no
+  // botao Atualizar.
+  var EVENTO_ATUAL = {
+    key: "mentalidade-2026-10-17",
+    nome: "Evento de Mentalidade · 17/10/2026",
+    mentoria: "Mentoria Mãe",
+    descricao: "Confirmações do formulário do Google, em tempo real. Base: alunos ativos da Mentoria Mãe. \"Sem resposta\" é a lista pra cobrar — cada um tem o WhatsApp ao lado do nome."
+  };
+  var evRsvps = [], evFiltro = "todos", evBusca = "", evTimer = null;
+
+  function carregaEvento(){
+    if($("evNome")) $("evNome").textContent = EVENTO_ATUAL.nome;
+    if($("evDescricao")) $("evDescricao").textContent = EVENTO_ATUAL.descricao;
+    sb.from("event_rsvps").select("*").eq("event_key", EVENTO_ATUAL.key).order("submitted_at", { ascending:false }).then(function(r){
+      if(r.error){ $("evBody").innerHTML = '<tr><td colspan="9" class="empty-note">Erro ao carregar: ' + r.error.message + '</td></tr>'; return; }
+      evRsvps = r.data || [];
+      renderEvento();
+    });
+    clearInterval(evTimer);
+    evTimer = setInterval(function(){
+      if($("tab-eventos") && $("tab-eventos").classList.contains("active")) carregaEvento(); else clearInterval(evTimer);
+    }, 60000);
+  }
+
+  function evBase(){
+    return allStudents.filter(function(s){
+      if(s.status === "inativo" || s.status === "cancelado") return false;
+      return (s.deliveries || []).some(function(d){ return d.status === "ativo" && d.label === EVENTO_ATUAL.mentoria; });
+    });
+  }
+  // resposta que vale pro aluno: manual da CS ganha; senao a mais recente
+  function evRespostaDe(studentId){
+    var minhas = evRsvps.filter(function(r){ return r.student_id === studentId; });
+    if(!minhas.length) return null;
+    var manual = minhas.filter(function(r){ return r.manual; })[0];
+    return manual || minhas[0];
+  }
+  function evSituacao(r){
+    if(!r || r.attending === null || r.attending === undefined) return "sem_resposta";
+    return r.attending ? "confirmado" : "nao_vai";
+  }
+  function evDataHora(iso){
+    if(!iso) return "—";
+    var d = new Date(iso); if(isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
+  }
+
+  function evLinhas(){
+    var base = evBase();
+    return base.map(function(s){ return { s:s, r:evRespostaDe(s.id), sit:evSituacao(evRespostaDe(s.id)) }; })
+      .filter(function(x){
+        if(evFiltro === "confirmado" && x.sit !== "confirmado") return false;
+        if(evFiltro === "nao_vai" && x.sit !== "nao_vai") return false;
+        if(evFiltro === "sem_resposta" && x.sit !== "sem_resposta") return false;
+        if(evFiltro === "conjuge" && !(x.r && x.r.spouse)) return false;
+        if(evFiltro === "restricao" && !(x.r && x.r.dietary)) return false;
+        if(evFiltro === "necessidade" && !(x.r && x.r.special_needs)) return false;
+        if(evBusca){
+          var alvo = ((x.s.full_name || "") + " " + (x.s.email || "")).toLowerCase();
+          if(alvo.indexOf(evBusca) === -1) return false;
+        }
+        return true;
+      })
+      .sort(function(a, b){
+        var peso = { sem_resposta:0, confirmado:1, nao_vai:2 };
+        return (peso[a.sit] - peso[b.sit]) || (a.s.full_name || "").localeCompare(b.s.full_name || "");
+      });
+  }
+
+  function renderEvento(){
+    if(!$("evBody")) return;
+    var base = evBase();
+    var todos = base.map(function(s){ return { s:s, r:evRespostaDe(s.id) }; });
+    var conf = todos.filter(function(x){ return evSituacao(x.r) === "confirmado"; });
+    var nao = todos.filter(function(x){ return evSituacao(x.r) === "nao_vai"; });
+    var faltam = todos.filter(function(x){ return evSituacao(x.r) === "sem_resposta"; });
+    $("evStatBase").textContent = base.length;
+    $("evStatConfirmados").textContent = conf.length;
+    $("evStatNaoVao").textContent = nao.length;
+    $("evStatFaltam").textContent = faltam.length;
+    $("evStatConjuges").textContent = conf.filter(function(x){ return x.r.spouse; }).length;
+    $("evStatRestricoes").textContent = conf.filter(function(x){ return x.r.dietary; }).length;
+    $("evResumo").textContent = base.length ? Math.round((conf.length + nao.length) / base.length * 100) + "% responderam" : "";
+
+    var linhas = evLinhas();
+    $("evContagem").textContent = linhas.length === base.length ? base.length + " aluno(s)" : linhas.length + " de " + base.length;
+    var SIT = { confirmado:'<span class="status-pill ativo">vai</span>', nao_vai:'<span class="status-pill cancelado">não vai</span>', sem_resposta:'<span class="status-pill onboarding">sem resposta</span>' };
+    $("evBody").innerHTML = linhas.length ? linhas.map(function(x){
+      var s = x.s, r = x.r;
+      return '<tr>' +
+        '<td><b>' + s.full_name + '</b>' + waLinkHtml(s.phone) + '<br><span class="hint">' + (s.email || "") + '</span></td>' +
+        '<td>' + (r && r.badge_name ? r.badge_name : '<span class="hint">—</span>') + '</td>' +
+        '<td>' + SIT[x.sit] + (r && r.manual ? ' <span class="hint" title="marcado pela CS">manual</span>' : '') + '</td>' +
+        '<td>' + (r ? (r.spouse === true ? "sim" : r.spouse === false ? "não" : "—") : "—") + '</td>' +
+        '<td>' + (r && r.dietary ? r.dietary : '<span class="hint">—</span>') + '</td>' +
+        '<td>' + (r && r.special_needs ? r.special_needs : '<span class="hint">—</span>') + '</td>' +
+        '<td class="hint">' + (r ? evDataHora(r.submitted_at || r.updated_at) : "—") + '</td>' +
+        '<td>' + csPorMentoriaHtml(s) + '</td>' +
+        '<td style="white-space:nowrap;">' +
+          '<button class="row-edit-btn" data-ev-marca="1" data-id="' + s.id + '" title="Confirmou por WhatsApp, por exemplo"><i class="fa-solid fa-check"></i></button> ' +
+          '<button class="row-edit-btn" data-ev-marca="0" data-id="' + s.id + '" title="Avisou que não vai"><i class="fa-solid fa-xmark"></i></button>' +
+        '</td>' +
+      '</tr>';
+    }).join("") : '<tr><td colspan="9" class="empty-note">Ninguém nesse recorte.</td></tr>';
+
+    $("evBody").querySelectorAll("[data-ev-marca]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var sId = b.getAttribute("data-id"), vai = b.getAttribute("data-ev-marca") === "1";
+        var st = allStudents.find(function(x){ return x.id === sId; });
+        sb.from("event_rsvps").upsert({
+          event_key: EVENTO_ATUAL.key, response_id: "manual:" + sId, student_id: sId, matched_by: "manual", manual: true,
+          attending: vai, email: st ? st.email : null, full_name: st ? st.full_name : null, phone: st ? st.phone : null,
+          submitted_at: new Date().toISOString(), raw: { origem: "marcado pela CS " + (currentStaff.full_name || "") }
+        }, { onConflict: "event_key,response_id" }).then(function(r){
+          if(r.error){ alert("Erro: " + r.error.message); return; }
+          carregaEvento();
+        });
+      });
+    });
+
+    // respostas que nao acharam aluno
+    var semPar = evRsvps.filter(function(r){ return !r.student_id && !r.manual; });
+    $("evSemParCard").style.display = semPar.length ? "block" : "none";
+    if(semPar.length){
+      $("evSemParResumo").textContent = semPar.length + " resposta(s)";
+      var opcoes = allStudents.slice().sort(function(a, b){ return (a.full_name || "").localeCompare(b.full_name || ""); })
+        .map(function(st){ return '<option value="' + st.id + '">' + st.full_name + (st.email ? " — " + st.email : "") + '</option>'; }).join("");
+      $("evSemParBody").innerHTML = semPar.map(function(r){
+        return '<tr>' +
+          '<td><b>' + (r.full_name || "(sem nome)") + '</b><br><span class="hint">' + [r.email, r.phone].filter(Boolean).join(" · ") + '</span></td>' +
+          '<td>' + (r.attending === true ? "sim" : r.attending === false ? "não" : "—") + '</td>' +
+          '<td><select data-ev-liga="' + r.id + '" style="max-width:320px;"><option value="">Escolher aluno…</option>' + opcoes + '</select></td>' +
+        '</tr>';
+      }).join("");
+      $("evSemParBody").querySelectorAll("[data-ev-liga]").forEach(function(sel){
+        sel.addEventListener("change", function(){
+          if(!sel.value) return;
+          sb.from("event_rsvps").update({ student_id: sel.value, matched_by: "manual" }).eq("id", sel.getAttribute("data-ev-liga")).then(function(r){
+            if(r.error){ alert("Erro: " + r.error.message); return; }
+            carregaEvento();
+          });
+        });
+      });
+    }
+  }
+
+  document.querySelectorAll("[data-ev-filtro]").forEach(function(ch){
+    ch.addEventListener("click", function(){
+      document.querySelectorAll("[data-ev-filtro]").forEach(function(c){ c.classList.remove("selected"); });
+      ch.classList.add("selected");
+      evFiltro = ch.getAttribute("data-ev-filtro");
+      renderEvento();
+    });
+  });
+  if($("evBusca")) $("evBusca").addEventListener("input", function(){ evBusca = this.value.trim().toLowerCase(); renderEvento(); });
+  if($("evAtualizar")) $("evAtualizar").addEventListener("click", carregaEvento);
+  if($("evExportar")) $("evExportar").addEventListener("click", function(){
+    var linhas = evLinhas();
+    var rows = [["Aluno","E-mail","Telefone","Nome na credencial","Vai?","Cônjuge","Restrição alimentar","Necessidade especial","Respondeu em","CS","Mentorias"]];
+    linhas.forEach(function(x){
+      var s = x.s, r = x.r;
+      rows.push([
+        s.full_name || "", s.email || "", telefoneBonito(s.phone) || "", r && r.badge_name || "",
+        x.sit === "confirmado" ? "Sim" : x.sit === "nao_vai" ? "Não" : "Sem resposta",
+        r ? (r.spouse === true ? "Sim" : r.spouse === false ? "Não" : "") : "",
+        r && r.dietary || "", r && r.special_needs || "",
+        r ? evDataHora(r.submitted_at || r.updated_at) : "",
+        (s.staff && s.staff.full_name) || "",
+        (s.deliveries || []).filter(function(d){ return d.status === "ativo"; }).map(function(d){ return d.label; }).join(" / ")
+      ]);
+    });
+    downloadCsv("evento-" + EVENTO_ATUAL.key + "-" + (evFiltro === "todos" ? "todos" : evFiltro) + ".csv", rows);
+  });
 
   // ---------------- Perfil DISC ----------------
   // Os resultados vem embutidos em allStudents (disc_results), entao a lista
