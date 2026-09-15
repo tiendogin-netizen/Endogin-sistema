@@ -368,10 +368,20 @@
       </div>
 
       <div class="secao">
-        <div class="secao-cab"><h3>Vencimentos</h3><span class="nota">próximos 60 dias</span></div>
+        <div class="secao-cab"><h3>Vencimentos</h3><span class="nota" id="notaVencimentos"></span></div>
+        <div class="chips" id="chipsVenc" style="margin-bottom:12px;">
+          <button class="chip" data-venc="vencidos">Já vencidos</button>
+          <button class="chip on" data-venc="30">Próximos 30 dias</button>
+          <button class="chip" data-venc="60">Próximos 60 dias</button>
+          <button class="chip" data-venc="90">Próximos 90 dias</button>
+          <button class="chip" data-venc="180">Próximos 6 meses</button>
+          <button class="chip" data-venc="todos">Todos com data</button>
+          <button class="chip" data-venc="semdata">Sem data / vitalícios</button>
+        </div>
+        <p class="dica" style="margin:-4px 0 10px;">"Vencido" e ainda ativo quer dizer que o contrato passou da data e a CS ainda não registrou renovação nem desligamento — é a lista pra cobrar da CS. A data é a mesma da ficha na Área CS (a menor entre as mentorias do mentorado).</p>
         <div class="tab-rolagem">
           <table>
-            <thead><tr><th>Mentorado</th><th>Mentoria</th><th>CS</th><th>Vence</th><th>Situação</th></tr></thead>
+            <thead><tr><th>Mentorado</th><th>Mentoria</th><th>CS</th><th>Entrou</th><th>Vence</th><th>Situação</th></tr></thead>
             <tbody id="tabVencimentos"></tbody>
           </table>
         </div>
@@ -1276,23 +1286,58 @@
     var totalVenc6 = mesesFuturos.reduce(function(sum, m){ return sum + vencPorMes[m]; }, 0);
     $("notaMovimento").textContent = totalEntradas12 + " entradas em 12 meses · " + totalVenc6 + " vencimentos nos próximos 6";
 
-    var proximos = alunos.filter(function(a){
-      if(a.is_lifetime || !a.renewal_date) return false;
-      var d = diasAte(a.renewal_date);
-      return d !== null && d <= 60;
-    }).sort(function(x,y){ return diasAte(x.renewal_date) - diasAte(y.renewal_date); }).slice(0, 25);
+    desenhaVencimentos();
+  }
 
-    $("tabVencimentos").innerHTML = proximos.length ? proximos.map(function(a){
+  // Vencimentos com filtro: vencidos, janelas de dias, todos, sem data.
+  // So mentorados ativos (onboarding/reonboarding contam): quem ja saiu nao
+  // tem contrato pra vencer. Lista completa, sem corte de 25.
+  var vencFiltro = "30";
+  function desenhaVencimentos(){
+    var ativos = alunos.filter(function(a){ return a.status === "ativo" || a.status === "onboarding" || a.status === "em_reonboarding"; });
+    var lista = ativos.filter(function(a){
+      var semData = a.is_lifetime || !a.renewal_date;
+      if(vencFiltro === "semdata") return semData;
+      if(semData) return false;
       var d = diasAte(a.renewal_date);
-      var sel = d < 0 ? '<span class="selo risco">' + Math.abs(d) + 'd vencido</span>'
-        : '<span class="selo ' + (d <= 30 ? "alerta" : "") + '">vence em ' + d + 'd</span>';
+      if(d === null) return false;
+      if(vencFiltro === "vencidos") return d < 0;
+      if(vencFiltro === "todos") return true;
+      var lim = parseInt(vencFiltro, 10);
+      return d >= 0 && d <= lim;
+    }).sort(function(x,y){
+      var dx = x.renewal_date ? diasAte(x.renewal_date) : 1e9, dy = y.renewal_date ? diasAte(y.renewal_date) : 1e9;
+      return (dx - dy) || String(x.full_name).localeCompare(String(y.full_name));
+    });
+
+    var vencidos = ativos.filter(function(a){ return !a.is_lifetime && a.renewal_date && diasAte(a.renewal_date) < 0; }).length;
+    var em30 = ativos.filter(function(a){ var d = (!a.is_lifetime && a.renewal_date) ? diasAte(a.renewal_date) : null; return d !== null && d >= 0 && d <= 30; }).length;
+    $("notaVencimentos").textContent = lista.length + " na lista · " + vencidos + " vencidos · " + em30 + " vencem em 30 dias";
+
+    $("tabVencimentos").innerHTML = lista.length ? lista.map(function(a){
+      var semData = a.is_lifetime || !a.renewal_date;
+      var d = semData ? null : diasAte(a.renewal_date);
+      var sel = semData
+        ? '<span class="selo">' + (a.is_lifetime ? "vitalício" : "sem data de vencimento") + '</span>'
+        : (d < 0 ? '<span class="selo risco">' + Math.abs(d) + 'd vencido</span>'
+          : '<span class="selo ' + (d <= 30 ? "alerta" : "") + '">vence em ' + d + 'd</span>');
+      var renov = a.renewal_status ? '<span class="secundario">' + esc(a.renewal_status) + '</span>' : '';
       return '<tr><td><span class="principal">' + esc(a.full_name) + waHtml(a.phone) + '</span><span class="secundario">' + esc(a.email || "") + '</span></td>' +
         '<td>' + esc(mentoriasDe(a).join(", ") || "—") + '</td>' +
         '<td>' + esc((a.staff && a.staff.full_name) || "—") + '</td>' +
-        '<td class="num-col">' + dataCurta(a.renewal_date) + '</td>' +
-        '<td>' + sel + '</td></tr>';
-    }).join("") : '<tr><td colspan="5" class="vazio">Nenhum vencimento nos próximos 60 dias.</td></tr>';
+        '<td class="num-col">' + (a.entry_date ? dataCurta(a.entry_date) : "—") + '</td>' +
+        '<td class="num-col">' + (semData ? "—" : dataCurta(a.renewal_date)) + '</td>' +
+        '<td>' + sel + renov + '</td></tr>';
+    }).join("") : '<tr><td colspan="6" class="vazio">Ninguém nesse recorte.</td></tr>';
   }
+  document.querySelectorAll("#chipsVenc .chip").forEach(function(ch){
+    ch.addEventListener("click", function(){
+      document.querySelectorAll("#chipsVenc .chip").forEach(function(c){ c.classList.remove("on"); });
+      ch.classList.add("on");
+      vencFiltro = ch.getAttribute("data-venc");
+      desenhaVencimentos();
+    });
+  });
 
   // ---------- mentorados ----------
   // Roda a cada atualizacao automatica, entao precisa repovoar em vez de
