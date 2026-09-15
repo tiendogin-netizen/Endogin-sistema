@@ -1090,8 +1090,13 @@
   });
 
   // ---------- sinais por mentorado ----------
+  // Enquanto a base inteira nao tem NENHUM clique de aula ao vivo (o Zoom
+  // ainda nao esta ligado), "nunca entrou ao vivo" nao e um sinal do aluno,
+  // e a ausencia de medicao. Nao pontua e o KPI avisa isso.
+  var medindoAoVivo = false;
   function montaPerfil(progresso, nps, cliques, sessoes){
     perfil = {};
+    medindoAoVivo = (cliques || []).length > 0;
     function p(id){ return perfil[id] || (perfil[id] = { soma:0, qtd:0, nps:null, cliques:0, sessao:null }); }
 
     (progresso || []).forEach(function(x){
@@ -1143,7 +1148,7 @@
     else if(r.media < 15){ pontos += 2; motivos.push({ t:"assistiu " + r.media + "%", g:true }); }
     else if(r.media < 35){ pontos += 1; motivos.push({ t:"assistiu " + r.media + "%", g:false }); }
 
-    if(!r.cliques){ pontos += 1; motivos.push({ t:"nunca entrou ao vivo", g:false }); }
+    if(medindoAoVivo && !r.cliques){ pontos += 1; motivos.push({ t:"nunca entrou ao vivo", g:false }); }
     if(r.sessao !== "realizada" && a.status !== "inativo"){ pontos += 1; motivos.push({ t:"1x1 não realizado", g:false }); }
 
     return { pontos: pontos, motivos: motivos, media: r.media, nps: r.nps };
@@ -1185,7 +1190,9 @@
     $("kpisRenovacao").innerHTML = [
       { rot:"Risco alto de não renovar", num: emRisco.length, sub:"6+ pontos de sinal", cls: emRisco.length ? "risco" : "ok" },
       { rot:"NPS médio", num: mediaNps === null ? "—" : mediaNps.toFixed(1), sub: comNps.length + " respostas", cls: mediaNps !== null && mediaNps >= 9 ? "ok" : "alerta" },
-      { rot:"Nunca entrou numa aula ao vivo", num: semAoVivo.length, sub:"de " + alunos.length + " mentorados", cls:"alerta" },
+      medindoAoVivo
+        ? { rot:"Nunca entrou numa aula ao vivo", num: semAoVivo.length, sub:"de " + alunos.length + " mentorados", cls:"alerta" }
+        : { rot:"Aulas ao vivo", num:"—", sub:"sem medição ainda (Zoom não ligado)", cls:"" },
       { rot:"Sem 1x1 realizado", num: sem1a1.length, sub:"conversa com os fundadores", cls:"alerta" }
     ].map(function(k){
       return '<div class="kpi ' + (k.cls || "") + '"><div class="rot">' + k.rot + '</div>' +
