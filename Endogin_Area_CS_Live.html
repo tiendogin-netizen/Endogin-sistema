@@ -1244,8 +1244,13 @@
         <div id="progressoList"></div>
       </div>
       <div class="card">
-        <div class="card-head"><h3><i class="fa-solid fa-video icn"></i>Presença em aula ao vivo (Zoom)</h3></div>
-        <p class="hint">Ainda não integrado — depende da liberação da API do Zoom pelo Dr. Caio (marcado para essa semana). Enquanto isso, o engajamento com aula ao vivo aparece pelo número de cliques em "Assistir" na aba <b>Calendário</b>.</p>
+        <div class="card-head">
+          <h3><i class="fa-solid fa-video icn"></i>Presença em aula ao vivo (Zoom)</h3>
+          <button class="btn-secondary" id="zoomSyncBtn" type="button"><i class="fa-solid fa-rotate"></i> Sincronizar com o Zoom agora</button>
+        </div>
+        <p class="hint" style="margin:-8px 0 10px;">Quem realmente esteve na sala, puxado do relatório do Zoom. Vale pra toda aula do Calendário que tem o <b>ID da reunião</b> preenchido. Sincroniza sozinho de madrugada; o botão é pra quando você não quer esperar.</p>
+        <p class="hint" id="zoomSyncStatus" style="margin:0 0 12px;"></p>
+        <div id="zoomLista"></div>
       </div>
     </div>
 
@@ -1914,6 +1919,8 @@
       }
       if(btn.getAttribute("data-tab") === "progresso"){
         startProgressoIfNeeded();
+        if(!allLessons.length) loadCalendarioAdmin();
+        carregaZoom();
       }
       if(btn.getAttribute("data-tab") === "dashboard"){
         setTimeout(renderDashboard, 30);
@@ -4135,7 +4142,67 @@
     downloadCsv("evento-" + EVENTO_ATUAL.key + "-" + (evFiltro === "todos" ? "todos" : evFiltro) + ".csv", rows);
   });
 
-  // ---------------- Perfil DISC ----------------
+  // ---------------- presenca ao vivo (Zoom) ----------------
+  var zoomOcorrencias = [], zoomPresentes = [];
+  function carregaZoom(){
+    Promise.all([
+      sb.from("live_attendance").select("lesson_id,occurred_at,attendee_count,matched_student_count,synced_at").order("occurred_at", { ascending:false }),
+      sb.from("live_attendance_students").select("id,lesson_id,occurred_at,student_id,participant_name,participant_email,duration_min,matched_by").order("participant_name"),
+      sb.from("app_settings_kv").select("value").eq("key", "zoom_last_sync").maybeSingle()
+    ]).then(function(rs){
+      if(rs[0].error){ $("zoomLista").innerHTML = '<p class="hint">Ainda sem a tabela de presença (rode o v57).</p>'; return; }
+      zoomOcorrencias = rs[0].data || [];
+      zoomPresentes = rs[1].data || [];
+      var ult = rs[2] && rs[2].data && rs[2].data.value;
+      $("zoomSyncStatus").innerHTML = ult
+        ? 'Última sincronização: <b>' + new Date(ult.em).toLocaleString("pt-BR") + '</b> · ' + ult.ocorrencias_novas + ' aula(s) nova(s) · ' + ult.participantes + ' participante(s)' + (ult.sem_par ? ' · <span style="color:var(--eg-gold-300);">' + ult.sem_par + ' sem aluno identificado</span>' : '') + (ult.avisos && ult.avisos.length ? '<br><span style="color:var(--eg-red);">' + ult.avisos.join(" · ") + '</span>' : '')
+        : 'Ainda não sincronizou nenhuma vez.';
+      renderZoom();
+    });
+  }
+  function renderZoom(){
+    var wrap = $("zoomLista"); if(!wrap) return;
+    if(!zoomOcorrencias.length){ wrap.innerHTML = '<p class="hint">Nenhuma aula com presença ainda. Confira se as aulas do Calendário têm o ID da reunião do Zoom e clique em sincronizar.</p>'; return; }
+    wrap.innerHTML = zoomOcorrencias.slice(0, 60).map(function(o){
+      var l = allLessons.find(function(x){ return x.id === o.lesson_id; });
+      var quem = zoomPresentes.filter(function(p){ return p.lesson_id === o.lesson_id && p.occurred_at === o.occurred_at; });
+      var pct = o.attendee_count ? Math.round(o.matched_student_count / o.attendee_count * 100) : 0;
+      return '<details style="border-top:1px solid var(--eg-navy-line);padding:10px 0;">' +
+        '<summary style="cursor:pointer;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">' +
+          '<b>' + (l ? l.title : "Aula") + '</b><span class="hint">' + String(o.occurred_at).split("-").reverse().join("/") + '</span>' +
+          '<span class="status-pill ativo">' + o.attendee_count + ' na sala</span>' +
+          '<span class="hint">' + o.matched_student_count + ' identificado(s) · ' + pct + '%</span>' +
+        '</summary>' +
+        '<div class="carteira-table-wrap" style="margin-top:8px;"><table><thead><tr><th>Participante (no Zoom)</th><th>Aluno</th><th>Tempo</th></tr></thead><tbody>' +
+        quem.map(function(p){
+          var st = p.student_id ? allStudents.find(function(x){ return x.id === p.student_id; }) : null;
+          var alunoCel = st ? '<b>' + st.full_name + '</b> <span class="hint">' + (p.matched_by || "") + '</span>'
+            : (p.student_id ? '<span class="hint">aluno de outra carteira</span>'
+              : '<select data-zoom-liga="' + p.id + '" style="max-width:260px;"><option value="">Ligar a um aluno…</option>' +
+                allStudents.map(function(x){ return '<option value="' + x.id + '">' + x.full_name + '</option>'; }).join("") + '</select>');
+          return '<tr><td>' + p.participant_name + (p.participant_email ? '<br><span class="hint">' + p.participant_email + '</span>' : '') + '</td><td>' + alunoCel + '</td><td>' + (p.duration_min || 0) + ' min</td></tr>';
+        }).join("") +
+        '</tbody></table></div></details>';
+    }).join("");
+    wrap.querySelectorAll("[data-zoom-liga]").forEach(function(sel){
+      sel.addEventListener("change", function(){
+        if(!sel.value) return;
+        sb.from("live_attendance_students").update({ student_id: sel.value, matched_by: "manual" }).eq("id", sel.getAttribute("data-zoom-liga")).then(function(r){
+          if(r.error){ alert("Erro: " + r.error.message); return; }
+          carregaZoom();
+        });
+      });
+    });
+  }
+  if($("zoomSyncBtn")) $("zoomSyncBtn").addEventListener("click", function(){
+    var b = $("zoomSyncBtn"); b.disabled = true; b.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Sincronizando…';
+    sb.functions.invoke("zoom-sync", { body: {} }).then(function(r){
+      b.disabled = false; b.innerHTML = '<i class="fa-solid fa-rotate"></i> Sincronizar com o Zoom agora';
+      var d = r.data || {};
+      if(r.error || !d.ok){ alert("Não deu: " + ((d && d.error) || (r.error && r.error.message) || "erro")); return; }
+      carregaZoom();
+    });
+  });
   // Os resultados vem embutidos em allStudents (disc_results), entao a lista
   // respeita exatamente o que a pessoa ja enxerga na aba Alunos — CS ve os
   // seus, master ve todos. Um aluno pode ter refeito o teste: vale o ultimo.

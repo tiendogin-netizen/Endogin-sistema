@@ -1153,7 +1153,8 @@
       buscarTudo("nps_responses", "student_id,score,created_at"),
       buscarTudo("live_click_log", "student_id"),
       buscarTudo("mentoring_sessions", "student_id,status"),
-      buscarTudo("event_rsvps", "student_id,attending,spouse,dietary,special_needs,badge_name,submitted_at,updated_at,manual", function(q){ return q.eq("event_key", EVENTO.key); })
+      buscarTudo("event_rsvps", "student_id,attending,spouse,dietary,special_needs,badge_name,submitted_at,updated_at,manual", function(q){ return q.eq("event_key", EVENTO.key); }),
+      buscarTudo("live_attendance_students", "student_id,lesson_id,occurred_at,duration_min")
     ]).then(function(res){
       carregando = false;
       $("btnAtualizar").disabled = false;
@@ -1163,6 +1164,7 @@
       }
       alunos = res[0].data || [];
       branches = res[1].data || [];
+      presencas = (res[7] && res[7].data) || [];
       montaPerfil(res[2].data, res[3].data, res[4].data, res[5].data);
       rsvps = (res[6] && res[6].data) || [];
       montaFiltros();
@@ -1202,10 +1204,12 @@
   // Enquanto a base inteira nao tem NENHUM clique de aula ao vivo (o Zoom
   // ainda nao esta ligado), "nunca entrou ao vivo" nao e um sinal do aluno,
   // e a ausencia de medicao. Nao pontua e o KPI avisa isso.
-  var medindoAoVivo = false;
+  var medindoAoVivo = false, presencas = [];
   function montaPerfil(progresso, nps, cliques, sessoes){
     perfil = {};
-    medindoAoVivo = (cliques || []).length > 0;
+    // presenca real do Zoom vale mais que clique; qualquer um dos dois ja
+    // significa que estamos medindo
+    medindoAoVivo = (cliques || []).length > 0 || presencas.length > 0;
     function p(id){ return perfil[id] || (perfil[id] = { soma:0, qtd:0, nps:null, cliques:0, sessao:null }); }
 
     (progresso || []).forEach(function(x){
@@ -1218,6 +1222,7 @@
     (nps || []).sort(function(a,b){ return String(a.created_at).localeCompare(String(b.created_at)); })
       .forEach(function(x){ p(x.student_id).nps = Number(x.score); });
     (cliques || []).forEach(function(x){ p(x.student_id).cliques++; });
+    presencas.forEach(function(x){ if(x.student_id){ var r = p(x.student_id); r.presencas = (r.presencas || 0) + 1; r.cliques++; } });
     (sessoes || []).forEach(function(x){
       var r = p(x.student_id);
       if(x.status === "realizada" || !r.sessao) r.sessao = x.status;
@@ -1257,7 +1262,7 @@
     else if(r.media < 15){ pontos += 2; motivos.push({ t:"assistiu " + r.media + "%", g:true }); }
     else if(r.media < 35){ pontos += 1; motivos.push({ t:"assistiu " + r.media + "%", g:false }); }
 
-    if(medindoAoVivo && !r.cliques){ pontos += 1; motivos.push({ t:"nunca entrou ao vivo", g:false }); }
+    if(medindoAoVivo && !r.cliques && !r.presencas){ pontos += 1; motivos.push({ t:"nunca entrou ao vivo", g:false }); }
     if(r.sessao !== "realizada" && a.status !== "inativo"){ pontos += 1; motivos.push({ t:"1x1 não realizado", g:false }); }
 
     return { pontos: pontos, motivos: motivos, media: r.media, nps: r.nps };
@@ -1798,10 +1803,21 @@
       });
 
       var totalSemana = cliques.filter(function(c){ return new Date(c.clicked_at).getTime() >= seteDias; }).length;
+      // presenca real (Zoom), por aula
+      var pres = {};
+      presencas.forEach(function(x){
+        var s = pres[x.lesson_id] || (pres[x.lesson_id] = { total:0, dias:{} });
+        s.total++; s.dias[x.occurred_at] = (s.dias[x.occurred_at] || 0) + 1;
+      });
+      var alunosUnicosAoVivo = {}; presencas.forEach(function(x){ if(x.student_id) alunosUnicosAoVivo[x.student_id] = true; });
+      var temZoom = presencas.length > 0;
+      if($("avisoZoom")) $("avisoZoom").style.display = temZoom ? "none" : "";
       $("kpisAoVivo").innerHTML = [
         { rot:"Aulas e encontros", num: aulas.length, sub:"cadastrados no calendário" },
+        temZoom ? { rot:"Presenças registradas (Zoom)", num: presencas.length, sub: Object.keys(alunosUnicosAoVivo).length + " mentorados diferentes", cls:"ok" }
+                : { rot:"Presença (Zoom)", num:"—", sub:"ainda não sincronizado" },
         { rot:"Cliques para entrar", num: cliques.length, sub:"desde o início" },
-        { rot:"Nos últimos 7 dias", num: totalSemana, sub:"medido pela plataforma", cls:"ok" }
+        { rot:"Nos últimos 7 dias", num: totalSemana, sub:"cliques na plataforma" }
       ].map(function(k){
         return '<div class="kpi ' + (k.cls || "") + '"><div class="rot">' + k.rot + '</div>' +
           '<div class="num">' + k.num + '</div><div class="sub">' + k.sub + '</div></div>';
@@ -1819,8 +1835,11 @@
         var quando = l.lesson_type === "evento"
           ? [dataCurta(l.event_date), hora].filter(Boolean).join(" · ")
           : [DIAS[l.weekday] || l.weekday, hora].filter(Boolean).join(" · ");
+        var pz = pres[l.id];
+        var mediaPres = pz ? Math.round(pz.total / Object.keys(pz.dias).length) : null;
         return '<tr><td><span class="principal">' + esc(l.title) + '</span>' +
-            (l.category ? '<span class="secundario">' + esc(l.category) + '</span>' : '') + '</td>' +
+            (l.category ? '<span class="secundario">' + esc(l.category) + '</span>' : '') +
+            (pz ? '<span class="secundario" style="color:var(--green);">Zoom: média de ' + mediaPres + ' presentes em ' + Object.keys(pz.dias).length + ' aula(s)</span>' : '') + '</td>' +
           '<td>' + esc(quando || "—") + '</td>' +
           '<td>' + esc(b ? b.name : "Todas") + '</td>' +
           '<td class="num-col">' + s.total + '</td>' +
