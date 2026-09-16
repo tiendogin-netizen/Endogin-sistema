@@ -230,6 +230,34 @@
   .eg-linha .dica{position:absolute;pointer-events:none;background:#0e1a29;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:8px 10px;font-size:11.5px;box-shadow:0 12px 30px rgba(0,0,0,.6);transform:translate(-50%,-118%);white-space:nowrap;opacity:0;transition:opacity .15s;z-index:2;}
   .eg-linha .dica b{display:block;font-size:14px;color:#f3f0e8;font-family:'Sora',sans-serif;}
   .eg-linha .dica span{color:#8792a8;}
+  /* ---- evento ---- */
+  .ev-capa{
+    position:relative;overflow:hidden;border-radius:14px;padding:30px 32px;margin-bottom:22px;
+    border:1px solid rgba(227,189,118,.28);
+    background:
+      radial-gradient(700px 260px at 0% 0%, rgba(227,189,118,.16), transparent 60%),
+      radial-gradient(500px 240px at 100% 100%, rgba(143,179,224,.12), transparent 60%),
+      linear-gradient(160deg,#0f1f33,#08131f);
+  }
+  .ev-capa::after{content:"";position:absolute;inset:0;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><circle cx='60' cy='60' r='58' fill='none' stroke='%23e3bd76' stroke-opacity='.06'/></svg>") right -20px top -20px no-repeat;pointer-events:none;}
+  .ev-capa .rot{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--gold-lit);text-transform:uppercase;}
+  .ev-capa h2{font-family:'Sora',sans-serif;font-size:30px;font-weight:700;margin:6px 0 4px;letter-spacing:-.01em;color:#f3f0e8;}
+  .ev-capa .sub{color:var(--txt-2);font-size:13.5px;margin:0;}
+  .ev-capa .faltam{position:absolute;right:30px;top:26px;text-align:right;}
+  .ev-capa .faltam b{display:block;font-family:'Sora',sans-serif;font-size:40px;line-height:1;color:var(--gold-lit);}
+  .ev-capa .faltam span{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--txt-3);text-transform:uppercase;}
+  .ev-grid{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:18px;margin-bottom:22px;}
+  .ev-barra{height:10px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;display:flex;margin:14px 0 8px;}
+  .ev-barra i{display:block;height:100%;}
+  .ev-legenda{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--txt-2);}
+  .ev-legenda b{color:#f3f0e8;}
+  .ev-legenda i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:-1px;}
+  .ev-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;}
+  .ev-item{background:var(--bg-1);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:12.5px;}
+  .ev-item b{display:block;color:#f3f0e8;font-weight:600;}
+  .ev-item span{color:var(--txt-3);font-size:11px;}
+  @media (max-width:760px){ .ev-grid{grid-template-columns:1fr;} .ev-capa .faltam{position:static;text-align:left;margin-top:12px;} .ev-capa h2{font-size:24px;} }
+
   .eg-hero{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 28px;margin-bottom:6px;}
   .eg-hero .rot{font-size:12px;color:#8792a8;font-weight:600;width:100%;}
   .eg-hero .num{font-family:'Sora',sans-serif;font-size:36px;font-weight:700;line-height:1;color:#f3f0e8;}
@@ -280,6 +308,10 @@
       <nav class="nav" id="nav3">
         <button data-v="aovivo">Aulas ao vivo</button>
         <button data-v="recados">Recados</button>
+      </nav>
+      <div class="nav-grupo">EVENTOS</div>
+      <nav class="nav" id="nav4">
+        <button data-v="evento">Evento de Mentalidade</button>
       </nav>
     </div>
 
@@ -530,6 +562,69 @@
     </section>
 
     <!-- ============ AO VIVO ============ -->
+    <!-- ============ EVENTO ============ -->
+    <section class="vista" id="v-evento">
+      <div class="topo">
+        <div class="caminho">EVENTOS</div>
+        <h2>Evento de Mentalidade</h2>
+        <p>Quem confirmou presença pelo formulário. Esta tela só mostra — quem responde é o mentorado, e quem ajusta na mão é a CS.</p>
+      </div>
+
+      <div class="ev-capa">
+        <div class="rot">Mentoria Mãe · presencial</div>
+        <h2>Evento de Mentalidade</h2>
+        <p class="sub">17 de outubro de 2026 · confirmações abertas até o prazo do formulário</p>
+        <div class="faltam"><b id="evDias">—</b><span>dias para o evento</span></div>
+      </div>
+
+      <div class="kpis" id="evKpis"></div>
+
+      <div class="ev-grid">
+        <div class="painel">
+          <h4>Como está a resposta</h4>
+          <p class="dica">Base: mentorados ativos da Mentoria Mãe.</p>
+          <div id="evDonut"></div>
+        </div>
+        <div class="painel">
+          <h4>Confirmações ao longo dos dias</h4>
+          <p class="dica">Acumulado de "vou participar" por dia de resposta.</p>
+          <div id="evLinha"></div>
+          <div class="ev-barra" id="evBarra"></div>
+          <div class="ev-legenda" id="evLegenda"></div>
+        </div>
+      </div>
+
+      <div class="graficos" style="margin-bottom:22px;">
+        <div class="painel">
+          <h4>Restrições alimentares</h4>
+          <p class="dica">Entre quem confirmou — é o que vai pro buffet.</p>
+          <div class="ev-lista" id="evRestricoes"></div>
+        </div>
+        <div class="painel">
+          <h4>Necessidades especiais</h4>
+          <p class="dica">Entre quem confirmou — acessibilidade e estrutura.</p>
+          <div class="ev-lista" id="evNecessidades"></div>
+        </div>
+      </div>
+
+      <div class="secao">
+        <div class="secao-cab"><h3>Lista</h3><span class="nota" id="evNota"></span></div>
+        <div class="chips" id="chipsEv" style="margin-bottom:12px;">
+          <button class="chip on" data-ev="confirmado">Confirmados</button>
+          <button class="chip" data-ev="nao_vai">Não vão</button>
+          <button class="chip" data-ev="sem_resposta">Ainda não responderam</button>
+          <button class="chip" data-ev="conjuge">Levam cônjuge</button>
+          <button class="chip" data-ev="todos">Todos</button>
+        </div>
+        <div class="tab-rolagem">
+          <table>
+            <thead><tr><th>Mentorado</th><th>Credencial</th><th>Situação</th><th>Cônjuge</th><th>Restrição alimentar</th><th>Necessidade especial</th><th>CS</th><th>Respondeu em</th></tr></thead>
+            <tbody id="tabEvento"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section class="vista" id="v-aovivo">
       <div class="topo">
         <div class="caminho">ENGAJAMENTO</div>
@@ -1010,6 +1105,7 @@
       // zero e o gráfico nasce sem tamanho. Por isso o redesenho no clique.
       if(btn.getAttribute("data-v") === "panorama") setTimeout(desenhaPanorama, 30);
       if(btn.getAttribute("data-v") === "disc") setTimeout(renderDisc, 30);
+      if(btn.getAttribute("data-v") === "evento") setTimeout(renderEvento, 30);
     });
   });
 
@@ -1056,7 +1152,8 @@
       buscarTudo("course_progress", "student_id,progress_percentage"),
       buscarTudo("nps_responses", "student_id,score,created_at"),
       buscarTudo("live_click_log", "student_id"),
-      buscarTudo("mentoring_sessions", "student_id,status")
+      buscarTudo("mentoring_sessions", "student_id,status"),
+      buscarTudo("event_rsvps", "student_id,attending,spouse,dietary,special_needs,badge_name,submitted_at,updated_at,manual", function(q){ return q.eq("event_key", EVENTO.key); })
     ]).then(function(res){
       carregando = false;
       $("btnAtualizar").disabled = false;
@@ -1067,7 +1164,9 @@
       alunos = res[0].data || [];
       branches = res[1].data || [];
       montaPerfil(res[2].data, res[3].data, res[4].data, res[5].data);
+      rsvps = (res[6] && res[6].data) || [];
       montaFiltros();
+      renderEvento();
       desenhaPanorama();
       renderAlunos();
       carregaCursos();
@@ -1554,6 +1653,126 @@
         err.textContent = "Material publicado. Já aparece para os mentorados.";
         carregaMateriais();
       });
+    });
+  });
+
+  // ---------- evento ----------
+  // Mesma tabela que a Area CS alimenta (event_rsvps, via forms-webhook).
+  // A diretoria so le. Manual da CS vale mais que o formulario.
+  var EVENTO = { key:"mentalidade-2026-10-17", mentoria:"Mentoria Mãe", data:"2026-10-17" };
+  var rsvps = [], evFiltro = "confirmado";
+
+  function evBase(){
+    return alunos.filter(function(a){
+      if(a.status === "inativo" || a.status === "cancelado") return false;
+      return (a.deliveries || []).some(function(d){ return d.status === "ativo" && d.label === EVENTO.mentoria; });
+    });
+  }
+  function evRespostaDe(id){
+    var minhas = rsvps.filter(function(r){ return r.student_id === id; })
+      .sort(function(a, b){ return String(b.submitted_at || "").localeCompare(String(a.submitted_at || "")); });
+    if(!minhas.length) return null;
+    return minhas.filter(function(r){ return r.manual; })[0] || minhas[0];
+  }
+  function evSit(r){ return (!r || r.attending === null || r.attending === undefined) ? "sem_resposta" : (r.attending ? "confirmado" : "nao_vai"); }
+  function evDataHora(iso){
+    if(!iso) return "—";
+    var d = new Date(iso); if(isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
+  }
+
+  function renderEvento(){
+    if(!$("evKpis")) return;
+    var base = evBase();
+    var pares = base.map(function(a){ var r = evRespostaDe(a.id); return { a:a, r:r, sit:evSit(r) }; });
+    var conf = pares.filter(function(x){ return x.sit === "confirmado"; });
+    var nao = pares.filter(function(x){ return x.sit === "nao_vai"; });
+    var sem = pares.filter(function(x){ return x.sit === "sem_resposta"; });
+    var conj = conf.filter(function(x){ return x.r.spouse; });
+    var rest = conf.filter(function(x){ return x.r.dietary; });
+    var nec = conf.filter(function(x){ return x.r.special_needs; });
+    var pct = base.length ? Math.round((conf.length + nao.length) / base.length * 100) : 0;
+
+    var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    var dias = Math.round((new Date(EVENTO.data + "T00:00:00").getTime() - hoje.getTime()) / 86400000);
+    $("evDias").textContent = dias >= 0 ? dias : "—";
+
+    $("evKpis").innerHTML = [
+      { rot:"Mentorados da Mãe", num: base.length, sub:"base convidada" },
+      { rot:"Confirmaram", num: conf.length, sub: base.length ? Math.round(conf.length / base.length * 100) + "% da base" : "", cls:"ok" },
+      { rot:"Não vão", num: nao.length, sub:"responderam que não", cls: nao.length ? "risco" : "" },
+      { rot:"Ainda não responderam", num: sem.length, sub:"lista da CS pra cobrar", cls: sem.length ? "alerta" : "ok" },
+      { rot:"Pessoas no evento", num: conf.length + conj.length, sub: conf.length + " mentorados + " + conj.length + " cônjuge(s)" },
+      { rot:"Restrições alimentares", num: rest.length, sub:"entre os confirmados" }
+    ].map(function(k){
+      return '<div class="kpi ' + (k.cls || "") + '"><div class="rot">' + k.rot + '</div><div class="num">' + k.num + '</div><div class="sub">' + (k.sub || "") + '</div></div>';
+    }).join("");
+
+    donutEG("evDonut", [
+      { label:"Confirmaram", value: conf.length, color:"#8fc79f" },
+      { label:"Não vão", value: nao.length, color:"#d98a8a" },
+      { label:"Sem resposta", value: sem.length, color:"#3a4a63" }
+    ], { titulo:"Respostas", centro: pct + "%" });
+
+    // acumulado de confirmacoes por dia (ultimos 30 dias ate o evento)
+    var porDia = {};
+    conf.forEach(function(x){ var d = String(x.r.submitted_at || x.r.updated_at || "").slice(0, 10); if(d) porDia[d] = (porDia[d] || 0) + 1; });
+    var diasOrd = Object.keys(porDia).sort();
+    var pontos = [], acum = 0;
+    if(diasOrd.length){
+      var ini = new Date(diasOrd[0] + "T00:00:00"), fim = new Date(Math.min(hoje.getTime(), new Date(EVENTO.data + "T00:00:00").getTime()));
+      for(var d = new Date(ini); d <= fim; d.setDate(d.getDate() + 1)){
+        var ch = d.toISOString().slice(0, 10);
+        acum += porDia[ch] || 0;
+        pontos.push({ x: ch.slice(8, 10) + "/" + ch.slice(5, 7), y: acum });
+      }
+    }
+    if(pontos.length > 1) linhaEG("evLinha", pontos, { cor:"#8fc79f", altura:200, unidade:"confirmado(s)" });
+    else $("evLinha").innerHTML = '<p class="vazio">Ainda não há confirmações suficientes pra desenhar a curva.</p>';
+
+    var tot = Math.max(1, base.length);
+    $("evBarra").innerHTML =
+      '<i style="width:' + (conf.length / tot * 100) + '%;background:#8fc79f;"></i>' +
+      '<i style="width:' + (nao.length / tot * 100) + '%;background:#d98a8a;"></i>' +
+      '<i style="width:' + (sem.length / tot * 100) + '%;background:#3a4a63;"></i>';
+    $("evLegenda").innerHTML =
+      '<span><i style="background:#8fc79f"></i><b>' + conf.length + '</b> confirmaram</span>' +
+      '<span><i style="background:#d98a8a"></i><b>' + nao.length + '</b> não vão</span>' +
+      '<span><i style="background:#3a4a63"></i><b>' + sem.length + '</b> sem resposta</span>';
+
+    function listaItens(el, itens, campo, vazio){
+      $(el).innerHTML = itens.length ? itens.map(function(x){
+        return '<div class="ev-item"><b>' + esc(x.a.full_name) + '</b><span>' + esc(x.r[campo]) + '</span></div>';
+      }).join("") : '<p class="vazio">' + vazio + '</p>';
+    }
+    listaItens("evRestricoes", rest, "dietary", "Nenhuma restrição informada até agora.");
+    listaItens("evNecessidades", nec, "special_needs", "Nenhuma necessidade especial informada.");
+
+    var lista = pares.filter(function(x){
+      if(evFiltro === "todos") return true;
+      if(evFiltro === "conjuge") return x.sit === "confirmado" && x.r.spouse;
+      return x.sit === evFiltro;
+    }).sort(function(x, y){ return String(x.a.full_name).localeCompare(String(y.a.full_name)); });
+    $("evNota").textContent = lista.length + " na lista · " + pct + "% da base respondeu";
+    var SELO = { confirmado:'<span class="selo ok">vai</span>', nao_vai:'<span class="selo risco">não vai</span>', sem_resposta:'<span class="selo">sem resposta</span>' };
+    $("tabEvento").innerHTML = lista.length ? lista.map(function(x){
+      var a = x.a, r = x.r;
+      return '<tr><td><span class="principal">' + esc(a.full_name) + waHtml(a.phone) + '</span><span class="secundario">' + esc(a.email || "") + '</span></td>' +
+        '<td>' + esc((r && r.badge_name) || "—") + '</td>' +
+        '<td>' + SELO[x.sit] + '</td>' +
+        '<td>' + (r ? (r.spouse === true ? "sim" : r.spouse === false ? "não" : "—") : "—") + '</td>' +
+        '<td>' + esc((r && r.dietary) || "—") + '</td>' +
+        '<td>' + esc((r && r.special_needs) || "—") + '</td>' +
+        '<td>' + esc((a.staff && a.staff.full_name) || "—") + '</td>' +
+        '<td class="num-col">' + (r ? evDataHora(r.submitted_at || r.updated_at) : "—") + '</td></tr>';
+    }).join("") : '<tr><td colspan="8" class="vazio">Ninguém nesse recorte.</td></tr>';
+  }
+  document.querySelectorAll("#chipsEv .chip").forEach(function(ch){
+    ch.addEventListener("click", function(){
+      document.querySelectorAll("#chipsEv .chip").forEach(function(c){ c.classList.remove("on"); });
+      ch.classList.add("on");
+      evFiltro = ch.getAttribute("data-ev");
+      renderEvento();
     });
   });
 
