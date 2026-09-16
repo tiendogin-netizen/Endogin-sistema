@@ -55,6 +55,24 @@
   .tab-btn.active{background:rgba(201,151,75,0.12);color:var(--eg-gold-100);border-color:var(--eg-border);}
   .tab-btn.active i{color:var(--eg-gold-300);}
   .tab-panel{display:none;} .tab-panel.active{display:block;}
+  /* guia de uso */
+  .guia-indice{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 18px;}
+  .guia-indice a{font-size:11.5px;font-weight:600;padding:6px 11px;border-radius:99px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-secondary);text-decoration:none;}
+  .guia-indice a:hover{border-color:var(--eg-gold-500);color:var(--eg-gold-100);}
+  .guia-sec{padding:18px 0 6px;border-top:1px solid var(--eg-navy-line);scroll-margin-top:80px;}
+  .guia-sec:first-of-type{border-top:none;padding-top:0;}
+  .guia-sec h4{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:9px;}
+  .guia-sec h4 i{color:var(--eg-gold-300);font-size:13px;}
+  .guia-sec .pra{font-size:12px;color:var(--eg-text-muted);margin:0 0 10px;}
+  .guia-sec ol,.guia-sec ul{margin:6px 0 10px;padding-left:20px;font-size:13px;line-height:1.65;color:var(--eg-text-secondary);}
+  .guia-sec li b{color:var(--eg-text-primary);}
+  .guia-sec p{font-size:13px;line-height:1.65;color:var(--eg-text-secondary);margin:6px 0;}
+  .guia-dica{border-left:3px solid var(--eg-gold-500);background:rgba(201,151,75,.07);padding:8px 12px;border-radius:0 8px 8px 0;font-size:12.5px;margin:8px 0 4px;color:var(--eg-text-secondary);}
+  .guia-dica b{color:var(--eg-gold-100);}
+  .guia-alerta{border-left:3px solid var(--eg-red);background:rgba(217,138,138,.07);padding:8px 12px;border-radius:0 8px 8px 0;font-size:12.5px;margin:8px 0 4px;color:var(--eg-text-secondary);}
+  .guia-sec.destaque{background:linear-gradient(90deg,rgba(201,151,75,.10),transparent 70%);border-radius:10px;padding:14px 14px 8px;border-top:none;margin-top:6px;}
+  .guia-faq summary{cursor:pointer;font-size:13px;font-weight:600;padding:8px 0;color:var(--eg-text-primary);}
+  .guia-faq p{margin:0 0 10px 18px;}
   @media (max-width:900px){
     .page{flex-direction:column;}
     .side-nav{position:relative;width:100%;height:auto;flex-direction:row;overflow-x:auto;padding:12px 16px;border-right:none;border-bottom:1px solid var(--eg-navy-line);}
@@ -530,6 +548,7 @@
         <button class="tab-btn" data-tab="nps"><i class="fa-solid fa-gauge-high"></i>NPS</button>
         <button class="tab-btn" data-tab="relatorios"><i class="fa-solid fa-file-export"></i>Relatórios</button>
         <button class="tab-btn" data-tab="equipe"><i class="fa-solid fa-user-group"></i>Equipe CS</button>
+        <button class="tab-btn" data-tab="guia"><i class="fa-regular fa-circle-question"></i>Como usar</button>
       </div>
     </div>
 
@@ -541,6 +560,7 @@
           <div class="user-av" id="userAv"></div>
           <span id="userName"></span>
         </div>
+        <button class="logout-btn" id="ajudaBtn" title="Como usar esta tela" style="margin-right:8px;"><i class="fa-regular fa-circle-question"></i> Como usar</button>
         <button class="logout-btn" id="logoutBtn">Sair</button>
       </div>
     </div>
@@ -878,6 +898,174 @@
             <thead><tr><th>Como veio no formulário</th><th>Vai?</th><th>Ligar ao aluno</th></tr></thead>
             <tbody id="evSemParBody"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-guia">
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-regular fa-circle-question icn"></i>Como usar a Área CS</h3><span class="hint">guia rápido, tela por tela</span></div>
+        <p class="hint" style="margin:-8px 0 14px;">Tudo que você faz aqui aparece na hora no Portal do Aluno e na Área de Mentores — não existe "salvar e sincronizar". Clique numa tela abaixo pra pular direto.</p>
+        <div class="guia-indice">
+          <a href="#guia-comeco">Comece aqui</a><a href="#guia-alunos">Alunos</a><a href="#guia-ficha">Ficha do aluno</a><a href="#guia-carteiras">Carteiras</a><a href="#guia-disc">Perfil DISC</a><a href="#guia-eventos">Eventos</a><a href="#guia-grupos">Grupos WhatsApp</a><a href="#guia-aulas">Aulas</a><a href="#guia-calendario">Calendário</a><a href="#guia-materiais">Materiais</a><a href="#guia-progresso">Progresso</a><a href="#guia-sessoes">Sessões 1x1</a><a href="#guia-trilha">Trilha CS</a><a href="#guia-aniversarios">Aniversários</a><a href="#guia-recados">Recados</a><a href="#guia-feedbacks">Feedbacks e NPS</a><a href="#guia-relatorios">Relatórios</a><a href="#guia-equipe">Equipe CS</a><a href="#guia-portal">O que o aluno vê</a><a href="#guia-faq">Perguntas frequentes</a>
+        </div>
+
+        <div class="guia-sec destaque" id="guia-comeco">
+          <h4><i class="fa-solid fa-flag"></i>Comece aqui — as 3 regras da casa</h4>
+          <ul>
+            <li><b>Você vê os seus alunos.</b> Aparece pra você quem tem você como CS responsável em alguma mentoria. A Thaís (e a diretoria) vê todo mundo. Se um aluno seu não aparece, é porque na ficha dele a CS daquela mentoria é outra pessoa — fala com a Thaís.</li>
+            <li><b>Um aluno pode estar em mais de uma mentoria</b>, cada uma com sua CS, sua data de entrada e seu vencimento. Ele aparece pra cada CS responsável.</li>
+            <li><b>Tudo é ao vivo.</b> Mudou na ficha, mudou no Portal do aluno e na tela dos doutores no mesmo minuto.</li>
+          </ul>
+          <div class="guia-dica"><b>Senha:</b> em Equipe CS → "Minha senha" você troca a sua. Aluno esqueceu a dele? Na ficha dele, bloco "Acesso ao Portal", defina uma nova.</div>
+        </div>
+
+        <div class="guia-sec" id="guia-alunos">
+          <h4><i class="fa-solid fa-users"></i>Alunos</h4>
+          <p class="pra">Sua carteira. É daqui que sai quase tudo.</p>
+          <ul>
+            <li><b>Busca</b> por nome, e-mail, CPF ou telefone. <b>Filtros</b> por status, mentoria, temperatura, vencimento e <b>Jornada</b> (quem nunca entrou no Portal, quem falta fazer o DISC, quem parou na trilha, quem não fez o 1x1).</li>
+            <li><b>Ordenar</b> por nome, vencimento mais próximo ou entrada mais recente.</li>
+            <li>A coluna <b>Jornada</b> mostra em que pé o aluno está no Portal. "Sem login" = ele ainda não tem acesso; "Nunca entrou" = tem login mas não usou.</li>
+            <li>O ícone verde do WhatsApp ao lado do nome abre a conversa direto.</li>
+            <li><b>Chip "sem acesso"</b>: filtra quem ainda não tem login no Portal.</li>
+          </ul>
+        </div>
+
+        <div class="guia-sec" id="guia-ficha">
+          <h4><i class="fa-solid fa-id-card"></i>Ficha do aluno (botão "Editar")</h4>
+          <ol>
+            <li><b>Jornada no Portal</b> (em cima): login criado?, primeiro e último acesso, boas-vindas, DISC, trilha x de 5, 1x1. Logo abaixo, as etapas com quadradinhos — clique pra marcar como feita (ex.: ele confirmou por telefone que assistiu a aula).</li>
+            <li><b>Mentorias</b>: clique nos chips pra colocar/tirar o aluno de uma mentoria. Pra cada mentoria marcada aparece uma linha com <b>entrou em</b>, <b>vence em</b> e <b>CS responsável</b>. As datas gerais do aluno (entrada e vencimento) são calculadas sozinhas a partir dessas linhas — a mais antiga e a mais próxima.</li>
+            <li><b>Status</b>: ativo, onboarding, trancado, inativo, cancelado. Aluno que saiu → <b>inativo</b> (ele continua no histórico). <b>Excluir</b> (só master) é pra cadastro duplicado ou teste — apaga tudo.</li>
+            <li><b>Jornada no Portal → Aluno novo / Veterano</b>: veterano é quem já passou pela trilha e 1x1 antes do Portal; ele faz só boas-vindas e DISC. Todo mundo começa como "novo" — quem decide é a Thaís.</li>
+            <li><b>Temperatura, status de renovação, inadimplência, nota</b>: é o que alimenta "Precisam de atenção" na tela dos doutores. Mantenha atualizado.</li>
+            <li><b>Acesso ao Portal</b>: criar login (e-mail + senha), trocar senha, gerar link de acesso, ou excluir só o login (o cadastro fica).</li>
+          </ol>
+          <div class="guia-alerta"><b>Vencimento vencido e aluno ainda "ativo"</b> aparece em vermelho pros doutores como "contrato vencido há X dias". Se ele renovou, atualize a data; se saiu, mude o status.</div>
+        </div>
+
+        <div class="guia-sec" id="guia-carteiras">
+          <h4><i class="fa-solid fa-chart-pie"></i>Carteiras CS</h4>
+          <p>Visão da carteira por CS: quantos ativos, quantos vencem em 30/60/90 dias, vencidos, vitalícios. Os chips filtram a lista embaixo. Serve pra planejar a semana de renovação.</p>
+        </div>
+
+        <div class="guia-sec" id="guia-disc">
+          <h4><i class="fa-solid fa-chart-pie"></i>Perfil DISC</h4>
+          <p>Resultado do teste que o aluno responde no primeiro acesso ao Portal. <b>D</b> Dominância, <b>I</b> Influência, <b>S</b> Estabilidade, <b>C</b> Conformidade. Clique no aluno pra ver o radar e uma leitura de como ele prefere ser acompanhado. Filtre por mentoria, CS e perfil. Quem ainda não respondeu: é porque ainda não entrou no Portal — use o filtro Jornada na aba Alunos.</p>
+        </div>
+
+        <div class="guia-sec" id="guia-eventos">
+          <h4><i class="fa-solid fa-ticket"></i>Eventos</h4>
+          <p>Confirmações de presença que chegam <b>sozinhas</b> do formulário do Google (o aluno responde, aparece aqui em segundos).</p>
+          <ul>
+            <li><b>Sem resposta</b> é a lista pra cobrar — WhatsApp ao lado do nome.</li>
+            <li>Aluno confirmou por WhatsApp em vez do formulário? Clique no <b>✓</b> (ou <b>✕</b> se avisou que não vai). O que a CS marca vale mais que o formulário.</li>
+            <li><b>Respostas sem aluno encontrado</b>: o e-mail/telefone do formulário não bateu com o cadastro. Escolha o aluno na lista, uma vez só.</li>
+            <li><b>Exportar lista</b> gera o Excel do recorte (confirmados com restrição alimentar, por exemplo) pra mandar pro buffet.</li>
+          </ul>
+        </div>
+
+        <div class="guia-sec" id="guia-grupos">
+          <h4><i class="fa-brands fa-whatsapp"></i>Grupos WhatsApp</h4>
+          <p>Em quais grupos cada aluno está. Cadastre os grupos uma vez; depois é marcar na ficha. Aluno que saiu do grupo: desmarque. Serve pra conferir quem ficou de fora de algum grupo obrigatório.</p>
+        </div>
+
+        <div class="guia-sec" id="guia-aulas">
+          <h4><i class="fa-solid fa-graduation-cap"></i>Aulas (buscar aula)</h4>
+          <p>Um chat pra achar aula gravada pelo assunto ("aula sobre GLP-1", "agendamento"). Ele responde com título, módulo e link da Cademí — pra você mandar pro aluno sem sair daqui.</p>
+        </div>
+
+        <div class="guia-sec destaque" id="guia-calendario">
+          <h4><i class="fa-regular fa-calendar-days"></i>Calendário — em 3 passos</h4>
+          <ol>
+            <li><b>Escolha a mentoria</b> nas abas de cima (Mentoria Mãe, Start Caio e Jordana, Surgical…).</li>
+            <li><b>Veja a semana dela</b>: grade de segunda a domingo. Card sem link fica marcado em dourado ("sem link") — o aluno não consegue entrar sem isso.</li>
+            <li><b>Clique em "Nova aula na [mentoria]"</b>. A aula já nasce presa àquela mentoria; a frase verde no formulário confirma pra quem ela vai aparecer.</li>
+          </ol>
+          <ul>
+            <li><b>Aula semanal</b> repete toda semana no mesmo dia/hora. <b>Encontro</b> é uma data só (some do Portal depois que passa).</li>
+            <li><b>"Todas as mentorias (geral)"</b>: só pra aula que é realmente pra base inteira. Tudo ali aparece pra todo aluno, de qualquer mentoria.</li>
+            <li><b>Aulas obrigatórias</b>: as 5 da trilha de boas-vindas. Clique no lápis pra colocar capa (link de imagem) e link.</li>
+            <li><b>ID do Zoom</b> no formulário: é o que vai permitir medir presença quando o Zoom estiver ligado.</li>
+            <li><b>Arte da semana</b> (mais embaixo): monta a imagem pro WhatsApp a partir do que está cadastrado. "Baixar uma por mentoria" gera todas de uma vez.</li>
+          </ul>
+        </div>
+
+        <div class="guia-sec" id="guia-materiais">
+          <h4><i class="fa-solid fa-folder-open"></i>Materiais</h4>
+          <p>PDF, protocolo, checklist. Escolha a mentoria (ou todas), categoria e marque "Vigente". Saiu versão nova? Suba a nova e arquive a antiga — o aluno só vê a vigente.</p>
+        </div>
+
+        <div class="guia-sec" id="guia-progresso">
+          <h4><i class="fa-solid fa-chart-line"></i>Progresso de aulas</h4>
+          <p>Quanto cada aluno assistiu de cada curso, vindo da Cademí sozinho (webhook). O botão "Sincronizar" só é necessário pra puxar o histórico de aluno novo — o dia a dia atualiza sem clicar em nada. A parte de Zoom (presença ao vivo) ainda não está ligada.</p>
+        </div>
+
+        <div class="guia-sec" id="guia-sessoes">
+          <h4><i class="fa-solid fa-calendar-check"></i>Sessões 1x1</h4>
+          <p>O aluno pede um horário pelo Portal (depois de fechar a trilha); aparece aqui como <b>a agendar</b>. Você confirma a data, marca <b>agendada/confirmada</b> e, depois que aconteceu, <b>realizada</b>. Só "realizada" fecha a etapa na jornada do aluno. Dá pra criar sessão na mão também.</p>
+        </div>
+
+        <div class="guia-sec" id="guia-trilha">
+          <h4><i class="fa-solid fa-route"></i>Trilha CS</h4>
+          <p>Seu próprio treinamento como CS: marque cada etapa conforme for concluindo. A Thaís acompanha o percentual de cada pessoa.</p>
+        </div>
+
+        <div class="guia-sec" id="guia-aniversarios">
+          <h4><i class="fa-solid fa-cake-candles"></i>Aniversários</h4>
+          <p>Quem faz aniversário nos próximos dias (precisa ter data de nascimento na ficha). "Baixar arte" gera a imagem de parabéns já com foto e nome.</p>
+        </div>
+
+        <div class="guia-sec" id="guia-recados">
+          <h4><i class="fa-solid fa-bullhorn"></i>Recados</h4>
+          <ol>
+            <li>"Novo recado": título, mensagem, link e/ou arquivo (PDF, imagem).</li>
+            <li><b>Pra quais mentorias?</b> Marque as mentorias — só os alunos delas veem. Aparecem pra você as mentorias que você atende.</li>
+            <li><b>Prazo</b>: depois dessa data o recado some do Portal sozinho.</li>
+          </ol>
+          <p>Aparece no Portal em destaque, acima da jornada, até vencer.</p>
+        </div>
+
+        <div class="guia-sec" id="guia-feedbacks">
+          <h4><i class="fa-regular fa-comment-dots"></i>Feedbacks e NPS</h4>
+          <p><b>NPS</b>: a nota de 0 a 10 que o aluno dá no primeiro acesso e nas pesquisas periódicas (você também pode registrar uma nota que ele deu por WhatsApp). <b>Feedbacks</b>: comentários livres. Nota ≤ 6 pesa no "risco de não renovar" que os doutores veem.</p>
+        </div>
+
+        <div class="guia-sec" id="guia-relatorios">
+          <h4><i class="fa-solid fa-file-export"></i>Relatórios — exportar e importar</h4>
+          <ul>
+            <li><b>Exportar alunos</b>: Excel da sua carteira (Thaís: tudo). Escolha as colunas.</li>
+            <li><b>Importar alunos por planilha</b>: cadastra alunos novos a partir de uma planilha. Quem já existe (mesmo e-mail) não é duplicado; aluno que já é de outra CS é pulado e avisado.</li>
+            <li><b>Importar as planilhas da CS</b> (só Thaís): as duas planilhas oficiais (carteira e acessos), com a regra de desempate entre elas.</li>
+          </ul>
+          <div class="guia-dica"><b>Diferença:</b> "planilha de alunos" traz cadastro (nome, e-mail, telefone, mentoria); "planilha de acesso" traz quem tem login na Cademí. As duas casam pelo e-mail.</div>
+        </div>
+
+        <div class="guia-sec" id="guia-equipe">
+          <h4><i class="fa-solid fa-user-group"></i>Equipe CS (Thaís)</h4>
+          <p>Cadastrar CS, ligar CS às mentorias que ela atende (é isso que define as mentorias que ela vê no recado e na arte), ativar/desativar, e distribuição automática de aluno novo. "Minha senha" fica aqui pra todo mundo.</p>
+        </div>
+
+        <div class="guia-sec destaque" id="guia-portal">
+          <h4><i class="fa-solid fa-mobile-screen"></i>O que o aluno vê no Portal</h4>
+          <ol>
+            <li><b>Primeiro acesso</b>: boas-vindas (NPS, foto, aniversário) → <b>teste DISC</b> → Jornada. Isso acontece uma vez só, automaticamente.</li>
+            <li><b>Jornada</b>: as etapas (boas-vindas, DISC, trilha de 5 aulas obrigatórias, sessão 1x1, mentoria em andamento). A trilha vem em cards com capa e link; quando fecha, libera pedir o 1x1.</li>
+            <li><b>Recados</b> em destaque, <b>Calendário</b> só com as aulas das mentorias dele, <b>Conteúdos</b> (cursos, livro, galeria do Curso 3), <b>Materiais</b> vigentes, <b>Feedback & NPS</b>.</li>
+            <li>A CS dele aparece no canto com botão de WhatsApp.</li>
+          </ol>
+        </div>
+
+        <div class="guia-sec" id="guia-faq">
+          <h4><i class="fa-regular fa-circle-question"></i>Perguntas frequentes</h4>
+          <details class="guia-faq"><summary>Um aluno meu não aparece na minha lista</summary><p>Na ficha dele, a CS responsável daquela mentoria é outra pessoa (ou está vazia). Quem corrige é a Thaís: Alunos → Editar → linha da mentoria → CS.</p></details>
+          <details class="guia-faq"><summary>Criei uma aula e o aluno não vê</summary><p>Confira na aba da mentoria dele no Calendário se a aula está lá. Se estiver em outra mentoria ou em "geral", abra a aula e troque o campo "Pra qual mentoria é essa aula?". Aula sem link não abre pro aluno.</p></details>
+          <details class="guia-faq"><summary>O aluno não consegue entrar no Portal</summary><p>Ficha → "Acesso ao Portal". Se "Sem login", crie (e-mail + senha). Se já tem, defina uma senha nova e mande pra ele. O e-mail de login é o do cadastro.</p></details>
+          <details class="guia-faq"><summary>O DISC dele não aparece</summary><p>Ele ainda não fez o primeiro acesso (coluna Jornada = "Nunca entrou" ou "Falta DISC"). O teste é obrigatório no primeiro login — é só ele entrar.</p></details>
+          <details class="guia-faq"><summary>Marquei "realizada" na sessão 1x1 e a jornada não mudou</summary><p>Peça pra ele dar F5 no Portal. A jornada lê o banco ao abrir.</p></details>
+          <details class="guia-faq"><summary>Quero que uma etapa da trilha conte como feita</summary><p>Ficha → bloco Jornada → clique no quadradinho da aula. Vale o mesmo pro DISC e boas-vindas.</p></details>
+          <details class="guia-faq"><summary>Os doutores estão vendo um dado errado</summary><p>A Área de Mentores só espelha as fichas. Corrija na ficha (data, status, temperatura) e a tela deles muda no próximo minuto.</p></details>
         </div>
       </div>
     </div>
@@ -1690,6 +1878,16 @@
   }
 
   // ---------------- tabs ----------------
+  // "Como usar" no topo: abre o guia ja na secao da tela que a pessoa estava
+  var GUIA_SECAO = { dashboard:"guia-comeco", alunos:"guia-alunos", carteiras:"guia-carteiras", disc:"guia-disc", eventos:"guia-eventos", grupos:"guia-grupos", aulas:"guia-aulas", calendario:"guia-calendario", materiais:"guia-materiais", progresso:"guia-progresso", sessoes:"guia-sessoes", trilha:"guia-trilha", aniversarios:"guia-aniversarios", recados:"guia-recados", feedbacks:"guia-feedbacks", nps:"guia-feedbacks", relatorios:"guia-relatorios", equipe:"guia-equipe" };
+  if($("ajudaBtn")) $("ajudaBtn").addEventListener("click", function(){
+    var ativa = document.querySelector(".tab-btn.active");
+    var alvo = ativa ? GUIA_SECAO[ativa.getAttribute("data-tab")] : null;
+    var btnGuia = document.querySelector('.tab-btn[data-tab="guia"]');
+    if(btnGuia) btnGuia.click();
+    if(alvo && $(alvo)) setTimeout(function(){ $(alvo).scrollIntoView({ behavior:"smooth", block:"start" }); }, 60);
+  });
+
   document.querySelectorAll(".tab-btn").forEach(function(btn){
     btn.addEventListener("click", function(){
       document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
