@@ -314,6 +314,26 @@
   .filter-block{margin-bottom:12px;}
   .filter-block-label{font-size:10.5px;color:var(--eg-text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:6px;display:block;}
   .filter-chip{font-size:11px;font-weight:600;padding:6px 11px;border-radius:99px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-secondary);cursor:pointer;user-select:none;display:inline-block;margin:0 6px 6px 0;}
+  /* calendario por mentoria */
+  #calMentoriaChips .filter-chip{font-size:12px;padding:8px 14px;}
+  #calMentoriaChips .filter-chip .n{opacity:.6;margin-left:6px;font-weight:500;}
+  .cal-cab{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 16px;border:1px solid var(--eg-border);border-radius:12px;background:linear-gradient(90deg,rgba(201,151,75,.10),transparent 70%);margin-bottom:14px;}
+  .cal-cab b{font-size:15px;}
+  .cal-semana{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
+  .cal-dia{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:10px;padding:10px 10px 8px;min-height:120px;}
+  .cal-dia > b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--eg-text-muted);margin-bottom:8px;}
+  .cal-dia.hoje > b{color:var(--eg-gold-300);}
+  .cal-aula{border:1px solid var(--eg-border);border-left:3px solid var(--eg-gold-500);border-radius:8px;padding:8px 9px;margin-bottom:7px;background:rgba(255,255,255,.02);cursor:pointer;}
+  .cal-aula:hover{border-color:var(--eg-gold-500);}
+  .cal-aula .h{font-family:var(--eg-mono,monospace);font-size:11px;color:var(--eg-gold-300);}
+  .cal-aula .t{display:block;font-size:12px;font-weight:600;margin-top:2px;line-height:1.3;}
+  .cal-aula .m{font-size:10.5px;color:var(--eg-text-muted);}
+  .cal-aula.evento{border-left-color:#8fb3e0;}
+  .cal-aula.evento .h{color:#8fb3e0;}
+  .cal-vazio{font-size:11px;color:var(--eg-text-muted);font-style:italic;}
+  .cal-encontros{margin:0 0 14px;}
+  @media (max-width:900px){ .cal-semana{grid-template-columns:repeat(2,1fr);} .cal-dia{min-height:auto;} }
+  @media (max-width:520px){ .cal-semana{grid-template-columns:1fr;} }
   .filter-chip.selected{background:rgba(201,151,75,0.16);border-color:var(--eg-gold-500);color:var(--eg-gold-100);}
   .wpp-group-tag{font-size:9.5px;font-weight:700;background:rgba(201,151,75,0.14);color:var(--eg-gold-100);padding:3px 7px;border-radius:99px;margin:1px 3px 1px 0;display:inline-block;}
   .wpp-alert{background:rgba(217,138,138,0.1);border:1px solid rgba(217,138,138,0.3);border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:12.5px;}
@@ -945,10 +965,17 @@
     <div class="tab-panel" id="tab-calendario">
       <div class="card">
         <div class="card-head">
-          <h3><i class="fa-solid fa-calendar-days icn"></i>Aulas da semana e encontros</h3>
-          <button class="btn-secondary" id="newLessonBtn"><i class="fa-solid fa-plus"></i> Nova aula/encontro</button>
+          <h3><i class="fa-solid fa-calendar-days icn"></i>Calendário das mentorias</h3>
         </div>
-        <p class="hint" style="margin:-8px 0 14px;">É o que aparece no card "Calendário" do Portal do Aluno. Aula semanal repete toda semana no mesmo dia/horário; encontro é pontual, numa data específica.</p>
+        <p class="hint" style="margin:-8px 0 12px;"><b>1.</b> Escolha a mentoria. <b>2.</b> Veja a semana dela. <b>3.</b> Clique em "Nova aula" — a aula já nasce presa àquela mentoria e só os alunos dela veem no Portal.</p>
+        <div class="filter-row" id="calMentoriaChips" style="margin-bottom:14px;"></div>
+        <div class="cal-cab" id="calCabecalho" style="display:none;">
+          <div>
+            <b id="calCabTitulo"></b>
+            <p class="hint" id="calCabSub" style="margin:2px 0 0;"></p>
+          </div>
+          <button class="btn-primary" id="newLessonBtn" style="width:auto;"><i class="fa-solid fa-plus"></i> <span id="newLessonBtnTexto">Nova aula</span></button>
+        </div>
         <div id="calendarioLoading" class="loading-note">Carregando...</div>
         <div id="calendarioList"></div>
       </div>
@@ -1450,6 +1477,11 @@
     <div class="modal-head"><b id="lessonModalTitle">Nova aula/encontro</b><button class="modal-close" id="lessonModalClose"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
       <div class="form-grid">
+        <div style="grid-column:1/-1;">
+          <label>Pra qual mentoria é essa aula?</label>
+          <select id="lessonFieldBranch"><option value="">Todas as mentorias</option></select>
+          <div id="lessonAlvo" class="hint" style="margin-top:6px;padding:8px 10px;border-radius:8px;border:1px solid var(--eg-border);"></div>
+        </div>
         <div style="grid-column:1/-1;"><label>Título</label><input type="text" id="lessonFieldTitle" placeholder="Ex: Aula ao vivo de emagrecimento"></div>
         <div>
           <label>Tipo</label>
@@ -1459,7 +1491,6 @@
             <option value="trilha">Aula obrigatória (trilha de boas-vindas)</option>
           </select>
         </div>
-        <div><label>Mentoria</label><select id="lessonFieldBranch"><option value="">Todas as mentorias</option></select></div>
         <div id="lessonWeekdayWrap"><label>Dia da semana</label>
           <select id="lessonFieldWeekday">
             <option value="segunda">Segunda</option>
@@ -4762,6 +4793,42 @@
       allBranches.map(function(b){ return '<option value="' + b.id + '">' + b.name + '</option>'; }).join("");
   }
 
+  // Quantos alunos ativos tem em cada mentoria (so faz sentido pra master,
+  // que enxerga a base inteira; a CS ve a carteira dela e o numero enganaria)
+  function alunosAtivosDaMentoria(branchId){
+    if(!currentStaff.isMasterLike) return null;
+    return allStudents.filter(function(st){
+      if(st.status === "inativo" || st.status === "cancelado") return false;
+      return (st.deliveries || []).some(function(d){ return d.status === "ativo" && d.branch_id === branchId; });
+    }).length;
+  }
+
+  // Frase viva no formulario: pra quem essa aula vai aparecer. E a resposta
+  // da duvida que as CS tinham ("se eu criar aqui, vai pra quem?").
+  function atualizaLessonAlvo(){
+    var el = $("lessonAlvo"); if(!el) return;
+    var id = $("lessonFieldBranch").value;
+    var tipo = $("lessonFieldType").value;
+    if(tipo === "trilha"){
+      el.innerHTML = '<i class="fa-solid fa-route"></i> Aula obrigatória: aparece na <b>trilha de boas-vindas</b> de todo aluno novo' + (id ? ' da mentoria escolhida' : ', de qualquer mentoria') + '.';
+      el.style.color = ""; el.style.borderColor = "var(--eg-border)"; return;
+    }
+    if(!id){
+      el.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> <b>Vai aparecer para TODOS os alunos, de todas as mentorias.</b> Se a aula é de uma mentoria só, escolha ela acima.';
+      el.style.color = "var(--eg-gold-300)"; el.style.borderColor = "var(--eg-gold-500)"; return;
+    }
+    var b = allBranches.find(function(x){ return x.id === id; });
+    var n = alunosAtivosDaMentoria(id);
+    el.innerHTML = '<i class="fa-solid fa-users"></i> Vai aparecer no Portal <b>só para os alunos da ' + (b ? b.name : "mentoria") + '</b>' + (n !== null ? ' (' + n + ' ativo(s))' : '') + '. Ninguém de outra mentoria vê.';
+    el.style.color = "var(--eg-green)"; el.style.borderColor = "rgba(143,199,159,.5)";
+  }
+  if($("lessonFieldBranch")) $("lessonFieldBranch").addEventListener("change", atualizaLessonAlvo);
+  if($("lessonFieldType")) $("lessonFieldType").addEventListener("change", atualizaLessonAlvo);
+
+  // mentoria escolhida na aba Calendario: "" = visao geral, "geral" = aulas
+  // sem mentoria, "trilha" = obrigatorias, ou o id da mentoria
+  var calMentoriaSel = "";
+
   function toggleLessonTypeFields(){
     var tipo = $("lessonFieldType").value;
     var isEvento = tipo === "evento", isTrilha = tipo === "trilha";
@@ -4782,7 +4849,9 @@
     $("lessonFieldTitle").value = "";
     $("lessonFieldType").value = "semanal";
     populateLessonBranchSelect();
-    $("lessonFieldBranch").value = "";
+    // nasce presa a mentoria que esta aberta na aba
+    $("lessonFieldBranch").value = (calMentoriaSel && calMentoriaSel !== "geral" && calMentoriaSel !== "trilha") ? calMentoriaSel : "";
+    if(calMentoriaSel === "trilha") $("lessonFieldType").value = "trilha";
     $("lessonFieldWeekday").value = "segunda";
     $("lessonFieldDate").value = "";
     $("lessonFieldTime").value = "";
@@ -4793,6 +4862,7 @@
     $("lessonFieldLink").value = "";
     $("lessonFieldZoomId").value = "";
     toggleLessonTypeFields();
+    atualizaLessonAlvo();
     $("lessonModal").classList.add("open");
   });
 
@@ -4804,6 +4874,7 @@
     $("lessonFieldType").value = l.lesson_type;
     populateLessonBranchSelect();
     $("lessonFieldBranch").value = l.branch_id || "";
+    setTimeout(atualizaLessonAlvo, 0);
     $("lessonFieldWeekday").value = l.weekday || "segunda";
     $("lessonFieldDate").value = l.event_date || "";
     $("lessonFieldTime").value = l.scheduled_time ? l.scheduled_time.slice(0,5) : "";
@@ -5206,12 +5277,103 @@
   // A lista era um monte so, e com Mae, duas Starts e a Surgical no mesmo lugar
   // ninguem enxerga de quem e cada aula. Agora cada mentoria tem o seu bloco —
   // que e exatamente o recorte que a arte do WhatsApp usa.
+  var CAL_DIAS = ["segunda","terca","quarta","quinta","sexta","sabado","domingo"];
+
+  function renderCalMentoriaChips(){
+    var wrap = $("calMentoriaChips"); if(!wrap) return;
+    function conta(f){ return allLessons.filter(f).length; }
+    var chips = [{ id:"", nome:"Visão geral", n: allLessons.length }];
+    allBranches.slice().sort(function(a, b){ return (a.name || "").localeCompare(b.name || ""); }).forEach(function(b){
+      chips.push({ id:b.id, nome:b.name, n: conta(function(l){ return l.branch_id === b.id && l.lesson_type !== "trilha"; }) });
+    });
+    chips.push({ id:"geral", nome:"Todas as mentorias (geral)", n: conta(function(l){ return !l.branch_id && l.lesson_type !== "trilha"; }), alerta:true });
+    chips.push({ id:"trilha", nome:"Aulas obrigatórias", n: conta(function(l){ return l.lesson_type === "trilha"; }) });
+    wrap.innerHTML = chips.map(function(c){
+      return '<span class="filter-chip' + (calMentoriaSel === c.id ? " selected" : "") + '" data-cal-m="' + c.id + '"' + (c.alerta && c.n ? ' style="border-color:var(--eg-gold-500);"' : '') + '>' + c.nome + '<span class="n">' + c.n + '</span></span>';
+    }).join("");
+    wrap.querySelectorAll("[data-cal-m]").forEach(function(ch){
+      ch.addEventListener("click", function(){ calMentoriaSel = ch.getAttribute("data-cal-m"); renderCalendarioList(); });
+    });
+  }
+
+  // Semana de UMA mentoria: encontros com data em cima, depois a grade
+  // seg..dom com as aulas semanais. E o que o aluno daquela mentoria ve.
+  function renderCalSemana(aulas, nomeMentoria){
+    var hojeIdx = (new Date().getDay() + 6) % 7; // segunda = 0
+    var encontros = aulas.filter(function(l){ return l.lesson_type === "evento"; })
+      .sort(function(a, b){ return String(a.event_date || "").localeCompare(String(b.event_date || "")); });
+    var semanais = aulas.filter(function(l){ return l.lesson_type === "semanal"; });
+    function card(l){
+      var h = l.scheduled_time ? l.scheduled_time.slice(0, 5).replace(":", "h") : "sem horário";
+      return '<div class="cal-aula ' + l.lesson_type + '" data-id="' + l.id + '" title="Clique pra editar">' +
+        '<span class="h">' + (l.lesson_type === "evento" ? fmtEventDate(l.event_date) + ' · ' : '') + h + (l.duration_minutes ? ' · ' + l.duration_minutes + 'min' : '') + '</span>' +
+        '<span class="t">' + l.title + '</span>' +
+        (l.category && l.category !== "Geral" ? '<span class="m">' + l.category + '</span>' : '') +
+        (l.link_url ? '<span class="m"> · <i class="fa-solid fa-link"></i> link ok</span>' : '<span class="m" style="color:var(--eg-gold-300);"> · sem link</span>') +
+        '</div>';
+    }
+    var html = "";
+    if(encontros.length){
+      html += '<div class="cal-encontros"><b style="font-size:12px;">Encontros com data marcada</b><div class="hint" style="margin-bottom:8px;">Aparecem no Portal até a data passar.</div>' + encontros.map(card).join("") + '</div>';
+    }
+    html += '<div class="cal-semana">' + CAL_DIAS.map(function(d, i){
+      var doDia = semanais.filter(function(l){ return l.weekday === d; }).sort(function(a, b){ return (a.scheduled_time || "").localeCompare(b.scheduled_time || ""); });
+      return '<div class="cal-dia' + (i === hojeIdx ? " hoje" : "") + '"><b>' + LESSON_WEEKDAY_LABEL[d] + '</b>' +
+        (doDia.length ? doDia.map(card).join("") : '<span class="cal-vazio">—</span>') + '</div>';
+    }).join("") + '</div>';
+    if(!aulas.length) html = '<p class="hint">Nenhuma aula cadastrada' + (nomeMentoria ? ' na ' + nomeMentoria : '') + ' ainda. Clique em "Nova aula" aí em cima.</p>';
+    return html;
+  }
+
   function renderCalendarioList(){
     var wrap = $("calendarioList");
     // Montar a grade da semana e trabalho corrente de qualquer CS, nao so da
     // master. Apagar continua restrito: aula sumida no meio da semana vira
     // aluno perdido, e ninguem sabe quem tirou.
-    $("newLessonBtn").style.display = "inline-flex";
+    renderCalMentoriaChips();
+    var cab = $("calCabecalho"); cab.style.display = "flex";
+
+    if(calMentoriaSel){
+      var aulasSel, titulo, sub, btn;
+      if(calMentoriaSel === "geral"){
+        aulasSel = allLessons.filter(function(l){ return !l.branch_id && l.lesson_type !== "trilha"; });
+        titulo = "Aulas para todas as mentorias";
+        sub = "Tudo aqui aparece para TODOS os alunos, de qualquer mentoria. Use só pra aula realmente geral.";
+        btn = "Nova aula geral (todas)";
+      } else if(calMentoriaSel === "trilha"){
+        aulasSel = allLessons.filter(function(l){ return l.lesson_type === "trilha"; });
+        titulo = "Aulas obrigatórias — trilha de boas-vindas";
+        sub = "Todo aluno novo precisa assistir antes do 1x1. Clique no lápis pra colocar capa e link.";
+        btn = "Nova aula obrigatória";
+      } else {
+        var b = allBranches.find(function(x){ return x.id === calMentoriaSel; });
+        aulasSel = allLessons.filter(function(l){ return l.branch_id === calMentoriaSel && l.lesson_type !== "trilha"; });
+        var n = alunosAtivosDaMentoria(calMentoriaSel);
+        titulo = "Semana da " + (b ? b.name : "mentoria");
+        sub = "Só os alunos da " + (b ? b.name : "mentoria") + (n !== null ? " (" + n + " ativos)" : "") + " veem essas aulas no Portal. A arte do WhatsApp usa exatamente esta lista.";
+        btn = "Nova aula na " + (b ? b.name : "mentoria");
+      }
+      $("calCabTitulo").textContent = titulo;
+      $("calCabSub").textContent = sub;
+      $("newLessonBtnTexto").textContent = btn;
+      if(calMentoriaSel === "trilha"){
+        wrap.innerHTML = aulasSel.length ? aulasSel.map(calendarioLinha).join("") : '<p class="hint">Nenhuma aula obrigatória cadastrada.</p>';
+      } else {
+        wrap.innerHTML = renderCalSemana(aulasSel, calMentoriaSel === "geral" ? "" : ($("calCabTitulo").textContent.replace("Semana da ", "")));
+        wrap.querySelectorAll(".cal-aula[data-id]").forEach(function(el){
+          el.addEventListener("click", function(){
+            var l = allLessons.find(function(x){ return x.id === el.getAttribute("data-id"); });
+            if(l) openLessonForEdit(l);
+          });
+        });
+      }
+      ligaBotoesCalendario(wrap);
+      return;
+    }
+
+    $("calCabTitulo").textContent = "Visão geral — todas as mentorias";
+    $("calCabSub").textContent = "Escolha uma mentoria acima pra ver a semana dela e criar aula já no lugar certo.";
+    $("newLessonBtnTexto").textContent = "Nova aula";
     if(!allLessons.length){ wrap.innerHTML = '<p class="hint">Nenhuma aula semanal ou encontro cadastrado ainda.</p>'; return; }
 
     var blocos = [];
@@ -5260,6 +5422,10 @@
         '</div>';
     }).join("");
 
+    ligaBotoesCalendario(wrap);
+  }
+
+  function ligaBotoesCalendario(wrap){
     wrap.querySelectorAll(".lesson-edit-btn").forEach(function(btn){
       btn.addEventListener("click", function(){
         var l = allLessons.find(function(x){ return x.id === btn.getAttribute("data-id"); });
