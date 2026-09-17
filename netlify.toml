@@ -1,35 +1,11 @@
 # Só as quatro páginas e os assets são públicos. O resto do repositório
 # (migrations SQL, código das Edge Functions, arquivos de trabalho) não
 # tem por que ser servido pelo site.
-[[redirects]]
-  from = "/*.sql"
-  to = "/404.html"
-  status = 404
-  force = true
-
-[[redirects]]
-  from = "/supabase/*"
-  to = "/404.html"
-  status = 404
-  force = true
-
-[[redirects]]
-  from = "/*.py"
-  to = "/404.html"
-  status = 404
-  force = true
-
-[[redirects]]
-  from = "/*.md"
-  to = "/404.html"
-  status = 404
-  force = true
-
-[[redirects]]
-  from = "/netlify.toml"
-  to = "/404.html"
-  status = 404
-  force = true
+[build]
+  # Publica só o que é site: as páginas e os assets. SQL, código das funções
+  # e arquivos de trabalho ficam fora do que o Netlify sobe.
+  command = "rm -rf dist && mkdir -p dist && cp *.html dist/ && cp -r assets dist/assets"
+  publish = "dist"
 
 # Cabeçalhos de proteção do navegador
 [[headers]]
