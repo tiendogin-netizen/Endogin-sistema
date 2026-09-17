@@ -3970,6 +3970,12 @@
   // enxerga na aba Alunos — CS ve os dela, Thais ve todos), cruzada com as
   // respostas. Recarrega ao abrir a aba, a cada 60s enquanto aberta, e no
   // botao Atualizar.
+  // texto que veio de fora (formulario, Zoom) nunca entra como HTML
+  function esc(v){
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
   var EVENTO_ATUAL = {
     key: "mentalidade-2026-10-17",
     nome: "Evento de Mentalidade · 17/10/2026",
@@ -4059,11 +4065,11 @@
       var s = x.s, r = x.r;
       return '<tr>' +
         '<td><b>' + s.full_name + '</b>' + waLinkHtml(s.phone) + '<br><span class="hint">' + (s.email || "") + '</span></td>' +
-        '<td>' + (r && r.badge_name ? r.badge_name : '<span class="hint">—</span>') + '</td>' +
+        '<td>' + (r && r.badge_name ? esc(r.badge_name) : '<span class="hint">—</span>') + '</td>' +
         '<td>' + SIT[x.sit] + (r && r.manual ? ' <span class="hint" title="marcado pela CS">manual</span>' : '') + '</td>' +
         '<td>' + (r ? (r.spouse === true ? "sim" : r.spouse === false ? "não" : "—") : "—") + '</td>' +
-        '<td>' + (r && r.dietary ? r.dietary : '<span class="hint">—</span>') + '</td>' +
-        '<td>' + (r && r.special_needs ? r.special_needs : '<span class="hint">—</span>') + '</td>' +
+        '<td>' + (r && r.dietary ? esc(r.dietary) : '<span class="hint">—</span>') + '</td>' +
+        '<td>' + (r && r.special_needs ? esc(r.special_needs) : '<span class="hint">—</span>') + '</td>' +
         '<td class="hint">' + (r ? evDataHora(r.submitted_at || r.updated_at) : "—") + '</td>' +
         '<td>' + csPorMentoriaHtml(s) + '</td>' +
         '<td style="white-space:nowrap;">' +
@@ -4097,7 +4103,7 @@
         .map(function(st){ return '<option value="' + st.id + '">' + st.full_name + (st.email ? " — " + st.email : "") + '</option>'; }).join("");
       $("evSemParBody").innerHTML = semPar.map(function(r){
         return '<tr>' +
-          '<td><b>' + (r.full_name || "(sem nome)") + '</b><br><span class="hint">' + [r.email, r.phone].filter(Boolean).join(" · ") + '</span></td>' +
+          '<td><b>' + esc(r.full_name || "(sem nome)") + '</b><br><span class="hint">' + esc([r.email, r.phone].filter(Boolean).join(" · ")) + '</span></td>' +
           '<td>' + (r.attending === true ? "sim" : r.attending === false ? "não" : "—") + '</td>' +
           '<td><select data-ev-liga="' + r.id + '" style="max-width:320px;"><option value="">Escolher aluno…</option>' + opcoes + '</select></td>' +
         '</tr>';
@@ -4180,7 +4186,7 @@
             : (p.student_id ? '<span class="hint">aluno de outra carteira</span>'
               : '<select data-zoom-liga="' + p.id + '" style="max-width:260px;"><option value="">Ligar a um aluno…</option>' +
                 allStudents.map(function(x){ return '<option value="' + x.id + '">' + x.full_name + '</option>'; }).join("") + '</select>');
-          return '<tr><td>' + p.participant_name + (p.participant_email ? '<br><span class="hint">' + p.participant_email + '</span>' : '') + '</td><td>' + alunoCel + '</td><td>' + (p.duration_min || 0) + ' min</td></tr>';
+          return '<tr><td>' + esc(p.participant_name) + (p.participant_email ? '<br><span class="hint">' + esc(p.participant_email) + '</span>' : '') + '</td><td>' + alunoCel + '</td><td>' + (p.duration_min || 0) + ' min</td></tr>';
         }).join("") +
         '</tbody></table></div></details>';
     }).join("");
