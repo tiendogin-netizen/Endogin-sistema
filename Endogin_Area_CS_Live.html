@@ -1665,6 +1665,35 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="anivModal">
+  <div class="modal-card" style="max-width:820px;">
+    <div class="modal-head"><b>Arte de aniversário</b><button class="modal-close" id="anivModalClose"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:minmax(200px,260px) 1fr;gap:18px;align-items:start;">
+        <div>
+          <img id="anivPreview" alt="prévia" style="width:100%;border-radius:10px;border:1px solid var(--eg-navy-line);background:#0a1730;display:block;min-height:200px;">
+          <p class="hint" style="margin:6px 0 0;text-align:center;">Confira antes de baixar.</p>
+        </div>
+        <div class="form-grid" style="grid-template-columns:1fr;">
+          <div>
+            <label>Nome como vai sair na arte</label>
+            <input type="text" id="anivNome" placeholder="Ex: Dra. Nauale Lima">
+            <p class="hint" id="anivNomeDica" style="margin:4px 0 0;"></p>
+          </div>
+          <div>
+            <label>Foto</label>
+            <div id="anivFotoStatus" class="hint" style="margin:0 0 6px;"></div>
+            <input type="file" id="anivFotoInput" accept="image/*">
+            <p class="hint" style="margin:4px 0 0;">A foto fica salva na ficha do aluno — da próxima vez já vem pronta.</p>
+          </div>
+          <div class="err-msg" id="anivErr"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot"><span class="hint" id="anivRodape"></span><button class="btn-primary" id="anivBaixarBtn"><i class="fa-solid fa-download"></i> Baixar PNG</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="lessonModal">
   <div class="modal-card">
     <div class="modal-head"><b id="lessonModalTitle">Nova aula/encontro</b><button class="modal-close" id="lessonModalClose"><i class="fa-solid fa-xmark"></i></button></div>
@@ -4574,7 +4603,7 @@
     wrap.querySelectorAll("[data-aniv-art]").forEach(function(btn){
       btn.addEventListener("click", function(){
         var student = withBirth.find(function(s){ return s.id === btn.getAttribute("data-aniv-art"); });
-        if(student) generateBirthdayArt(student);
+        if(student) abreArteAniversario(student);
       });
     });
   }
@@ -4593,17 +4622,79 @@
   var BIRTHDAY_BOX = { x: 138, y: 395, w: 803, h: 804, r: 52 };
   var BIRTHDAY_TAG = { right: 1013, top: 1079, h: 73, padX: 26, cor: "#d0aa70", minW: 430 };
 
-  function generateBirthdayArt(student){
+  // Conferencia antes de baixar: a CS ve a arte pronta, ajusta o nome
+  // (Dr./Dra.) e, se o aluno ainda nao tem foto, coloca uma na hora — a foto
+  // vai pra ficha. So libera o download com foto: arte sem a foto do doutor
+  // nao pode sair.
+  var anivAluno = null, anivTimer = null;
+  function abreArteAniversario(student){
+    anivAluno = student;
+    $("anivErr").textContent = "";
+    $("anivNome").value = student.full_name || "";
+    $("anivFotoInput").value = "";
+    $("anivPreview").removeAttribute("src");
+    $("anivModal").classList.add("open");
+    atualizaArteAniversario();
+  }
+  function atualizaArteAniversario(){
+    var st = anivAluno; if(!st) return;
+    var nome = $("anivNome").value.trim();
+    var temFoto = !!st.photo_url;
+    $("anivFotoStatus").innerHTML = temFoto
+      ? '<span style="color:var(--eg-green);"><i class="fa-solid fa-check"></i> Foto da ficha carregada.</span> Pra trocar, escolha outra abaixo.'
+      : '<span style="color:var(--eg-red);"><i class="fa-solid fa-triangle-exclamation"></i> Este aluno ainda não tem foto.</span> Escolha uma abaixo antes de baixar.';
+    $("anivNomeDica").textContent = /^dr\.?a?\.?\s/i.test(nome) ? "" : "Dica: confira o tratamento — Dr. ou Dra. na frente do nome.";
+    $("anivBaixarBtn").disabled = !temFoto || !nome;
+    $("anivRodape").textContent = temFoto && nome ? "Sai em 1080×1920 (story)." : "Falta " + (!temFoto ? "a foto" : "o nome") + ".";
+    generateBirthdayArt(Object.assign({}, st, { full_name: nome || st.full_name }), function(canvas){
+      $("anivPreview").src = canvas.toDataURL("image/jpeg", 0.85);
+    });
+  }
+  $("anivNome").addEventListener("input", function(){ clearTimeout(anivTimer); anivTimer = setTimeout(atualizaArteAniversario, 250); });
+  $("anivModalClose").addEventListener("click", function(){ $("anivModal").classList.remove("open"); });
+  $("anivFotoInput").addEventListener("change", function(e){
+    var file = e.target.files && e.target.files[0]; if(!file || !anivAluno) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var img = new Image();
+      img.onload = function(){
+        // guarda em 1000px (o quadro da arte tem 803): leve e nitida
+        var LADO = 1000, c = document.createElement("canvas");
+        var fator = Math.min(1, LADO / Math.max(img.width, img.height));
+        c.width = Math.round(img.width * fator); c.height = Math.round(img.height * fator);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        var dataUrl = c.toDataURL("image/jpeg", 0.85);
+        $("anivErr").textContent = "";
+        sb.from("students").update({ photo_url: dataUrl }).eq("id", anivAluno.id).then(function(r){
+          if(r.error){ $("anivErr").textContent = "Não consegui salvar a foto: " + r.error.message; return; }
+          anivAluno.photo_url = dataUrl;
+          var naLista = allStudents.find(function(x){ return x.id === anivAluno.id; });
+          if(naLista) naLista.photo_url = dataUrl;
+          atualizaArteAniversario();
+        });
+      };
+      img.onerror = function(){ $("anivErr").textContent = "Não consegui ler essa imagem. Tente JPG ou PNG."; };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  $("anivBaixarBtn").addEventListener("click", function(){
+    if(!anivAluno || !anivAluno.photo_url) return;
+    var nome = $("anivNome").value.trim() || anivAluno.full_name;
+    generateBirthdayArt(Object.assign({}, anivAluno, { full_name: nome }), function(canvas){
+      var link = document.createElement("a");
+      link.download = "aniversario-" + nome.replace(/\s+/g, "-").toLowerCase() + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    });
+  });
+
+  function generateBirthdayArt(student, pronto){
     var canvas = $("birthdayCanvas");
     var ctx = canvas.getContext("2d");
     var W = canvas.width, H = canvas.height;
 
-    function finish(){
-      var link = document.createElement("a");
-      link.download = "aniversario-" + student.full_name.trim().replace(/\s+/g, "-").toLowerCase() + ".png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    }
+    function finish(){ if(pronto) pronto(canvas); }
 
     function roundRect(x, y, w, h, r){
       ctx.beginPath();
