@@ -4587,6 +4587,9 @@
   // cantos arredondados e o nome vai na tarja dourada, alinhada a direita do
   // quadro. Medidas tiradas da propria arte.
   var BIRTHDAY_TEMPLATE_URL = "/assets/aniversario-base.jpg";
+  // os baloes que invadem o quadro ficam NA FRENTE da foto, como na arte
+  // original — recorte transparente so dessa parte
+  var BIRTHDAY_OVERLAY_URL = "/assets/aniversario-baloes.png";
   var BIRTHDAY_BOX = { x: 138, y: 395, w: 803, h: 804, r: 52 };
   var BIRTHDAY_TAG = { right: 1013, top: 1079, h: 73, padX: 26, cor: "#d0aa70", minW: 430 };
 
@@ -4613,6 +4616,13 @@
 
     function drawPhotoAndName(){
       function drawName(){
+        var ov = new Image();
+        ov.crossOrigin = "anonymous";
+        ov.onload = function(){ ctx.drawImage(ov, BIRTHDAY_BOX.x, BIRTHDAY_BOX.y); drawTag(); };
+        ov.onerror = drawTag;
+        ov.src = BIRTHDAY_OVERLAY_URL;
+      }
+      function drawTag(){
         // tarja dourada com o nome, encostada na direita do quadro; a fonte
         // encolhe se o nome for comprido, e a tarja cresce junto
         var nome = (student.full_name || "").trim();
