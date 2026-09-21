@@ -1285,7 +1285,7 @@
         <div id="aniversariosList"></div>
       </div>
     </div>
-    <canvas id="birthdayCanvas" width="1080" height="1080" style="display:none;"></canvas>
+    <canvas id="birthdayCanvas" width="1080" height="1920" style="display:none;"></canvas>
 
     <!-- ================= RECADOS ================= -->
     <div class="tab-panel" id="tab-recados">
@@ -4583,9 +4583,12 @@
   // Enquanto o Luiz não manda o template de verdade, isso desenha uma arte base
   // com a identidade da Endogin. Pra trocar depois pelo template real, é só
   // preencher BIRTHDAY_TEMPLATE_URL com a imagem e ajustar as posições abaixo.
-  var BIRTHDAY_TEMPLATE_URL = "";
-  var BIRTHDAY_PHOTO = { x: 540, y: 430, radius: 260 };
-  var BIRTHDAY_NAME_Y = 800;
+  // Template oficial (story 1080x1920): a foto entra no quadro claro com
+  // cantos arredondados e o nome vai na tarja dourada, alinhada a direita do
+  // quadro. Medidas tiradas da propria arte.
+  var BIRTHDAY_TEMPLATE_URL = "/assets/aniversario-base.jpg";
+  var BIRTHDAY_BOX = { x: 138, y: 395, w: 803, h: 804, r: 52 };
+  var BIRTHDAY_TAG = { right: 1013, top: 1079, h: 73, padX: 26, cor: "#d0aa70", minW: 430 };
 
   function generateBirthdayArt(student){
     var canvas = $("birthdayCanvas");
@@ -4599,53 +4602,62 @@
       link.click();
     }
 
+    function roundRect(x, y, w, h, r){
+      ctx.beginPath();
+      ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
     function drawPhotoAndName(){
       function drawName(){
-        ctx.textAlign = "center";
-        ctx.fillStyle = "#f2dfae";
-        ctx.font = "700 54px 'Sora', sans-serif";
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
-        ctx.shadowBlur = 12;
-        ctx.fillText(student.full_name, W / 2, BIRTHDAY_NAME_Y);
-        ctx.shadowBlur = 0;
+        // tarja dourada com o nome, encostada na direita do quadro; a fonte
+        // encolhe se o nome for comprido, e a tarja cresce junto
+        var nome = (student.full_name || "").trim();
+        var size = 54;
+        ctx.font = "700 " + size + "px 'Montserrat', sans-serif";
+        var maxTexto = BIRTHDAY_BOX.w - BIRTHDAY_TAG.padX * 2 - 20;
+        while(ctx.measureText(nome).width > maxTexto && size > 30){ size -= 2; ctx.font = "700 " + size + "px 'Montserrat', sans-serif"; }
+        var tw = Math.max(BIRTHDAY_TAG.minW, ctx.measureText(nome).width + BIRTHDAY_TAG.padX * 2);
+        var tx = BIRTHDAY_TAG.right - tw, ty = BIRTHDAY_TAG.top;
+        ctx.fillStyle = BIRTHDAY_TAG.cor;
+        ctx.fillRect(tx, ty, tw, BIRTHDAY_TAG.h);
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(nome, tx + tw / 2, ty + BIRTHDAY_TAG.h / 2 + 2);
+        ctx.textBaseline = "alphabetic";
         finish();
       }
       if(student.photo_url){
         var img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = function(){
+          var B = BIRTHDAY_BOX;
           ctx.save();
-          ctx.beginPath();
-          ctx.arc(BIRTHDAY_PHOTO.x, BIRTHDAY_PHOTO.y, BIRTHDAY_PHOTO.radius, 0, Math.PI * 2);
-          ctx.closePath();
+          roundRect(B.x, B.y, B.w, B.h, B.r);
           ctx.clip();
-          var scale = Math.max((BIRTHDAY_PHOTO.radius * 2) / img.width, (BIRTHDAY_PHOTO.radius * 2) / img.height);
+          var scale = Math.max(B.w / img.width, B.h / img.height);
           var iw = img.width * scale, ih = img.height * scale;
-          ctx.drawImage(img, BIRTHDAY_PHOTO.x - iw / 2, BIRTHDAY_PHOTO.y - ih / 2, iw, ih);
+          ctx.drawImage(img, B.x + (B.w - iw) / 2, B.y + (B.h - ih) / 2, iw, ih);
           ctx.restore();
-          ctx.beginPath();
-          ctx.arc(BIRTHDAY_PHOTO.x, BIRTHDAY_PHOTO.y, BIRTHDAY_PHOTO.radius, 0, Math.PI * 2);
-          ctx.lineWidth = 8;
-          ctx.strokeStyle = "#c9974b";
-          ctx.stroke();
           drawName();
         };
         img.onerror = drawName;
         img.src = student.photo_url;
       } else {
-        // sem foto cadastrada ainda: iniciais num círculo dourado
+        // sem foto: fica a paisagem do template, com as iniciais no meio
+        var B2 = BIRTHDAY_BOX;
         ctx.beginPath();
-        ctx.arc(BIRTHDAY_PHOTO.x, BIRTHDAY_PHOTO.y, BIRTHDAY_PHOTO.radius, 0, Math.PI * 2);
-        ctx.fillStyle = "#152436";
+        ctx.arc(B2.x + B2.w / 2, B2.y + B2.h / 2 - 40, 170, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(10,23,48,.85)";
         ctx.fill();
-        ctx.lineWidth = 8;
-        ctx.strokeStyle = "#c9974b";
-        ctx.stroke();
+        ctx.lineWidth = 8; ctx.strokeStyle = "#c9974b"; ctx.stroke();
         ctx.fillStyle = "#f2dfae";
-        ctx.font = "700 140px 'Sora', sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(teamInitials(student.full_name).toUpperCase(), BIRTHDAY_PHOTO.x, BIRTHDAY_PHOTO.y + 10);
+        ctx.font = "700 150px 'Sora', sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(teamInitials(student.full_name).toUpperCase(), B2.x + B2.w / 2, B2.y + B2.h / 2 - 30);
         ctx.textBaseline = "alphabetic";
         drawName();
       }
