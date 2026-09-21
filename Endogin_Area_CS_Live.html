@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -516,6 +517,7 @@
     </div>
     <div class="login-field"><label>E-mail</label><input type="email" id="loginEmail" placeholder="seuemail@exemplo.com"></div>
     <div class="login-field"><label>Senha</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
+    <div id="turnstileBox" style="margin:0 0 10px;"></div>
     <button class="btn-primary" id="loginBtn" style="width:100%;">Entrar</button>
     <div class="err-msg" id="loginErr"></div>
     <p class="hint" style="margin-top:16px;">Login gerado pela Thais — se ainda não tem um, peça pra ela.</p>
@@ -1837,6 +1839,25 @@
 
   function $(id){ return document.getElementById(id); }
 
+
+  // ---------- Cloudflare Turnstile (anti-robô no login) ----------
+  // Sem chave configurada o widget nem aparece e o login segue normal.
+  // Com chave: o token vai junto no signIn e o Supabase confere.
+  var TURNSTILE_SITE_KEY = "";
+  var turnstileWidget = null;
+  function turnstileMonta(){
+    if(!TURNSTILE_SITE_KEY || turnstileWidget !== null || typeof turnstile === "undefined") return;
+    var alvo = document.getElementById("turnstileBox"); if(!alvo) return;
+    turnstileWidget = turnstile.render(alvo, { sitekey: TURNSTILE_SITE_KEY, theme: "dark", appearance: "interaction-only", language: "pt-BR" });
+  }
+  function turnstileToken(){
+    if(!TURNSTILE_SITE_KEY) return undefined;
+    if(turnstileWidget === null) turnstileMonta();
+    try { return turnstile.getResponse(turnstileWidget) || undefined; } catch(e){ return undefined; }
+  }
+  function turnstileReset(){ if(turnstileWidget !== null){ try { turnstile.reset(turnstileWidget); } catch(e){} } }
+  window.addEventListener("load", function(){ setTimeout(turnstileMonta, 300); });
+
   // ---------------- login ----------------
   $("loginBtn").addEventListener("click", doLogin);
   $("loginPassword").addEventListener("keydown", function(e){ if(e.key === "Enter") doLogin(); });
@@ -1847,10 +1868,13 @@
     $("loginErr").textContent = "";
     if(!email || !password){ $("loginErr").textContent = "Preencha e-mail e senha."; return; }
     $("loginBtn").disabled = true;
-    sb.auth.signInWithPassword({ email: email, password: password }).then(function(res){
+    var token = turnstileToken();
+    if(TURNSTILE_SITE_KEY && !token){ $("loginBtn").disabled = false; $("loginErr").textContent = "Aguarde um instante a verificação de segurança e tente de novo."; return; }
+    sb.auth.signInWithPassword({ email: email, password: password, options: { captchaToken: token } }).then(function(res){
       $("loginBtn").disabled = false;
+      turnstileReset();
       if(res.error){
-        $("loginErr").textContent = "Login inválido. Confira e-mail/senha ou peça um novo pra Thais.";
+        $("loginErr").textContent = /captcha/i.test(res.error.message) ? "A verificação de segurança falhou. Recarregue a página e tente de novo." : "Login inválido. Confira e-mail/senha ou peça um novo pra Thais.";
         return;
       }
       boot();

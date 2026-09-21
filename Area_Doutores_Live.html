@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Montserrat:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
 <style>
   :root{
@@ -279,6 +280,7 @@
     <p>Acesso do Dr. Caio e do Dr. Vinícius ao panorama da mentoria.</p>
     <div class="campo"><label for="loginEmail">E-mail</label><input type="email" id="loginEmail" style="width:100%;" autocomplete="username" required></div>
     <div class="campo"><label for="loginSenha">Senha</label><input type="password" id="loginSenha" style="width:100%;" autocomplete="current-password" required></div>
+    <div id="turnstileBox" style="margin:0 0 10px;"></div>
     <button class="btn btn-full" type="submit" id="btnEntrar">Entrar</button>
     <div class="erro" id="loginErro"></div>
   </form>
@@ -1049,15 +1051,37 @@
     return "Nao consegui entrar: " + (erro && erro.message ? erro.message : "erro desconhecido");
   }
 
+
+  // ---------- Cloudflare Turnstile (anti-robô no login) ----------
+  // Sem chave configurada o widget nem aparece e o login segue normal.
+  // Com chave: o token vai junto no signIn e o Supabase confere.
+  var TURNSTILE_SITE_KEY = "";
+  var turnstileWidget = null;
+  function turnstileMonta(){
+    if(!TURNSTILE_SITE_KEY || turnstileWidget !== null || typeof turnstile === "undefined") return;
+    var alvo = document.getElementById("turnstileBox"); if(!alvo) return;
+    turnstileWidget = turnstile.render(alvo, { sitekey: TURNSTILE_SITE_KEY, theme: "dark", appearance: "interaction-only", language: "pt-BR" });
+  }
+  function turnstileToken(){
+    if(!TURNSTILE_SITE_KEY) return undefined;
+    if(turnstileWidget === null) turnstileMonta();
+    try { return turnstile.getResponse(turnstileWidget) || undefined; } catch(e){ return undefined; }
+  }
+  function turnstileReset(){ if(turnstileWidget !== null){ try { turnstile.reset(turnstileWidget); } catch(e){} } }
+  window.addEventListener("load", function(){ setTimeout(turnstileMonta, 300); });
+
   // ---------- login ----------
   $("formLogin").addEventListener("submit", function(ev){
     ev.preventDefault();
     var err = $("loginErro");
     err.textContent = "";
     $("btnEntrar").disabled = true;
-    sb.auth.signInWithPassword({ email: $("loginEmail").value.trim(), password: $("loginSenha").value }).then(function(r){
+    var token = turnstileToken();
+    if(TURNSTILE_SITE_KEY && !token){ $("btnEntrar").disabled = false; err.textContent = "Aguarde um instante a verificação de segurança e tente de novo."; return; }
+    sb.auth.signInWithPassword({ email: $("loginEmail").value.trim(), password: $("loginSenha").value, options: { captchaToken: token } }).then(function(r){
       $("btnEntrar").disabled = false;
-      if(r.error){ err.textContent = explicaErroLogin(r.error); return; }
+      turnstileReset();
+      if(r.error){ err.textContent = /captcha/i.test(r.error.message) ? "A verificação de segurança falhou. Recarregue a página e tente de novo." : explicaErroLogin(r.error); return; }
       confereAcesso();
     });
   });
