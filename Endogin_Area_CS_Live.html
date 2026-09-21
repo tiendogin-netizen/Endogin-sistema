@@ -1137,7 +1137,13 @@
     <!-- ================= AULAS ================= -->
     <div class="tab-panel" id="tab-aulas">
       <div class="card">
-        <div class="card-head"><h3><i class="fa-solid fa-graduation-cap icn"></i>Buscar aula (chat)</h3></div>
+        <div class="card-head">
+          <h3><i class="fa-solid fa-graduation-cap icn"></i>Buscar aula (chat)</h3>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="hint" id="catalogoStatus"></span>
+            <button class="btn-secondary" id="catalogoSyncBtn" type="button"><i class="fa-solid fa-rotate"></i> Atualizar catálogo da Cademi</button>
+          </div>
+        </div>
         <p class="hint" style="margin:-8px 0 16px;">Digite o assunto ou o nome da aula que você está procurando — sem lista, é só perguntar, igual um chat. Sem transcrição, só o catálogo (título, módulo, link, duração).</p>
         <div class="aula-chat-embed">
           <div class="aula-chat-messages" id="aulasChatMessages"></div>
@@ -3534,8 +3540,37 @@
       .order("name")
       .then(function(r){
         allAulaCourses = (r.data || []).filter(function(c){ return c.course_lessons && c.course_lessons.length; });
+        var n = allAulaCourses.reduce(function(t, c){ return t + c.course_lessons.length; }, 0);
+        if($("catalogoStatus")) $("catalogoStatus").textContent = n + " aula(s) em " + allAulaCourses.length + " curso(s) no catálogo";
       });
   }
+
+  // Puxa produtos e aulas da Cademi em lotes (limite de 2 chamadas/s la),
+  // chamando a funcao ate ela dizer que nao falta nada.
+  if($("catalogoSyncBtn")) $("catalogoSyncBtn").addEventListener("click", function(){
+    var b = $("catalogoSyncBtn"), st = $("catalogoStatus");
+    var force = confirm("Atualizar o catálogo inteiro? (OK = tudo de novo · Cancelar = só o que ainda não foi sincronizado)");
+    b.disabled = true; var total = 0, rodadas = 0;
+    function passo(){
+      rodadas++;
+      st.textContent = "Sincronizando com a Cademi… (rodada " + rodadas + ", " + total + " aula(s) até agora)";
+      sb.functions.invoke("cademi-sync-catalog", { body: { force: force && rodadas === 1 } }).then(function(r){
+        var d = r.data || {};
+        if(r.error || !d.ok){
+          b.disabled = false; st.textContent = "Não deu: " + ((d && d.error) || (r.error && r.error.message) || "erro");
+          return;
+        }
+        total += d.aulas_gravadas || 0;
+        if(d.avisos && d.avisos.length) console.warn("catálogo Cademi:", d.avisos);
+        if(d.exemplo_item) console.log("exemplo de item da Cademi:", d.exemplo_item);
+        if(d.restantes > 0 && d.processados > 0){ setTimeout(passo, 500); return; }
+        b.disabled = false;
+        loadAulas();
+        st.textContent = "Catálogo atualizado: " + d.produtos_na_cademi + " produto(s) na Cademi, " + total + " aula(s) gravadas nesta rodada" + (d.avisos && d.avisos.length ? " · " + d.avisos.length + " aviso(s) (veja o console)" : "");
+      });
+    }
+    passo();
+  });
 
   function escapeHtml(s){
     return (s || "").toString()
