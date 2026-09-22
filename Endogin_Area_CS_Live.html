@@ -1178,13 +1178,13 @@
 
       <div class="card">
         <div class="card-head">
-          <h3><i class="fa-solid fa-image icn"></i>Arte da semana para o WhatsApp</h3>
+          <h3><i class="fa-solid fa-image icn"></i>Arte da semana — <span id="arteQualMentoria">todas as mentorias</span></h3>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn-secondary" id="arteBaixarTodasBtn" style="width:auto;"><i class="fa-solid fa-layer-group"></i> Baixar uma por mentoria</button>
-            <button class="btn-primary" id="arteBaixarBtn"><i class="fa-solid fa-download"></i> Baixar PNG</button>
+            <button class="btn-secondary" id="arteBaixarTodasBtn" style="width:auto;"><i class="fa-solid fa-layer-group"></i> Baixar todas de uma vez</button>
+            <button class="btn-primary" id="arteBaixarBtn"><i class="fa-solid fa-download"></i> <span id="arteBaixarTexto">Baixar esta arte</span></button>
           </div>
         </div>
-        <p class="hint" style="margin:-8px 0 14px;">Monta a imagem <b>a partir das aulas que já estão cadastradas acima</b> — você não digita nada de novo. O que o aluno vê no Portal e o que sai na arte são sempre a mesma coisa.</p>
+        <p class="hint" style="margin:-8px 0 14px;">Monta a imagem <b>a partir das aulas cadastradas acima</b> — você não digita nada. <b>A arte acompanha a mentoria que você escolheu lá em cima:</b> abriu Ativação, a arte é da Ativação. <b>"Baixar todas de uma vez"</b> gera a geral (com a semana inteira) mais uma de cada mentoria que tem aula — uma pra mandar em cada grupo.</p>
         <div class="filter-row" style="margin-bottom:14px;align-items:flex-end;gap:14px;flex-wrap:wrap;">
           <div><label class="hint" style="display:block;margin-bottom:5px;">Semana de</label><input type="date" id="arteInicio"></div>
           <div><label class="hint" style="display:block;margin-bottom:5px;">até</label><input type="date" id="arteFim"></div>
@@ -5421,6 +5421,18 @@
     });
   }
 
+  // A arte acompanha a aba de mentoria aberta no Calendario: abriu Ativacao,
+  // a arte ja e a da Ativacao. Antes o seletor da arte vivia separado e a CS
+  // via o cronograma de todo mundo achando que era daquela mentoria.
+  function arteSegueMentoria(sel){
+    var alvo = (sel === "geral" || sel === "trilha") ? "" : (sel || "");
+    var campo = $("arteBranch");
+    if(!campo) return;
+    arteAtualizaMentorias();
+    if(campo.value !== alvo){ campo.value = alvo; }
+    renderArteSemana();
+  }
+
   // Qual mentoria esta escolhida no seletor da arte (null = todas).
   function arteMentoriaNome(){
     var sel = $("arteBranch");
@@ -5511,12 +5523,14 @@
 
     var nomeMent = arteMentoriaNome();
     var misturando = !nomeMent && arteBranchesComAula().length > 0;
+    if($("arteQualMentoria")) $("arteQualMentoria").textContent = nomeMent || "geral (todas as mentorias)";
+    if($("arteBaixarTexto")) $("arteBaixarTexto").textContent = nomeMent ? "Baixar arte da " + nomeMent : "Baixar arte geral";
     $("arteStatus").innerHTML = total
       ? total + " aula(s) nesta semana" + (nomeMent ? ' de <b>' + nomeMent + '</b>' : "") + ", vindas do Calendário acima." +
         (misturando
-          ? '<br><span style="color:var(--eg-gold-300);"><b>Esta imagem está misturando mentorias.</b> Com "Todas as mentorias" escolhido, a arte junta aula de mentorias diferentes — mandada no grupo de uma delas, mostra aula que aquele aluno não tem. Escolha a mentoria aí em cima, ou clique em "Baixar uma por mentoria".</span>'
+          ? '<br><span style="color:var(--eg-gold-300);">Esta é a arte <b>geral</b>: junta aula de mentorias diferentes. Serve pra visão da equipe — no grupo de cada mentoria, mande a arte dela (escolha a mentoria lá em cima ou clique em "Baixar todas de uma vez").</span>'
           : "")
-      : 'Nenhuma aula cadastrada para essa semana. Cadastre acima em "Nova aula/encontro" e a arte se monta sozinha.';
+      : 'Nenhuma aula cadastrada para essa semana' + (nomeMent ? ' na <b>' + nomeMent + '</b>' : "") + '. Cadastre acima em "Nova aula" e a arte se monta sozinha.';
   }
 
   // Quais mentorias tem aula PROPRIA nesta semana. As aulas marcadas como
@@ -5597,12 +5611,12 @@
       return;
     }
 
-    var alvos = arteBranchesComAula();
-    if(!alvos.length){
+    // a geral primeiro (semana inteira), depois uma por mentoria com aula
+    var alvos = [{ id: "", name: "geral (todas as mentorias)" }].concat(arteBranchesComAula());
+    if(alvos.length === 1){
       st.innerHTML = '<span style="color:var(--eg-gold-300);">Nenhuma aula desta semana está vinculada a uma mentoria — todas estão como "Todas as mentorias". ' +
-        'Enquanto for assim, uma imagem só já serve, e ela vale para a base inteira. ' +
-        'Marque a mentoria de cada aula no Calendário acima (lápis) e este botão passa a gerar uma arte por mentoria.</span>';
-      return;
+        'Enquanto for assim, a arte geral já serve pra base inteira. ' +
+        'Marque a mentoria de cada aula no Calendário acima e este botão passa a gerar também uma arte por mentoria.</span>';
     }
 
     var escolhaOriginal = $("arteBranch").value;
@@ -5621,7 +5635,7 @@
     }
 
     function proxima(){
-      if(i >= alvos.length){ encerra(alvos.length + " imagem(ns) baixada(s), uma por mentoria."); return; }
+      if(i >= alvos.length){ encerra(alvos.length + " imagem(ns) baixada(s): a geral e uma pra cada mentoria com aula."); return; }
       var b = alvos[i++];
       btn.innerHTML = "Gerando " + i + " de " + alvos.length + "...";
       $("arteBranch").value = b.id;
@@ -5799,6 +5813,7 @@
       $("calCabTitulo").textContent = titulo;
       $("calCabSub").textContent = sub;
       $("newLessonBtnTexto").textContent = btn;
+      arteSegueMentoria(calMentoriaSel);
       if(calMentoriaSel === "trilha"){
         wrap.innerHTML = aulasSel.length ? aulasSel.map(calendarioLinha).join("") : '<p class="hint">Nenhuma aula obrigatória cadastrada.</p>';
       } else {
@@ -5817,6 +5832,7 @@
     $("calCabTitulo").textContent = "Visão geral — todas as mentorias";
     $("calCabSub").textContent = "Escolha uma mentoria acima pra ver a semana dela e criar aula já no lugar certo.";
     $("newLessonBtnTexto").textContent = "Nova aula";
+    arteSegueMentoria("");
     if(!allLessons.length){ wrap.innerHTML = '<p class="hint">Nenhuma aula semanal ou encontro cadastrado ainda.</p>'; return; }
 
     var blocos = [];
