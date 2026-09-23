@@ -8,6 +8,20 @@
 -- não é aluno) também precisa ser guardada: fica sem aluno e a CS liga depois.
 alter table nps_responses alter column student_id drop not null;
 
+-- A coluna `source` tem uma regra que só aceita os valores antigos. Recria a
+-- regra somando o que já existe na tabela + as origens novas, sem perder nada.
+do $$
+declare vals text;
+begin
+  select string_agg(distinct quote_literal(source), ', ') into vals
+    from nps_responses where source is not null;
+  vals := coalesce(vals || ', ', '') || quote_literal('pesquisa_2026_08') || ', ' ||
+          quote_literal('primeiro_acesso') || ', ' || quote_literal('periodico') || ', ' ||
+          quote_literal('planilha');
+  execute 'alter table nps_responses drop constraint if exists nps_responses_source_check';
+  execute 'alter table nps_responses add constraint nps_responses_source_check check (source is null or source in (' || vals || '))';
+end $$;
+
 alter table nps_responses add column if not exists scale            int;
 alter table nps_responses add column if not exists score_raw        int;
 alter table nps_responses add column if not exists respondent_name  text;

@@ -1331,7 +1331,7 @@
         <div id="npsMetricRow" class="metric-row" style="display:none;"></div>
         <div class="filter-row" id="npsFiltros" style="margin:12px 0 4px;">
           <span class="filter-chip selected" data-nps-f="todos">Todos</span>
-          <span class="filter-chip" data-nps-f="pesquisa_2026_08">Pesquisa</span>
+          <span class="filter-chip" data-nps-f="pesquisa">Pesquisa</span>
           <span class="filter-chip" data-nps-f="primeiro_acesso">Primeiro acesso</span>
           <span class="filter-chip" data-nps-f="periodico">Registrado pela CS</span>
           <span class="filter-chip" data-nps-f="melhorar">Só quem sugeriu melhoria</span>
@@ -4938,6 +4938,7 @@
       if(npsFiltro === "todos") return true;
       if(npsFiltro === "melhorar") return !!(n.melhorar && n.melhorar.trim());
       if(npsFiltro === "baixas") return n.score < 9;
+      if(npsFiltro === "pesquisa") return String(n.source || "").indexOf("pesquisa") === 0;
       return n.source === npsFiltro;
     });
     if($("npsContagem")) $("npsContagem").textContent = lista.length === npsTodas.length
@@ -4981,7 +4982,8 @@
       metricRow.innerHTML += '<div class="metric-card"><div class="lbl">Sugestões de melhoria</div><div class="val">' + comMelhoria + '</div></div>';
     }
     wrap.innerHTML = "";
-    var ORIGEM = { pesquisa_2026_08:"Pesquisa", primeiro_acesso:"Primeiro acesso", periodico:"Registrado pela CS", planilha:"Planilha" };
+    var ORIGEM = { primeiro_acesso:"Primeiro acesso", periodico:"Registrado pela CS", planilha:"Planilha" };
+    function origemLabel(src){ return String(src || "").indexOf("pesquisa") === 0 ? "Pesquisa" : (ORIGEM[src] || src || "—"); }
     list.forEach(function(n){
       var c = npsClass(n.score);
       // nota como o aluno respondeu (a pesquisa é 0-5; o Portal, 0-10)
@@ -4996,7 +4998,7 @@
       row.className = "list-row";
       row.innerHTML =
         '<div class="list-main"><b>' + esc(nome) + '</b>' +
-          '<span class="hint">' + fmtDate(n.created_at) + ' · ' + (ORIGEM[n.source] || n.source || "—") +
+          '<span class="hint">' + fmtDate(n.created_at) + ' · ' + origemLabel(n.source) +
           (n.mentoria_informada ? ' · ' + esc(n.mentoria_informada) : '') + '</span>' +
           linhas.join("") +
         '</div>' +
