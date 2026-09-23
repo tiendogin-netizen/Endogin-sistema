@@ -57,6 +57,24 @@
   .tab-btn.active i{color:var(--eg-gold-300);}
   .tab-panel{display:none;} .tab-panel.active{display:block;}
   /* sub-abas dentro de uma aba (ex: Voz do aluno) */
+  /* quadro de 1:1 em colunas */
+  .s11-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .s11-col{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:12px;padding:12px 12px 8px;}
+  .s11-col > b{display:flex;align-items:center;justify-content:space-between;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;}
+  .s11-col .n{font-family:var(--eg-mono,monospace);font-size:18px;font-weight:700;}
+  .s11-col.pendente{border-color:rgba(217,138,138,.45);} .s11-col.pendente > b{color:var(--eg-red);}
+  .s11-col.agendada{border-color:rgba(201,151,75,.45);} .s11-col.agendada > b{color:var(--eg-gold-300);}
+  .s11-col.feita{border-color:rgba(143,199,159,.4);}    .s11-col.feita > b{color:var(--eg-green);}
+  .s11-card{background:var(--eg-bg-1);border:1px solid var(--eg-navy-line);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer;}
+  .s11-card:hover{border-color:var(--eg-gold-500);}
+  .s11-card b{display:block;font-size:12.5px;font-weight:600;}
+  .s11-card span{display:block;font-size:11px;color:var(--eg-text-muted);margin-top:2px;}
+  .s11-tag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:99px;padding:2px 7px;margin-bottom:4px;}
+  .s11-tag.novo{background:rgba(143,179,224,.16);color:#8fb3e0;}
+  .s11-tag.renov{background:rgba(201,151,75,.16);color:var(--eg-gold-100);}
+  .s11-vazio{font-size:11.5px;color:var(--eg-text-muted);font-style:italic;padding:4px 2px 8px;}
+  @media (max-width:820px){ .s11-cols{grid-template-columns:1fr;} }
+
   .sub-abas{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;border-bottom:1px solid var(--eg-navy-line);padding-bottom:10px;}
   .sub-aba{font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-secondary);cursor:pointer;}
   .sub-aba:hover{border-color:var(--eg-border-strong);color:var(--eg-gold-100);}
@@ -1009,6 +1027,7 @@
 
         <div class="guia-sec" id="guia-sessoes">
           <h4><i class="fa-solid fa-calendar-check"></i>Sessões 1x1</h4>
+          <p><b>Minhas sessões 1:1</b> (no topo): três colunas — <b>A marcar</b>, <b>Agendada</b> e <b>Feita</b> — com os alunos da sua carteira. A etiqueta azul <b>Novo</b> é o 1:1 de boas-vindas; a dourada <b>Renovação</b> é a conversa antes do contrato vencer. Clique no card pra abrir a ficha e mudar o status.</p>
           <p>O aluno pede um horário pelo Portal (depois de fechar a trilha); aparece aqui como <b>a agendar</b>. Você confirma a data, marca <b>agendada/confirmada</b> e, depois que aconteceu, <b>realizada</b>. Só "realizada" fecha a etapa na jornada do aluno. Dá pra criar sessão na mão também.</p>
         </div>
 
@@ -1269,11 +1288,17 @@
     <!-- ================= SESSÕES 1x1 ================= -->
     <div class="tab-panel" id="tab-sessoes">
       <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-list-check icn"></i>Minhas sessões 1:1</h3><span class="hint" id="s11Resumo"></span></div>
+        <p class="hint" style="margin:-8px 0 12px;">O quadro que a Thaís acompanha: quem ainda precisa marcar, quem já tem data e quem já fez. <b>Novo</b> é o 1:1 de boas-vindas; <b>Renovação</b> é a conversa antes do contrato vencer. Clique no aluno pra abrir a ficha.</p>
+        <div class="s11-cols" id="s11Painel"></div>
+      </div>
+
+      <div class="card">
         <div class="card-head">
-          <h3><i class="fa-solid fa-calendar-check icn"></i>Sessões 1x1 com os mentores</h3>
+          <h3><i class="fa-solid fa-calendar-check icn"></i>Sessões agendadas no Portal</h3>
           <button class="btn-secondary" id="newSessionBtn"><i class="fa-solid fa-plus"></i> Agendar sessão</button>
         </div>
-        <p class="hint" style="margin:-8px 0 14px;">É daqui que sai a informação que a Thais repassa pro Dr. Caio e pro Dr. Vinícius.</p>
+        <p class="hint" style="margin:-8px 0 14px;">Quando o aluno pede horário pelo Portal, cai aqui. É daqui que sai a informação que a Thais repassa pro Dr. Caio e pro Dr. Vinícius.</p>
         <div id="sessionsLoading" class="loading-note">Carregando...</div>
         <div id="sessionsList"></div>
       </div>
@@ -1576,7 +1601,21 @@
           </select>
           <p class="hint" style="margin:4px 0 0;">Veterano é quem já passou pela trilha e pelo 1x1 antes do Portal. Aluno que acabou de entrar fica como novo.</p>
         </div>
-        <div><label>Status do 1:1</label><input type="text" id="alunoFieldOneOnOneStatus" placeholder="ex: Pendente, Concluído"></div>
+        <div><label>Status do 1:1</label>
+          <select id="alunoFieldOneOnOneStatus">
+            <option value="">— sem 1:1 no fluxo —</option>
+            <option value="Pendente">Pendente (a marcar)</option>
+            <option value="Agendada">Agendada</option>
+            <option value="Concluído">Concluído</option>
+          </select>
+        </div>
+        <div><label>Tipo do 1:1</label>
+          <select id="alunoFieldOneOnOneType">
+            <option value="">—</option>
+            <option value="Novo">Novo (boas-vindas)</option>
+            <option value="Renovação">Renovação</option>
+          </select>
+        </div>
         <div><label>Data do 1:1</label><input type="text" id="alunoFieldOneOnOneDate" placeholder="data ou observação livre"></div>
         <div style="grid-column:1/-1;"><label>Resumo pós 1:1</label><input type="text" id="alunoFieldOneOnOneSummary"></div>
 
@@ -2016,6 +2055,9 @@
       }
       if(btn.getAttribute("data-tab") === "eventos"){
         carregaEvento();
+      }
+      if(btn.getAttribute("data-tab") === "sessoes"){
+        renderPainel11();
       }
       if(btn.getAttribute("data-tab") === "progresso"){
         startProgressoIfNeeded();
@@ -2650,7 +2692,7 @@
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,cidade_uf,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,cidade_uf,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -2660,6 +2702,7 @@
       applyAlunosFilter();
       // trilha e 1x1 chegam logo depois e a coluna "Jornada" se refaz
       carregaJornada().then(applyAlunosFilter);
+      renderPainel11();
       // o Dashboard desenha a partir desta lista: sempre que ela chega, os
       // graficos acompanham (se a aba estiver aberta)
       if($("tab-dashboard") && $("tab-dashboard").classList.contains("active")){ renderDashGraficos(); renderDashMovTable(); }
@@ -3122,6 +3165,7 @@
       });
     })();
     $("alunoFieldOneOnOneStatus").value = student.one_on_one_status || "";
+    $("alunoFieldOneOnOneType").value = student.one_on_one_type || "";
     $("alunoFieldVeterano").value = student.veterano ? "1" : "0";
     $("alunoFieldEspecialidade").value = student.especialidade || "";
     $("alunoFieldCidadeUf").value = student.cidade_uf || "";
@@ -3221,6 +3265,7 @@
       renewal_owner_id: $("alunoFieldRenewalOwner").value || null,
       renewal_note: $("alunoFieldRenewalNote").value.trim() || null,
       one_on_one_status: $("alunoFieldOneOnOneStatus").value.trim() || null,
+      one_on_one_type: $("alunoFieldOneOnOneType").value.trim() || null,
       veterano: $("alunoFieldVeterano").value === "1",
       especialidade: $("alunoFieldEspecialidade").value.trim() || null,
       cidade_uf: $("alunoFieldCidadeUf").value.trim() || null,
@@ -3269,7 +3314,7 @@
   // planilha — não tinha como criar um do zero (nem um "aluno teste"). Cria
   // com o mínimo (nome + e-mail) e já abre a ficha completa em seguida, pra
   // marcar mentoria/status/CS na hora, sem precisar de uma segunda tela.
-  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,cidade_uf,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)";
+  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,cidade_uf,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)";
 
   $("novoAlunoBtn").addEventListener("click", function(){
     $("novoAlunoFieldName").value = "";
@@ -4560,6 +4605,53 @@
   if($("discBusca")) $("discBusca").addEventListener("input", function(){ discFiltro.busca = this.value.trim().toLowerCase(); renderDisc(); });
 
   // ---------------- Sessões 1x1 ----------------
+  // Quadro de 1:1 — sai de allStudents, entao respeita a carteira de quem
+  // esta logada (CS ve os dela, Thais ve todas). Tres colunas: a fazer,
+  // agendada, feita. "Novo" = 1:1 de boas-vindas; "Renovação" = antes de vencer.
+  function s11Situacao(st){
+    var t = String(st.one_on_one_status || "").toLowerCase();
+    if(!t) return null;
+    if(t.indexOf("conclu") > -1 || t.indexOf("realiz") > -1 || t.indexOf("feit") > -1) return "feita";
+    if(t.indexOf("agend") > -1 || t.indexOf("marcad") > -1) return "agendada";
+    return "pendente";
+  }
+  function renderPainel11(){
+    var wrap = $("s11Painel");
+    if(!wrap) return;
+    var cols = { pendente:[], agendada:[], feita:[] };
+    allStudents.forEach(function(st){
+      if(st.status === "inativo" || st.status === "cancelado") return;
+      var sit = s11Situacao(st);
+      if(sit) cols[sit].push(st);
+    });
+    var TIT = { pendente:"A marcar", agendada:"Agendada", feita:"Feita" };
+    var total = cols.pendente.length + cols.agendada.length + cols.feita.length;
+    $("s11Resumo").textContent = total
+      ? total + " aluno(s) no fluxo de 1:1 · " + cols.pendente.length + " a marcar"
+      : "Nenhum 1:1 registrado na sua carteira ainda.";
+
+    wrap.innerHTML = ["pendente", "agendada", "feita"].map(function(k){
+      var lista = cols[k].sort(function(a, b){ return (a.full_name || "").localeCompare(b.full_name || ""); });
+      return '<div class="s11-col ' + k + '"><b>' + TIT[k] + '<span class="n">' + lista.length + '</span></b>' +
+        (lista.length ? lista.slice(0, 40).map(function(st){
+          var tipo = String(st.one_on_one_type || "").toLowerCase().indexOf("renov") > -1 ? "renov" : "novo";
+          var mentorias = (st.deliveries || []).filter(function(d){ return d.status === "ativo"; }).map(function(d){ return d.label; }).join(" · ");
+          return '<div class="s11-card" data-s11="' + st.id + '">' +
+            '<span class="s11-tag ' + tipo + '">' + (tipo === "renov" ? "Renovação" : "Novo") + '</span>' +
+            '<b>' + esc(st.full_name) + '</b>' +
+            (st.one_on_one_date ? '<span><i class="fa-regular fa-calendar"></i> ' + esc(st.one_on_one_date) + '</span>' : '') +
+            (mentorias ? '<span>' + esc(mentorias) + '</span>' : '') +
+            (st.one_on_one_summary ? '<span>' + esc(st.one_on_one_summary) + '</span>' : '') +
+          '</div>';
+        }).join("") + (lista.length > 40 ? '<div class="s11-vazio">+ ' + (lista.length - 40) + ' — use a aba Alunos pra ver o resto.</div>' : '')
+          : '<div class="s11-vazio">Ninguém aqui.</div>') +
+        '</div>';
+    }).join("");
+    wrap.querySelectorAll("[data-s11]").forEach(function(el){
+      el.addEventListener("click", function(){ openAlunoModal(el.getAttribute("data-s11")); });
+    });
+  }
+
   function loadSessions(){
     $("sessionsLoading").style.display = "block";
     sb.from("mentoring_sessions").select("*").order("scheduled_at", { ascending: true }).then(function(r){
@@ -7827,7 +7919,7 @@
     reader.readAsArrayBuffer(file);
   }
 
-  var IMP_CAMPOS_ALUNO = "id,full_name,email,phone,cpf,status,cs_id,birth_date,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,one_on_one_status,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,group_id,status),staff:cs_id(full_name)";
+  var IMP_CAMPOS_ALUNO = "id,full_name,email,phone,cpf,status,cs_id,birth_date,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,mentoria_raw_import,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,group_id,status),staff:cs_id(full_name)";
 
   function impComparar(lido, st, temColunasNovas){
     // As colunas do v39 só entram no select se existirem; senão o PostgREST
