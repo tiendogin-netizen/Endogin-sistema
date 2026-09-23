@@ -1168,7 +1168,10 @@
     carregando = true;
     $("btnAtualizar").disabled = true;
     Promise.all([
-      buscarTudo("students", "id,full_name,email,phone,status,temperature,renewal_date,renewal_status,is_lifetime,is_delinquent,entry_date,cs_id,disc_completed_at,staff:cs_id(full_name),deliveries(label,status,branch_id),disc_results(d_score,i_score,s_score,c_score,primary_profile)"),
+      // `oculto_diretoria` marca quem encerrou a mentoria: some daqui mesmo
+      // que a conta logada também seja master (caso do Dr. Caio).
+      buscarTudo("students", "id,full_name,email,phone,status,temperature,renewal_date,renewal_status,is_lifetime,is_delinquent,entry_date,cs_id,disc_completed_at,staff:cs_id(full_name),deliveries(label,status,branch_id),disc_results(d_score,i_score,s_score,c_score,primary_profile)",
+        function(q){ return q.or("oculto_diretoria.is.null,oculto_diretoria.eq.false"); }),
       sb.from("branches").select("id,name").order("name"),
       // Os sinais de risco moram em tabelas separadas — sem elas a tela vira
       // uma lista de cadastro, e o que a diretoria precisa e enxergar quem
