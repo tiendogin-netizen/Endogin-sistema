@@ -1327,7 +1327,17 @@
           <h3><i class="fa-solid fa-gauge-high icn"></i>NPS</h3>
           <button class="btn-secondary" id="newNpsBtn"><i class="fa-solid fa-plus"></i> Registrar NPS</button>
         </div>
+        <p class="hint" style="margin:-8px 0 12px;">Nota que o aluno dá pra Endogin. Vem de três lugares: o primeiro acesso no Portal, a pesquisa que a equipe manda e o que a CS registra na mão. Você vê os seus alunos.</p>
         <div id="npsMetricRow" class="metric-row" style="display:none;"></div>
+        <div class="filter-row" id="npsFiltros" style="margin:12px 0 4px;">
+          <span class="filter-chip selected" data-nps-f="todos">Todos</span>
+          <span class="filter-chip" data-nps-f="pesquisa_2026_08">Pesquisa</span>
+          <span class="filter-chip" data-nps-f="primeiro_acesso">Primeiro acesso</span>
+          <span class="filter-chip" data-nps-f="periodico">Registrado pela CS</span>
+          <span class="filter-chip" data-nps-f="melhorar">Só quem sugeriu melhoria</span>
+          <span class="filter-chip" data-nps-f="baixas">Notas baixas</span>
+        </div>
+        <p class="hint" id="npsContagem" style="margin:0 0 10px;"></p>
         <div id="npsLoading" class="loading-note">Carregando...</div>
         <div id="npsList"></div>
       </div>
@@ -4901,14 +4911,35 @@
   });
 
   // ---------------- NPS ----------------
+  var npsTodas = [], npsFiltro = "todos";
   function loadNps(){
     $("npsLoading").style.display = "block";
     sb.from("nps_responses").select("*").order("created_at", { ascending: false }).then(function(r){
       $("npsLoading").style.display = "none";
       if(r.error){ $("npsLoading").textContent = "Erro: " + r.error.message; $("npsLoading").style.display = "block"; return; }
-      renderNps(r.data || []);
+      npsTodas = r.data || [];
+      aplicaFiltroNps();
     });
   }
+  function aplicaFiltroNps(){
+    var lista = npsTodas.filter(function(n){
+      if(npsFiltro === "todos") return true;
+      if(npsFiltro === "melhorar") return !!(n.melhorar && n.melhorar.trim());
+      if(npsFiltro === "baixas") return n.score < 9;
+      return n.source === npsFiltro;
+    });
+    if($("npsContagem")) $("npsContagem").textContent = lista.length === npsTodas.length
+      ? npsTodas.length + " resposta(s)" : lista.length + " de " + npsTodas.length;
+    renderNps(lista);
+  }
+  document.querySelectorAll("[data-nps-f]").forEach(function(ch){
+    ch.addEventListener("click", function(){
+      document.querySelectorAll("[data-nps-f]").forEach(function(c){ c.classList.remove("selected"); });
+      ch.classList.add("selected");
+      npsFiltro = ch.getAttribute("data-nps-f");
+      aplicaFiltroNps();
+    });
+  });
   function npsClass(score){
     if(score >= 9) return {cls:"promoter", label:"Promotor"};
     if(score >= 7) return {cls:"passive", label:"Neutro"};
@@ -4933,14 +4964,31 @@
       '<div class="metric-card"><div class="lbl">Promotores</div><div class="val">' + Math.round((promoters/total)*100) + '%</div></div>' +
       '<div class="metric-card"><div class="lbl">Neutros</div><div class="val">' + Math.round((passives/total)*100) + '%</div></div>' +
       '<div class="metric-card"><div class="lbl">Detratores</div><div class="val">' + Math.round((detractors/total)*100) + '%</div></div>';
+    var comMelhoria = list.filter(function(n){ return n.melhorar && n.melhorar.trim(); }).length;
+    if(comMelhoria){
+      metricRow.innerHTML += '<div class="metric-card"><div class="lbl">Sugestões de melhoria</div><div class="val">' + comMelhoria + '</div></div>';
+    }
     wrap.innerHTML = "";
+    var ORIGEM = { pesquisa_2026_08:"Pesquisa", primeiro_acesso:"Primeiro acesso", periodico:"Registrado pela CS", planilha:"Planilha" };
     list.forEach(function(n){
       var c = npsClass(n.score);
+      // nota como o aluno respondeu (a pesquisa é 0-5; o Portal, 0-10)
+      var mostra = (n.score_raw !== null && n.score_raw !== undefined) ? (n.score_raw + "/" + (n.scale || 5)) : n.score;
+      var nome = n.student_id ? studentName(n.student_id) : (n.respondent_name || "(aluno não identificado)");
+      var linhas = [];
+      if(n.motivo) linhas.push('<span><b>Motivo:</b> ' + esc(n.motivo) + '</span>');
+      if(n.melhorar) linhas.push('<span style="color:var(--eg-gold-300);"><b>Melhorar:</b> ' + esc(n.melhorar) + '</span>');
+      if(n.feedback_geral) linhas.push('<span>' + esc(n.feedback_geral) + '</span>');
+      if(!linhas.length && n.comment) linhas.push('<span>' + esc(n.comment) + '</span>');
       var row = document.createElement("div");
       row.className = "list-row";
       row.innerHTML =
-        '<div class="list-main"><b>' + studentName(n.student_id) + '</b><span>' + fmtDate(n.created_at) + (n.comment ? " — " + n.comment : "") + '</span></div>' +
-        '<div class="list-side"><span class="nps-score-badge ' + c.cls + '">' + n.score + '</span></div>';
+        '<div class="list-main"><b>' + esc(nome) + '</b>' +
+          '<span class="hint">' + fmtDate(n.created_at) + ' · ' + (ORIGEM[n.source] || n.source || "—") +
+          (n.mentoria_informada ? ' · ' + esc(n.mentoria_informada) : '') + '</span>' +
+          linhas.join("") +
+        '</div>' +
+        '<div class="list-side"><span class="nps-score-badge ' + c.cls + '">' + mostra + '</span></div>';
       wrap.appendChild(row);
     });
   }
