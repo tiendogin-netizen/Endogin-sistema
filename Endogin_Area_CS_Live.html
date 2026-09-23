@@ -72,6 +72,9 @@
   .s11-tag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:99px;padding:2px 7px;margin-bottom:4px;}
   .s11-tag.novo{background:rgba(143,179,224,.16);color:#8fb3e0;}
   .s11-tag.renov{background:rgba(201,151,75,.16);color:var(--eg-gold-100);}
+  .s11-card{position:relative;}
+  .s11-editar{position:absolute;top:7px;right:7px;width:26px;height:26px;border-radius:7px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-gold-100);font-size:10.5px;cursor:pointer;}
+  .s11-editar:hover{border-color:var(--eg-gold-500);background:var(--eg-gold-500);color:#221708;}
   .s11-vazio{font-size:11.5px;color:var(--eg-text-muted);font-style:italic;padding:4px 2px 8px;}
   @media (max-width:820px){ .s11-cols{grid-template-columns:1fr;} }
 
@@ -1741,6 +1744,40 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="s11Modal">
+  <div class="modal-card" style="max-width:520px;">
+    <div class="modal-head"><b id="s11ModalTitulo">Sessão 1:1</b><button class="modal-close" id="s11ModalClose"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <p class="hint" style="margin:0 0 14px;" id="s11ModalAluno"></p>
+      <div class="form-grid" style="grid-template-columns:1fr;">
+        <div>
+          <label>Situação</label>
+          <select id="s11ModalStatus">
+            <option value="Pendente">A marcar</option>
+            <option value="Agendada">Agendada</option>
+            <option value="Concluído">Feita</option>
+          </select>
+        </div>
+        <div>
+          <label>Tipo</label>
+          <select id="s11ModalTipo">
+            <option value="Novo">Novo (boas-vindas)</option>
+            <option value="Renovação">Renovação</option>
+          </select>
+        </div>
+        <div id="s11ModalQuandoWrap">
+          <label>Dia e hora</label>
+          <input type="datetime-local" id="s11ModalQuando">
+          <p class="hint" style="margin:4px 0 0;">O aluno vê esse horário no Portal, na etapa "Sessão 1x1".</p>
+        </div>
+        <div><label>Observação (opcional)</label><input type="text" id="s11ModalObs" placeholder="ex: renovou com a Thais"></div>
+      </div>
+      <div class="err-msg" id="s11ModalErr"></div>
+    </div>
+    <div class="modal-foot"><span></span><button class="btn-primary" id="s11ModalSalvar">Salvar</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="anivModal">
   <div class="modal-card" style="max-width:820px;">
     <div class="modal-head"><b>Arte de aniversário</b><button class="modal-close" id="anivModalClose"><i class="fa-solid fa-xmark"></i></button></div>
@@ -2691,8 +2728,12 @@
   function loadAlunos(){
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
+    // A FOTO fica de fora da lista: ela é uma imagem inteira guardada no
+    // campo (data-URL, ~40 KB cada). Com 490 alunos isso sozinho eram ~20 MB
+    // por carregamento — era o que fazia a tela demorar. A ficha busca a foto
+    // do aluno que a CS abrir, uma de cada vez.
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,cidade_uf,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,cidade_uf,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -3109,6 +3150,13 @@
   function openAlunoModal(id){
     var student = allStudents.find(function(s){ return s.id === id; });
     if(!student) return;
+    // a foto não vem na lista (ver loadAlunos): busca a deste aluno agora
+    if(student.photo_url === undefined){
+      sb.from("students").select("photo_url").eq("id", id).single().then(function(r){
+        student.photo_url = (r.data && r.data.photo_url) || null;
+        if($("anivModal") && $("anivModal").classList.contains("open")) atualizaArteAniversario();
+      });
+    }
     alunoEditingId = id;
     var activeDeliveries = (student.deliveries || []).filter(function(d){ return d.status === "ativo"; });
     alunoSelectedBranches = activeDeliveries.map(function(d){ return d.label; });
@@ -4638,6 +4686,7 @@
           var mentorias = (st.deliveries || []).filter(function(d){ return d.status === "ativo"; }).map(function(d){ return d.label; }).join(" · ");
           return '<div class="s11-card" data-s11="' + st.id + '">' +
             '<span class="s11-tag ' + tipo + '">' + (tipo === "renov" ? "Renovação" : "Novo") + '</span>' +
+            '<button class="s11-editar" data-s11-edit="' + st.id + '" title="Mudar situação / marcar dia e hora"><i class="fa-solid fa-pen"></i></button>' +
             '<b>' + esc(st.full_name) + '</b>' +
             (st.one_on_one_date ? '<span><i class="fa-regular fa-calendar"></i> ' + esc(st.one_on_one_date) + '</span>' : '') +
             (mentorias ? '<span>' + esc(mentorias) + '</span>' : '') +
@@ -4650,7 +4699,87 @@
     wrap.querySelectorAll("[data-s11]").forEach(function(el){
       el.addEventListener("click", function(){ openAlunoModal(el.getAttribute("data-s11")); });
     });
+    wrap.querySelectorAll("[data-s11-edit]").forEach(function(el){
+      el.addEventListener("click", function(ev){ ev.stopPropagation(); abre11(el.getAttribute("data-s11-edit")); });
+    });
   }
+
+  // Editar o 1:1 direto do quadro. Agendar aqui grava a data em
+  // mentoring_sessions, que e o que o Portal do aluno le — assim o aluno ve
+  // "dia X as Yh" na etapa dele sem ninguem digitar duas vezes.
+  var s11Editando = null;
+  function abre11(id){
+    var st = allStudents.find(function(x){ return x.id === id; });
+    if(!st) return;
+    s11Editando = st;
+    $("s11ModalErr").textContent = "";
+    $("s11ModalAluno").textContent = st.full_name;
+    $("s11ModalStatus").value = s11Situacao(st) === "feita" ? "Concluído" : (s11Situacao(st) === "agendada" ? "Agendada" : "Pendente");
+    $("s11ModalTipo").value = String(st.one_on_one_type || "").toLowerCase().indexOf("renov") > -1 ? "Renovação" : "Novo";
+    $("s11ModalObs").value = st.one_on_one_summary || "";
+    $("s11ModalQuando").value = "";
+    // se ja existe sessao marcada pra esse aluno, traz a data dela
+    sb.from("mentoring_sessions").select("id,scheduled_at,status").eq("student_id", id)
+      .order("created_at", { ascending:false }).limit(1).then(function(r){
+        var ses = r.data && r.data[0];
+        if(ses && ses.scheduled_at){
+          var d = new Date(ses.scheduled_at);
+          if(!isNaN(d.getTime())) $("s11ModalQuando").value = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        }
+      });
+    toggle11Quando();
+    $("s11Modal").classList.add("open");
+  }
+  function toggle11Quando(){
+    var v = $("s11ModalStatus").value;
+    $("s11ModalQuandoWrap").style.display = (v === "Agendada" || v === "Concluído") ? "block" : "none";
+  }
+  if($("s11ModalStatus")) $("s11ModalStatus").addEventListener("change", toggle11Quando);
+  if($("s11ModalClose")) $("s11ModalClose").addEventListener("click", function(){ $("s11Modal").classList.remove("open"); });
+  if($("s11ModalSalvar")) $("s11ModalSalvar").addEventListener("click", function(){
+    var st = s11Editando; if(!st) return;
+    var situacao = $("s11ModalStatus").value;
+    var quandoTxt = $("s11ModalQuando").value;
+    if(situacao === "Agendada" && !quandoTxt){ $("s11ModalErr").textContent = "Marque o dia e a hora da sessão."; return; }
+    var quandoIso = quandoTxt ? new Date(quandoTxt).toISOString() : null;
+    var legivel = quandoTxt ? new Date(quandoTxt).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" }) : null;
+    $("s11ModalSalvar").disabled = true;
+
+    sb.from("students").update({
+      one_on_one_status: situacao,
+      one_on_one_type: $("s11ModalTipo").value,
+      one_on_one_date: legivel || st.one_on_one_date,
+      one_on_one_summary: $("s11ModalObs").value.trim() || null
+    }).eq("id", st.id).then(function(r){
+      if(r.error){ $("s11ModalSalvar").disabled = false; $("s11ModalErr").textContent = "Erro: " + r.error.message; return; }
+      st.one_on_one_status = situacao;
+      st.one_on_one_type = $("s11ModalTipo").value;
+      st.one_on_one_date = legivel || st.one_on_one_date;
+      st.one_on_one_summary = $("s11ModalObs").value.trim() || null;
+
+      // espelha no Portal do aluno
+      var statusSessao = situacao === "Concluído" ? "realizada" : (situacao === "Agendada" ? "agendada" : null);
+      function fecha(){
+        $("s11ModalSalvar").disabled = false;
+        $("s11Modal").classList.remove("open");
+        renderPainel11();
+        if($("sessionsList")) loadSessions();
+      }
+      if(!statusSessao){ fecha(); return; }
+      sb.from("mentoring_sessions").select("id").eq("student_id", st.id)
+        .order("created_at", { ascending:false }).limit(1).then(function(rs){
+          var ses = rs.data && rs.data[0];
+          var dados = { student_id: st.id, status: statusSessao };
+          if(quandoIso) dados.scheduled_at = quandoIso;
+          var acao = ses ? sb.from("mentoring_sessions").update(dados).eq("id", ses.id)
+                         : sb.from("mentoring_sessions").insert(dados);
+          acao.then(function(r2){
+            if(r2.error) $("s11ModalErr").textContent = "Salvei na ficha, mas não consegui avisar o Portal: " + r2.error.message;
+            fecha();
+          });
+        });
+    });
+  });
 
   function loadSessions(){
     $("sessionsLoading").style.display = "block";
