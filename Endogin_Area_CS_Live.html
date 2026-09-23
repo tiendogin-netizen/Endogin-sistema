@@ -56,6 +56,11 @@
   .tab-btn.active{background:rgba(201,151,75,0.12);color:var(--eg-gold-100);border-color:var(--eg-border);}
   .tab-btn.active i{color:var(--eg-gold-300);}
   .tab-panel{display:none;} .tab-panel.active{display:block;}
+  /* sub-abas dentro de uma aba (ex: Voz do aluno) */
+  .sub-abas{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;border-bottom:1px solid var(--eg-navy-line);padding-bottom:10px;}
+  .sub-aba{font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-secondary);cursor:pointer;}
+  .sub-aba:hover{border-color:var(--eg-border-strong);color:var(--eg-gold-100);}
+  .sub-aba.ativa{background:var(--eg-gold-500);border-color:var(--eg-gold-500);color:#221708;}
   /* guia de uso */
   .guia-indice{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 18px;}
   .guia-indice a{font-size:11.5px;font-weight:600;padding:6px 11px;border-radius:99px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-secondary);text-decoration:none;}
@@ -543,11 +548,9 @@
         <button class="tab-btn" data-tab="materiais"><i class="fa-solid fa-folder-open"></i>Materiais</button>
         <button class="tab-btn" data-tab="progresso"><i class="fa-solid fa-chart-line"></i>Progresso de aulas</button>
         <button class="tab-btn" data-tab="sessoes"><i class="fa-solid fa-calendar-check"></i>Sessões 1x1</button>
-        <button class="tab-btn" data-tab="trilha"><i class="fa-solid fa-route"></i>Trilha CS</button>
         <button class="tab-btn" data-tab="aniversarios"><i class="fa-solid fa-cake-candles"></i>Aniversários</button>
         <button class="tab-btn" data-tab="recados"><i class="fa-solid fa-bullhorn"></i>Recados</button>
-        <button class="tab-btn" data-tab="feedbacks"><i class="fa-regular fa-comment-dots"></i>Feedbacks</button>
-        <button class="tab-btn" data-tab="nps"><i class="fa-solid fa-gauge-high"></i>NPS</button>
+        <button class="tab-btn" data-tab="feedbacks"><i class="fa-regular fa-comment-dots"></i>Voz do aluno</button>
         <button class="tab-btn" data-tab="relatorios"><i class="fa-solid fa-file-export"></i>Relatórios</button>
         <button class="tab-btn" data-tab="equipe"><i class="fa-solid fa-user-group"></i>Equipe CS</button>
         <button class="tab-btn" data-tab="guia"><i class="fa-regular fa-circle-question"></i>Como usar</button>
@@ -909,7 +912,7 @@
         <div class="card-head"><h3><i class="fa-regular fa-circle-question icn"></i>Como usar a Área CS</h3><span class="hint">guia rápido, tela por tela</span></div>
         <p class="hint" style="margin:-8px 0 14px;">Tudo que você faz aqui aparece na hora no Portal do Aluno e na Área de Mentores — não existe "salvar e sincronizar". Clique numa tela abaixo pra pular direto.</p>
         <div class="guia-indice">
-          <a href="#guia-comeco">Comece aqui</a><a href="#guia-alunos">Alunos</a><a href="#guia-ficha">Ficha do aluno</a><a href="#guia-carteiras">Carteiras</a><a href="#guia-disc">Perfil DISC</a><a href="#guia-eventos">Eventos</a><a href="#guia-grupos">Grupos WhatsApp</a><a href="#guia-aulas">Aulas</a><a href="#guia-calendario">Calendário</a><a href="#guia-materiais">Materiais</a><a href="#guia-progresso">Progresso</a><a href="#guia-sessoes">Sessões 1x1</a><a href="#guia-trilha">Trilha CS</a><a href="#guia-aniversarios">Aniversários</a><a href="#guia-recados">Recados</a><a href="#guia-feedbacks">Feedbacks e NPS</a><a href="#guia-relatorios">Relatórios</a><a href="#guia-equipe">Equipe CS</a><a href="#guia-portal">O que o aluno vê</a><a href="#guia-faq">Perguntas frequentes</a>
+          <a href="#guia-comeco">Comece aqui</a><a href="#guia-alunos">Alunos</a><a href="#guia-ficha">Ficha do aluno</a><a href="#guia-carteiras">Carteiras</a><a href="#guia-disc">Perfil DISC</a><a href="#guia-eventos">Eventos</a><a href="#guia-grupos">Grupos WhatsApp</a><a href="#guia-aulas">Aulas</a><a href="#guia-calendario">Calendário</a><a href="#guia-materiais">Materiais</a><a href="#guia-progresso">Progresso</a><a href="#guia-sessoes">Sessões 1x1</a><a href="#guia-aniversarios">Aniversários</a><a href="#guia-recados">Recados</a><a href="#guia-feedbacks">Voz do aluno</a><a href="#guia-relatorios">Relatórios</a><a href="#guia-equipe">Equipe CS</a><a href="#guia-portal">O que o aluno vê</a><a href="#guia-faq">Perguntas frequentes</a>
         </div>
 
         <div class="guia-sec destaque" id="guia-comeco">
@@ -1009,11 +1012,6 @@
           <p>O aluno pede um horário pelo Portal (depois de fechar a trilha); aparece aqui como <b>a agendar</b>. Você confirma a data, marca <b>agendada/confirmada</b> e, depois que aconteceu, <b>realizada</b>. Só "realizada" fecha a etapa na jornada do aluno. Dá pra criar sessão na mão também.</p>
         </div>
 
-        <div class="guia-sec" id="guia-trilha">
-          <h4><i class="fa-solid fa-route"></i>Trilha CS</h4>
-          <p>Seu próprio treinamento como CS: marque cada etapa conforme for concluindo. A Thaís acompanha o percentual de cada pessoa.</p>
-        </div>
-
         <div class="guia-sec" id="guia-aniversarios">
           <h4><i class="fa-solid fa-cake-candles"></i>Aniversários</h4>
           <p>Quem faz aniversário nos próximos dias (precisa ter data de nascimento na ficha). "Baixar arte" gera a imagem de parabéns já com foto e nome.</p>
@@ -1030,8 +1028,13 @@
         </div>
 
         <div class="guia-sec" id="guia-feedbacks">
-          <h4><i class="fa-regular fa-comment-dots"></i>Feedbacks e NPS</h4>
-          <p><b>NPS</b>: a nota de 0 a 10 que o aluno dá no primeiro acesso e nas pesquisas periódicas (você também pode registrar uma nota que ele deu por WhatsApp). <b>Feedbacks</b>: comentários livres. Nota ≤ 6 pesa no "risco de não renovar" que os doutores veem.</p>
+          <h4><i class="fa-regular fa-comment-dots"></i>Voz do aluno</h4>
+          <p>Uma aba com duas partes: <b>Notas (NPS)</b> e <b>Comentários</b>.</p>
+          <ul>
+            <li><b>Notas</b>: vêm do primeiro acesso no Portal, da pesquisa que a equipe manda e do que você registra na mão. Os chips filtram por origem, por <b>quem sugeriu melhoria</b> e por <b>notas baixas</b> — é por aí que se começa.</li>
+            <li><b>Comentários</b>: o que o aluno falou por telefone, no grupo ou na aula. Registre aqui e fica na ficha dele.</li>
+            <li>Nota baixa pesa no "risco de não renovar" que os doutores veem.</li>
+          </ul>
         </div>
 
         <div class="guia-sec" id="guia-relatorios">
@@ -1045,7 +1048,8 @@
         </div>
 
         <div class="guia-sec" id="guia-equipe">
-          <h4><i class="fa-solid fa-user-group"></i>Equipe CS (Thaís)</h4>
+          <h4><i class="fa-solid fa-user-group"></i>Equipe CS</h4>
+          <p><b>Minha trilha de treinamento</b> (no topo da aba): seu próprio treinamento como CS — marque cada etapa conforme concluir; a Thaís acompanha o percentual de cada pessoa.</p>
           <p>Cadastrar CS, ligar CS às mentorias que ela atende (é isso que define as mentorias que ela vê no recado e na arte), ativar/desativar, e distribuição automática de aluno novo. "Minha senha" fica aqui pra todo mundo.</p>
         </div>
 
@@ -1276,13 +1280,7 @@
     </div>
 
     <!-- ================= TRILHA CS ================= -->
-    <div class="tab-panel" id="tab-trilha">
-      <div class="card">
-        <div class="card-head"><h3><i class="fa-solid fa-graduation-cap icn"></i>Minha trilha de treinamento</h3><span class="hint" id="trilhaPct"></span></div>
-        <div id="trilhaLoading" class="loading-note">Carregando...</div>
-        <div id="trilhaList"></div>
-      </div>
-    </div>
+    
 
     <!-- ================= ANIVERSÁRIOS ================= -->
     <div class="tab-panel" id="tab-aniversarios">
@@ -1310,19 +1308,13 @@
 
     <!-- ================= FEEDBACKS ================= -->
     <div class="tab-panel" id="tab-feedbacks">
-      <div class="card">
-        <div class="card-head">
-          <h3><i class="fa-solid fa-comment-dots icn"></i>Feedbacks dos alunos</h3>
-          <button class="btn-secondary" id="newFeedbackBtn"><i class="fa-solid fa-plus"></i> Registrar feedback</button>
-        </div>
-        <div id="feedbacksLoading" class="loading-note">Carregando...</div>
-        <div id="feedbacksList"></div>
+      <div class="sub-abas">
+        <button class="sub-aba ativa" data-sub="voz-nps">Notas (NPS)</button>
+        <button class="sub-aba" data-sub="voz-feedbacks">Comentários</button>
       </div>
-    </div>
 
-    <!-- ================= NPS ================= -->
-    <div class="tab-panel" id="tab-nps">
-      <div class="card">
+      <div class="sub-conteudo" id="sub-voz-nps">
+<div class="card">
         <div class="card-head">
           <h3><i class="fa-solid fa-gauge-high icn"></i>NPS</h3>
           <button class="btn-secondary" id="newNpsBtn"><i class="fa-solid fa-plus"></i> Registrar NPS</button>
@@ -1341,7 +1333,23 @@
         <div id="npsLoading" class="loading-note">Carregando...</div>
         <div id="npsList"></div>
       </div>
+      </div>
+
+      <div class="sub-conteudo" id="sub-voz-feedbacks" style="display:none;">
+        <div class="card">
+          <div class="card-head">
+            <h3><i class="fa-solid fa-comment-dots icn"></i>Comentários dos alunos</h3>
+            <button class="btn-secondary" id="newFeedbackBtn"><i class="fa-solid fa-plus"></i> Registrar comentário</button>
+          </div>
+          <p class="hint" style="margin:-8px 0 14px;">O que o aluno falou pra você — por telefone, no grupo, na aula. Fica registrado na ficha dele.</p>
+          <div id="feedbacksLoading" class="loading-note">Carregando...</div>
+          <div id="feedbacksList"></div>
+        </div>
+      </div>
     </div>
+
+    <!-- ================= NPS ================= -->
+    
 
     <!-- ================= RELATÓRIOS ================= -->
     <div class="tab-panel" id="tab-relatorios">
@@ -1392,6 +1400,11 @@
 
     <!-- ================= EQUIPE ================= -->
     <div class="tab-panel" id="tab-equipe">
+<div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-graduation-cap icn"></i>Minha trilha de treinamento</h3><span class="hint" id="trilhaPct"></span></div>
+        <div id="trilhaLoading" class="loading-note">Carregando...</div>
+        <div id="trilhaList"></div>
+      </div>
       <div class="card">
         <div class="card-head">
           <h3><i class="fa-solid fa-user-group icn"></i>Equipe CS</h3>
@@ -1959,13 +1972,25 @@
 
   // ---------------- tabs ----------------
   // "Como usar" no topo: abre o guia ja na secao da tela que a pessoa estava
-  var GUIA_SECAO = { dashboard:"guia-comeco", alunos:"guia-alunos", carteiras:"guia-carteiras", disc:"guia-disc", eventos:"guia-eventos", grupos:"guia-grupos", aulas:"guia-aulas", calendario:"guia-calendario", materiais:"guia-materiais", progresso:"guia-progresso", sessoes:"guia-sessoes", trilha:"guia-trilha", aniversarios:"guia-aniversarios", recados:"guia-recados", feedbacks:"guia-feedbacks", nps:"guia-feedbacks", relatorios:"guia-relatorios", equipe:"guia-equipe" };
+  var GUIA_SECAO = { dashboard:"guia-comeco", alunos:"guia-alunos", carteiras:"guia-carteiras", disc:"guia-disc", eventos:"guia-eventos", grupos:"guia-grupos", aulas:"guia-aulas", calendario:"guia-calendario", materiais:"guia-materiais", progresso:"guia-progresso", sessoes:"guia-sessoes", aniversarios:"guia-aniversarios", recados:"guia-recados", feedbacks:"guia-feedbacks", relatorios:"guia-relatorios", equipe:"guia-equipe" };
   if($("ajudaBtn")) $("ajudaBtn").addEventListener("click", function(){
     var ativa = document.querySelector(".tab-btn.active");
     var alvo = ativa ? GUIA_SECAO[ativa.getAttribute("data-tab")] : null;
     var btnGuia = document.querySelector('.tab-btn[data-tab="guia"]');
     if(btnGuia) btnGuia.click();
     if(alvo && $(alvo)) setTimeout(function(){ $(alvo).scrollIntoView({ behavior:"smooth", block:"start" }); }, 60);
+  });
+
+  // sub-abas (Voz do aluno): trocam o bloco sem sair da aba
+  document.querySelectorAll(".sub-aba").forEach(function(b){
+    b.addEventListener("click", function(){
+      var grupo = b.parentNode;
+      grupo.querySelectorAll(".sub-aba").forEach(function(x){ x.classList.remove("ativa"); });
+      b.classList.add("ativa");
+      grupo.parentNode.querySelectorAll(".sub-conteudo").forEach(function(c){ c.style.display = "none"; });
+      var alvo = $("sub-" + b.getAttribute("data-sub"));
+      if(alvo) alvo.style.display = "block";
+    });
   });
 
   document.querySelectorAll(".tab-btn").forEach(function(btn){
