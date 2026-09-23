@@ -4,6 +4,10 @@
 -- (nota 5 = 10). Assim o cálculo de promotor/detrator continua valendo e a CS
 -- vê a nota como o aluno respondeu.
 
+-- Resposta de quem não achamos na base (nome escrito diferente, ou pessoa que
+-- não é aluno) também precisa ser guardada: fica sem aluno e a CS liga depois.
+alter table nps_responses alter column student_id drop not null;
+
 alter table nps_responses add column if not exists scale            int;
 alter table nps_responses add column if not exists score_raw        int;
 alter table nps_responses add column if not exists respondent_name  text;

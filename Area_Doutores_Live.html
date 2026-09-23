@@ -1243,7 +1243,8 @@
     });
     // NPS: vale a nota mais recente, nao a media — o que importa e como ele
     // esta agora, nao como estava seis meses atras.
-    (nps || []).sort(function(a,b){ return String(a.created_at).localeCompare(String(b.created_at)); })
+    (nps || []).filter(function(x){ return x.student_id; })
+      .sort(function(a,b){ return String(a.created_at).localeCompare(String(b.created_at)); })
       .forEach(function(x){ p(x.student_id).nps = Number(x.score); });
     (cliques || []).forEach(function(x){ p(x.student_id).cliques++; });
     presencas.forEach(function(x){ if(x.student_id){ var r = p(x.student_id); r.presencas = (r.presencas || 0) + 1; r.cliques++; } });
