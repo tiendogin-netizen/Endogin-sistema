@@ -2096,6 +2096,9 @@
       if(btn.getAttribute("data-tab") === "sessoes"){
         renderPainel11();
       }
+      if(btn.getAttribute("data-tab") === "grupos"){
+        renderGruposTab();
+      }
       if(btn.getAttribute("data-tab") === "progresso"){
         startProgressoIfNeeded();
         if(!allLessons.length) loadCalendarioAdmin();
@@ -2749,7 +2752,8 @@
       if($("tab-dashboard") && $("tab-dashboard").classList.contains("active")){ renderDashGraficos(); renderDashMovTable(); }
       renderAniversarios(allStudents);
       populateStudentSelects();
-      renderGruposTab();
+      gruposDosAlunosCarregados = false;
+      if($("tab-grupos") && $("tab-grupos").classList.contains("active")) renderGruposTab();
       renderExportColumns();
     });
   }
@@ -3150,10 +3154,27 @@
   function openAlunoModal(id){
     var student = allStudents.find(function(s){ return s.id === id; });
     if(!student) return;
-    // a foto não vem na lista (ver loadAlunos): busca a deste aluno agora
-    if(student.photo_url === undefined){
-      sb.from("students").select("photo_url").eq("id", id).single().then(function(r){
-        student.photo_url = (r.data && r.data.photo_url) || null;
+    // A lista vem enxuta de propósito (foto, grupos de WhatsApp e campos
+    // longos ficam de fora — ver loadAlunos). Ao abrir a ficha, busca o
+    // cadastro completo DESTE aluno e completa o que falta.
+    if(student.__completo !== true){
+      sb.from("students").select("photo_url,mentoria_raw_import,student_whatsapp_groups(id,label,status,group_id)").eq("id", id).single().then(function(r){
+        if(!r.data) return;
+        student.photo_url = r.data.photo_url || null;
+        student.mentoria_raw_import = r.data.mentoria_raw_import || null;
+        student.student_whatsapp_groups = r.data.student_whatsapp_groups || [];
+        student.__completo = true;
+        if(alunoEditingId === id){
+          alunoSelectedGroups = student.student_whatsapp_groups
+            .filter(function(g){ return g.status === "ativo"; })
+            .map(function(g){ return g.label; });
+          renderAlunoGroupChecks();
+          var rawHint2 = $("alunoMentoriaRawHint");
+          if(rawHint2 && student.mentoria_raw_import){
+            rawHint2.style.display = "block";
+            rawHint2.textContent = 'Mentoria original da planilha: "' + student.mentoria_raw_import + '" — confira e marque a mentoria certa acima.';
+          }
+        }
         if($("anivModal") && $("anivModal").classList.contains("open")) atualizaArteAniversario();
       });
     }
@@ -3568,8 +3589,25 @@
     });
   }
 
+  // Os vínculos de grupo saíram da consulta da lista (era peso à toa em 490
+  // alunos). A aba Grupos carrega só eles, numa consulta leve, quando abre.
+  var gruposDosAlunosCarregados = false;
+  function carregaGruposDosAlunos(depois){
+    if(gruposDosAlunosCarregados){ depois && depois(); return; }
+    buscarTudo("student_whatsapp_groups", "id,student_id,label,status,group_id").then(function(r){
+      var porAluno = {};
+      (r.data || []).forEach(function(g){
+        (porAluno[g.student_id] = porAluno[g.student_id] || []).push(g);
+      });
+      allStudents.forEach(function(st){ st.student_whatsapp_groups = porAluno[st.id] || []; });
+      gruposDosAlunosCarregados = true;
+      depois && depois();
+    });
+  }
+
   function renderGruposTab(){
     if(!$("wppStatTotal")) return;
+    if(!gruposDosAlunosCarregados){ carregaGruposDosAlunos(renderGruposTab); return; }
     iniciaNovoGrupo();
     var total = allStudents.length;
     var ativos = allStudents.filter(function(s){ return s.status === "ativo"; }).length;
@@ -7169,6 +7207,8 @@
   }
   function allExportColumns(){ return ALUNO_EXPORT_COLUMNS.concat(groupExportColumns()); }
 
+  function garanteGruposParaExport(depois){ carregaGruposDosAlunos(depois); }
+
   function renderExportColumns(){
     var wrap = $("exportColsList");
     if(!wrap) return;
@@ -7229,6 +7269,9 @@
   }
 
   $("exportAlunosBtn").addEventListener("click", function(){
+    // a coluna de grupos de WhatsApp precisa dos vínculos, que só são
+    // carregados sob demanda (ver carregaGruposDosAlunos)
+    if(!gruposDosAlunosCarregados){ carregaGruposDosAlunos(function(){ $("exportAlunosBtn").click(); }); return; }
     if(typeof ExcelJS === "undefined"){ alert("A biblioteca de Excel ainda está carregando, tenta de novo em alguns segundos."); return; }
     var cols = allExportColumns().filter(function(c){ var el = $("exportcol_" + c.key); return el && el.checked; });
     if(!cols.length){ alert("Selecione pelo menos uma coluna pra exportar."); return; }
