@@ -771,6 +771,7 @@
               <option value="sem_acesso">Sem login criado</option>
               <option value="nao_entrou">Tem login, nunca entrou</option>
               <option value="boas_vindas">Falta boas-vindas</option>
+              <option value="ficha">Falta a ficha</option>
               <option value="disc">Falta DISC</option>
               <option value="trilha">Trilha em andamento</option>
               <option value="sessao">1x1 pendente</option>
@@ -1650,6 +1651,7 @@
 
         <div style="grid-column:1/-1;margin-top:14px;padding-top:14px;border-top:1px solid var(--eg-navy-line);"><label>Perfil e logística</label></div>
         <div><label>Restrição alimentar</label><input type="text" id="alunoFieldDietary"></div>
+        <div><label>Necessidade especial</label><input type="text" id="alunoFieldSpecialNeeds" placeholder="acessibilidade, mobilidade..."></div>
         <div><label>Número do calçado</label><input type="text" id="alunoFieldShoeSize"></div>
         <div><label>Tamanho da jaqueta</label><input type="text" id="alunoFieldJacketSize"></div>
         <div><label>Tamanho da camiseta</label><input type="text" id="alunoFieldShirtSize"></div>
@@ -2674,6 +2676,7 @@
     if(!s.auth_user_id) return { etapa:"sem_acesso", texto:"Sem login", cor:"var(--eg-text-muted)" };
     if(!s.first_login_at && !s.onboarding_completed_at) return { etapa:"nao_entrou", texto:"Nunca entrou", cor:"var(--eg-red)" };
     if(!s.onboarding_completed_at) return { etapa:"boas_vindas", texto:"Falta boas-vindas", cor:"var(--eg-gold-300)" };
+    if(!s.perfil_completed_at && !s.especialidade) return { etapa:"ficha", texto:"Falta a ficha", cor:"var(--eg-gold-300)" };
     if(!s.disc_completed_at) return { etapa:"disc", texto:"Falta DISC", cor:"var(--eg-gold-300)" };
     if(s.veterano) return { etapa:"completa", texto:"Veterano · completa", cor:"var(--eg-green)" };
     if(!total || feitas < total) return { etapa:"trilha", texto:"Trilha " + feitas + "/" + (total || "?"), cor:"var(--eg-gold-300)" };
@@ -2826,7 +2829,7 @@
     // por carregamento — era o que fazia a tela demorar. A ficha busca a foto
     // do aluno que a CS abrir, uma de cada vez.
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,especialidade_original,cidade,uf,cidade_uf,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,especialidade_original,cidade,uf,cidade_uf,special_needs,perfil_completed_at,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -3341,6 +3344,7 @@
     loadAlunoTrilha(student);
     loadAlunoCourseProgress(student);
     $("alunoFieldDietary").value = student.dietary_restriction || "";
+    $("alunoFieldSpecialNeeds").value = student.special_needs || "";
     $("alunoFieldShoeSize").value = student.shoe_size || "";
     $("alunoFieldJacketSize").value = student.jacket_size || "";
     $("alunoFieldShirtSize").value = student.shirt_size || "";
@@ -3439,6 +3443,7 @@
       one_on_one_date: $("alunoFieldOneOnOneDate").value.trim() || null,
       one_on_one_summary: $("alunoFieldOneOnOneSummary").value.trim() || null,
       dietary_restriction: $("alunoFieldDietary").value.trim() || null,
+      special_needs: $("alunoFieldSpecialNeeds").value.trim() || null,
       shoe_size: $("alunoFieldShoeSize").value.trim() || null,
       jacket_size: $("alunoFieldJacketSize").value.trim() || null,
       shirt_size: $("alunoFieldShirtSize").value.trim() || null,
@@ -3480,7 +3485,7 @@
   // planilha — não tinha como criar um do zero (nem um "aluno teste"). Cria
   // com o mínimo (nome + e-mail) e já abre a ficha completa em seguida, pra
   // marcar mentoria/status/CS na hora, sem precisar de uma segunda tela.
-  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,especialidade_original,cidade,uf,cidade_uf,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)";
+  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,especialidade_original,cidade,uf,cidade_uf,special_needs,perfil_completed_at,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)";
 
   $("novoAlunoBtn").addEventListener("click", function(){
     $("novoAlunoFieldName").value = "";
@@ -7288,6 +7293,7 @@
     { key:"medical_license", label:"CRM (médico)", get:function(s){ return s.medical_license || ""; } },
     { key:"especialidade", label:"Especialidade", get:function(s){ return s.especialidade || ""; } },
     { key:"cidade_uf", label:"Cidade/UF", get:function(s){ return s.cidade_uf || ""; } },
+    { key:"special_needs", label:"Necessidade especial", get:function(s){ return s.special_needs || ""; } },
     { key:"one_on_one_status", label:"Status do 1:1", get:function(s){ return s.one_on_one_status || ""; } },
     { key:"dietary_restriction", label:"Restrição alimentar", get:function(s){ return s.dietary_restriction || ""; } },
     { key:"referral_count", label:"Nº de indicações", get:function(s){ return s.referral_count || ""; } },

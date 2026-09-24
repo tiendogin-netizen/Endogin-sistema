@@ -72,6 +72,12 @@
   .brand-word .cs{display:block;font-size:9px;letter-spacing:3px;color:var(--eg-text-muted);font-weight:600;text-align:center;}
   .brand-word .name{display:block;font-family:'Sora',sans-serif;font-weight:600;font-size:19px;background:linear-gradient(180deg,var(--eg-gold-100),var(--eg-gold-500));-webkit-background-clip:text;background-clip:text;color:transparent;text-align:center;}
 
+  .form-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin-bottom:16px;}
+  .form-2col label{display:block;font-size:11.5px;font-weight:600;color:var(--eg-text-secondary);margin-bottom:5px;}
+  @media (max-width:520px){ .form-2col{grid-template-columns:1fr;} }
+  [data-screen] textarea{width:100%;border-radius:10px;border:1px solid var(--eg-border);background:var(--eg-bg-2);color:var(--eg-text-primary);padding:10px 12px;font-family:inherit;font-size:14px;resize:vertical;}
+  [data-screen] textarea:focus{outline:none;border-color:var(--eg-gold-500);}
+  [data-screen] label{display:block;font-size:11.5px;font-weight:600;color:var(--eg-text-secondary);margin-bottom:5px;}
   .step-title{font-size:16px;font-weight:700;margin-bottom:6px;text-align:center;}
   .step-sub{font-size:12.5px;color:var(--eg-text-secondary);text-align:center;margin-bottom:22px;line-height:1.6;}
   .nps-scale{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:18px;}
@@ -732,6 +738,81 @@
       <button class="btn-primary" id="obNpsNextBtn" style="width:100%;" disabled>Continuar</button>
     </div>
 
+    <!-- ============ ONBOARDING: FICHA DO MENTORADO ============ -->
+    <div data-screen="obPerfil">
+      <div class="step-title">Conta pra gente sobre você</div>
+      <div class="step-sub">São os dados que sua CS usa pra te acompanhar — e que a gente precisa pra encontros presenciais, brindes e materiais. Leva um minuto.</div>
+      <div class="form-2col">
+        <div style="grid-column:1/-1;"><label>Sua especialidade *</label>
+          <select id="obEspecialidade">
+            <option value="">Escolha…</option>
+            <option>Ginecologia</option><option>Nutrologia</option><option>Endocrinologia</option>
+            <option>Cirurgia Bariátrica</option><option>Clínica Geral</option>
+            <option>Emagrecimento e Metabolismo</option><option>Medicina do Esporte</option>
+            <option>Medicina de Família</option><option>Cardiologia</option><option>Dermatologia</option>
+            <option>Psiquiatria</option><option>Cirurgia</option><option>Ortopedia</option>
+            <option>Urologia</option><option>Pediatria</option><option>Mastologia</option>
+            <option>Neurologia</option><option>Nefrologia</option><option>Oncologia</option>
+            <option>Infectologia</option><option>Oftalmologia</option><option>Anestesiologia</option>
+            <option>Endoscopia</option>
+            <option value="__outra">Outra (escrever)</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;display:none;" id="obEspecialidadeOutraWrap">
+          <label>Qual?</label><input type="text" id="obEspecialidadeOutra" placeholder="Ex: Reumatologia">
+        </div>
+        <div><label>Cidade *</label><input type="text" id="obCidade" placeholder="Ex: Vitória"></div>
+        <div><label>Estado *</label>
+          <select id="obUf"><option value="">UF</option>
+            <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
+            <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+            <option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option>
+            <option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+            <option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option>
+            <option>SE</option><option>TO</option>
+          </select>
+        </div>
+        <div><label>CRM (opcional)</label><input type="text" id="obCrm" placeholder="Ex: 12345/ES"></div>
+        <div><label>Instagram (opcional)</label><input type="text" id="obInstagram" placeholder="@seuperfil"></div>
+        <div><label>Nº do calçado *</label><input type="text" id="obCalcado" placeholder="Ex: 39"></div>
+        <div><label>Tamanho da camiseta *</label>
+          <select id="obCamiseta"><option value="">Escolha…</option>
+            <option>PP</option><option>P</option><option>M</option><option>G</option><option>GG</option><option>XG</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;"><label>Tamanho da jaqueta *</label>
+          <select id="obJaqueta"><option value="">Escolha…</option>
+            <option>PP</option><option>P</option><option>M</option><option>G</option><option>GG</option><option>XG</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;"><label>Tem alguma restrição alimentar? *</label>
+          <select id="obRestricaoTem"><option value="">Escolha…</option><option value="nao">Não tenho</option><option value="sim">Sim, tenho</option></select>
+        </div>
+        <div style="grid-column:1/-1;display:none;" id="obRestricaoWrap">
+          <label>Qual?</label><input type="text" id="obRestricao" placeholder="Ex: intolerância a lactose, vegetariano…">
+        </div>
+        <div style="grid-column:1/-1;"><label>Alguma necessidade especial que devemos saber? (opcional)</label>
+          <input type="text" id="obNecessidade" placeholder="Acessibilidade, mobilidade, saúde… deixe em branco se não houver">
+        </div>
+      </div>
+      <button class="btn-primary" id="obPerfilBtn" style="width:100%;margin-top:6px;">Continuar</button>
+      <div class="err-msg" id="obPerfilErr"></div>
+    </div>
+
+    <!-- ============ ONBOARDING: FEEDBACK ============ -->
+    <div data-screen="obFeedback">
+      <div class="step-title">Sua opinião sincera</div>
+      <div class="step-sub">Três perguntas rápidas. Isso vai direto pra equipe e é o que faz a mentoria melhorar.</div>
+      <div><label>O que você está achando da mentoria até agora? *</label>
+        <textarea id="obFbMentoria" rows="3" placeholder="O que tem funcionado, o que poderia ser melhor…"></textarea></div>
+      <div style="margin-top:12px;"><label>E do atendimento da sua CS? *</label>
+        <textarea id="obFbCs" rows="3" placeholder="Ela respondeu rápido? Te ajudou no que precisava?"></textarea></div>
+      <div style="margin-top:12px;"><label>E desta plataforma? *</label>
+        <textarea id="obFbPlataforma" rows="3" placeholder="Achou fácil de usar? Faltou alguma coisa?"></textarea></div>
+      <button class="btn-primary" id="obFeedbackBtn" style="width:100%;margin-top:16px;">Continuar</button>
+      <div class="err-msg" id="obFeedbackErr"></div>
+    </div>
+
     <!-- ============ ONBOARDING: FOTO + ANIVERSÁRIO ============ -->
     <div data-screen="obPhoto">
       <div class="step-title">Só mais um pouco</div>
@@ -1114,6 +1195,69 @@
   }
 
   $("obNpsNextBtn").addEventListener("click", function(){
+    showScreen("obPerfil");
+  });
+
+  // ---------------- ficha do mentorado (primeiro acesso) ----------------
+  // Os dados que a CS precisa e que antes ela caçava um a um por WhatsApp:
+  // especialidade, de onde é, tamanhos (brinde/jaqueta do evento) e
+  // restrição alimentar. Obrigatório aqui, uma vez só na vida do aluno.
+  $("obEspecialidade").addEventListener("change", function(){
+    $("obEspecialidadeOutraWrap").style.display = this.value === "__outra" ? "block" : "none";
+  });
+  $("obRestricaoTem").addEventListener("change", function(){
+    $("obRestricaoWrap").style.display = this.value === "sim" ? "block" : "none";
+  });
+
+  var obPerfilDados = null;
+  $("obPerfilBtn").addEventListener("click", function(){
+    var err = $("obPerfilErr");
+    err.textContent = "";
+    var esp = $("obEspecialidade").value === "__outra" ? $("obEspecialidadeOutra").value.trim() : $("obEspecialidade").value;
+    var restricaoTem = $("obRestricaoTem").value;
+    var faltando = [];
+    if(!esp) faltando.push("especialidade");
+    if(!$("obCidade").value.trim()) faltando.push("cidade");
+    if(!$("obUf").value) faltando.push("estado");
+    if(!$("obCalcado").value.trim()) faltando.push("nº do calçado");
+    if(!$("obCamiseta").value) faltando.push("tamanho da camiseta");
+    if(!$("obJaqueta").value) faltando.push("tamanho da jaqueta");
+    if(!restricaoTem) faltando.push("restrição alimentar");
+    if(restricaoTem === "sim" && !$("obRestricao").value.trim()) faltando.push("qual é a restrição");
+    if(faltando.length){ err.textContent = "Falta preencher: " + faltando.join(", ") + "."; return; }
+
+    obPerfilDados = {
+      especialidade: esp,
+      cidade: $("obCidade").value.trim(),
+      uf: $("obUf").value,
+      cidade_uf: $("obCidade").value.trim() + "/" + $("obUf").value,
+      medical_license: $("obCrm").value.trim() || null,
+      instagram: $("obInstagram").value.trim() || null,
+      shoe_size: $("obCalcado").value.trim(),
+      shirt_size: $("obCamiseta").value,
+      jacket_size: $("obJaqueta").value,
+      dietary_restriction: restricaoTem === "sim" ? $("obRestricao").value.trim() : "Não tenho",
+      special_needs: $("obNecessidade").value.trim() || null,
+      perfil_completed_at: new Date().toISOString()
+    };
+    showScreen("obFeedback");
+  });
+
+  // ---------------- feedback do primeiro acesso ----------------
+  var obFeedbacks = null;
+  $("obFeedbackBtn").addEventListener("click", function(){
+    var err = $("obFeedbackErr");
+    err.textContent = "";
+    var m = $("obFbMentoria").value.trim(), c = $("obFbCs").value.trim(), pl = $("obFbPlataforma").value.trim();
+    if(m.length < 3 || c.length < 3 || pl.length < 3){
+      err.textContent = "Responda as três perguntas, mesmo que em poucas palavras.";
+      return;
+    }
+    obFeedbacks = [
+      { student_id: currentStudent.id, category: "mentoria",   comment: m, rating: obNpsScore === null ? 5 : Math.round(obNpsScore / 2), source: "primeiro_acesso" },
+      { student_id: currentStudent.id, category: "cs",         comment: c, rating: obNpsScore === null ? 5 : Math.round(obNpsScore / 2), source: "primeiro_acesso" },
+      { student_id: currentStudent.id, category: "plataforma", comment: pl, rating: obNpsScore === null ? 5 : Math.round(obNpsScore / 2), source: "primeiro_acesso" }
+    ];
     showScreen("obPhoto");
   });
 
@@ -1146,6 +1290,8 @@
     $("obErr").textContent = "";
     $("obFinishBtn").disabled = true; $("obFinishBtn").textContent = "Salvando…";
     var updates = { onboarding_completed_at: new Date().toISOString() };
+    // a ficha preenchida nas telas anteriores vai junto
+    if(obPerfilDados) updates = Object.assign(updates, obPerfilDados);
     if(!skipRest){
       if(obPhotoData) updates.photo_url = obPhotoData;
       var birth = $("obBirthDate").value;
@@ -1161,6 +1307,7 @@
       if(obNpsScore !== null){
         tasks.push(sb.from("nps_responses").insert({ student_id: currentStudent.id, score: obNpsScore, source: "primeiro_acesso" }));
       }
+      if(obFeedbacks) tasks.push(sb.from("feedback_entries").insert(obFeedbacks));
       Promise.all(tasks).then(function(){
         currentStudent = Object.assign({}, currentStudent, updates);
         startDiscOnly();
