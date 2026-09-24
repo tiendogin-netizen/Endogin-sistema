@@ -58,6 +58,15 @@
   .tab-panel{display:none;} .tab-panel.active{display:block;}
   /* sub-abas dentro de uma aba (ex: Voz do aluno) */
   /* quadro de 1:1 em colunas */
+
+  /* barras horizontais — especialidade e estado */
+  .barras{display:flex;flex-direction:column;gap:7px;}
+  .barra-linha{display:grid;grid-template-columns:minmax(110px,34%) 1fr auto;align-items:center;gap:10px;font-size:12.5px;}
+  .barra-linha .rotulo{color:var(--eg-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .barra-linha .trilho{height:9px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;}
+  .barra-linha .trilho i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--eg-gold-700),var(--eg-gold-300));}
+  .barra-linha .valor{font-family:var(--eg-mono,monospace);font-size:11.5px;color:var(--eg-text-muted);min-width:56px;text-align:right;}
+  .barra-vazia{font-size:12px;color:var(--eg-text-muted);font-style:italic;}
   .s11-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
   .s11-col{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:12px;padding:12px 12px 8px;}
   .s11-col > b{display:flex;align-items:center;justify-content:space-between;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;}
@@ -637,6 +646,15 @@
       </div>
 
       <div class="card">
+        <div class="card-head"><h3>Quem são os mentorados</h3><span class="hint" id="perfilResumo"></span></div>
+        <p class="hint" style="margin:-8px 0 14px;">Especialidade e de onde eles são — vem da planilha da CS. Só conta quem está na carteira.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px;">
+          <div><p class="hint" style="margin:0 0 10px;font-weight:700;">Por especialidade</p><div id="dashEspecialidade"></div></div>
+          <div><p class="hint" style="margin:0 0 10px;font-weight:700;">Por estado</p><div id="dashEstado"></div></div>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-head"><h3>Situação da carteira</h3></div>
         <p class="hint" style="margin:-8px 0 14px;">Passe o mouse numa fatia ou na legenda para ver o detalhe.</p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px;">
@@ -739,6 +757,14 @@
             </select>
           </div>
           <div>
+            <label>Especialidade</label>
+            <select id="fltEspecialidade"><option value="">Todas</option></select>
+          </div>
+          <div>
+            <label>Estado</label>
+            <select id="fltUf"><option value="">Todos</option></select>
+          </div>
+          <div>
             <label>Jornada no Portal</label>
             <select id="fltJornada">
               <option value="">Qualquer</option>
@@ -756,7 +782,7 @@
         </div>
         <div id="alunosLoading" class="loading-note">Carregando alunos...</div>
         <table id="alunosTable" style="display:none;">
-          <thead><tr><th>Aluno</th><th>Contato</th><th>Mentorias</th><th>Status</th><th>Jornada</th><th>CS</th><th></th></tr></thead>
+          <thead><tr><th>Aluno</th><th>Contato</th><th>Especialidade</th><th>Mentorias</th><th>Status</th><th>Jornada</th><th>CS</th><th></th></tr></thead>
           <tbody id="alunosBody"></tbody>
         </table>
       </div>
@@ -2420,6 +2446,33 @@
     renderDashMovTable();
   }
 
+
+  // Barras horizontais: com 22 especialidades e 25 estados, pizza vira
+  // confete. Barra ordenada responde a pergunta certa — quem é maior.
+  function barrasEG(elId, itens, total){
+    var el = $(elId);
+    if(!el) return;
+    if(!itens.length){ el.innerHTML = '<p class="barra-vazia">Ainda sem dados preenchidos.</p>'; return; }
+    var maior = itens[0].valor || 1;
+    el.innerHTML = '<div class="barras">' + itens.map(function(i){
+      var pct = total ? Math.round(i.valor / total * 100) : 0;
+      return '<div class="barra-linha" title="' + esc(i.rotulo) + ': ' + i.valor + ' (' + pct + '%)">' +
+        '<span class="rotulo">' + esc(i.rotulo) + '</span>' +
+        '<span class="trilho"><i style="width:' + Math.round(i.valor / maior * 100) + '%;"></i></span>' +
+        '<span class="valor">' + i.valor + ' · ' + pct + '%</span>' +
+      '</div>';
+    }).join("") + '</div>';
+  }
+  function contaCampo(lista, campo){
+    var mapa = {};
+    lista.forEach(function(s){
+      var v = (s[campo] || "").trim();
+      if(v) mapa[v] = (mapa[v] || 0) + 1;
+    });
+    return Object.keys(mapa).map(function(k){ return { rotulo:k, valor:mapa[k] }; })
+      .sort(function(a, b){ return b.valor - a.valor; });
+  }
+
   // Os graficos do Dashboard saem de allStudents — o mesmo recorte da aba
   // Alunos, ja limitado pela RLS. Antes aqui havia numeros inventados.
   function renderDashGraficos(){
@@ -2469,6 +2522,14 @@
       { label:"Frio",   value: porTemp.Frio,   color:"#8fb3e0" },
       { label:"Sem temperatura", value: porTemp["Sem temperatura"], color:"#4a5670" }
     ], { titulo:"Na carteira" });
+
+    // quem são: especialidade e estado
+    var esp = contaCampo(carteira, "especialidade"), est = contaCampo(carteira, "uf");
+    barrasEG("dashEspecialidade", esp.slice(0, 12), carteira.length);
+    barrasEG("dashEstado", est.slice(0, 12), carteira.length);
+    if($("perfilResumo")) $("perfilResumo").textContent =
+      esp.reduce(function(t, i){ return t + i.valor; }, 0) + " com especialidade · " +
+      est.reduce(function(t, i){ return t + i.valor; }, 0) + " com estado · de " + carteira.length;
   }
   function renderDashMovTable(filter){
     dashMovFiltro = filter || dashMovFiltro;
@@ -2572,7 +2633,7 @@
   // ---------------- filtros e ordenacao da lista de alunos ----------------
   // Tudo aqui roda sobre allStudents, que a RLS ja limitou ao que a pessoa
   // pode ver. Filtro e ordenacao nao ampliam acesso: so reorganizam.
-  var alunosFiltro = { status:"", mentoria:"", temp:"", venc:"", jornada:"", ordem:"nome_az" };
+  var alunosFiltro = { status:"", mentoria:"", temp:"", venc:"", jornada:"", especialidade:"", uf:"", ordem:"nome_az" };
 
   // ---- jornada do aluno no Portal ----
   // O que a CS precisa saber de relance: o aluno ja entrou? fez boas-vindas
@@ -2653,6 +2714,8 @@
   function passaFiltros(s){
     if(alunosFiltro.status && s.status !== alunosFiltro.status) return false;
     if(alunosFiltro.jornada && jornadaDe(s).etapa !== alunosFiltro.jornada) return false;
+    if(alunosFiltro.especialidade && (s.especialidade || "") !== alunosFiltro.especialidade) return false;
+    if(alunosFiltro.uf && (s.uf || "") !== alunosFiltro.uf) return false;
     if(alunosFiltro.mentoria){
       var tem = (s.deliveries || []).some(function(d){ return d.status === "ativo" && d.branch_id === alunosFiltro.mentoria; });
       if(!tem) return false;
@@ -2695,6 +2758,22 @@
     }
   }
 
+  // as opções saem dos próprios alunos: só aparece o que existe na carteira
+  function preencheFiltrosPerfil(){
+    [["fltEspecialidade", "especialidade"], ["fltUf", "uf"]].forEach(function(par){
+      var sel = $(par[0]);
+      if(!sel) return;
+      var atual = sel.value;
+      var vals = {};
+      allStudents.forEach(function(s){ var v = (s[par[1]] || "").trim(); if(v) vals[v] = true; });
+      var lista = Object.keys(vals).sort();
+      if(sel.options.length - 1 === lista.length) return;
+      sel.innerHTML = '<option value="">' + (par[1] === "uf" ? "Todos" : "Todas") + '</option>' +
+        lista.map(function(v){ return '<option value="' + v + '">' + v + '</option>'; }).join("");
+      sel.value = atual;
+    });
+  }
+
   function preencheFiltroMentoria(){
     var sel = $("fltMentoria");
     if(!sel) return;
@@ -2724,15 +2803,15 @@
     renderAlunos(filtered);
   }
 
-  [["fltOrdem","ordem"],["fltStatus","status"],["fltMentoria","mentoria"],["fltTemp","temp"],["fltVenc","venc"],["fltJornada","jornada"]]
+  [["fltOrdem","ordem"],["fltStatus","status"],["fltMentoria","mentoria"],["fltTemp","temp"],["fltVenc","venc"],["fltJornada","jornada"],["fltEspecialidade","especialidade"],["fltUf","uf"]]
     .forEach(function(par){
       var el = $(par[0]);
       if(el) el.addEventListener("change", function(){ alunosFiltro[par[1]] = el.value; applyAlunosFilter(); });
     });
   if($("fltLimpar")){
     $("fltLimpar").addEventListener("click", function(){
-      alunosFiltro = { status:"", mentoria:"", temp:"", venc:"", jornada:"", ordem:"nome_az" };
-      ["fltStatus","fltMentoria","fltTemp","fltVenc","fltJornada"].forEach(function(id){ $(id).value = ""; });
+      alunosFiltro = { status:"", mentoria:"", temp:"", venc:"", jornada:"", especialidade:"", uf:"", ordem:"nome_az" };
+      ["fltStatus","fltMentoria","fltTemp","fltVenc","fltJornada","fltEspecialidade","fltUf"].forEach(function(id){ $(id).value = ""; });
       $("fltOrdem").value = "nome_az";
       $("alunosSearch").value = ""; alunosSearchValue = "";
       applyAlunosFilter();
@@ -2747,7 +2826,7 @@
     // por carregamento — era o que fazia a tela demorar. A ficha busca a foto
     // do aluno que a CS abrir, uma de cada vez.
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,cidade_uf,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
+      .select("id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,especialidade_original,cidade,uf,cidade_uf,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
@@ -2765,6 +2844,7 @@
       renderDashMovTable();
       loadDashKpis(true);
       if(carteirasStudents.length) loadCarteiras();
+      preencheFiltrosPerfil();
       renderAniversarios(allStudents);
       populateStudentSelects();
       gruposDosAlunosCarregados = false;
@@ -2907,6 +2987,8 @@
       tr.innerHTML =
         '<td><b>' + s.full_name + '</b>' + discBadge(s) + '<br><span class="hint">' + s.email + '</span></td>' +
         '<td>' + telefoneBonito(s.phone) + waLinkHtml(s.phone) + '</td>' +
+        '<td>' + (s.especialidade ? esc(s.especialidade) : '<span class="hint">—</span>') +
+          (s.cidade_uf ? '<br><span class="hint">' + esc(s.cidade_uf) + '</span>' : '') + '</td>' +
         '<td>' + tags + '</td>' +
         '<td><span class="status-pill ' + s.status + '">' + s.status + '</span></td>' +
         '<td>' + jornadaBadge(s) + '</td>' +
@@ -3398,7 +3480,7 @@
   // planilha — não tinha como criar um do zero (nem um "aluno teste"). Cria
   // com o mínimo (nome + e-mail) e já abre a ficha completa em seguida, pra
   // marcar mentoria/status/CS na hora, sem precisar de uma segunda tela.
-  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,cidade_uf,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)";
+  var ALUNOS_SELECT_STRING = "id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,photo_url,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,especialidade_original,cidade,uf,cidade_uf,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)";
 
   $("novoAlunoBtn").addEventListener("click", function(){
     $("novoAlunoFieldName").value = "";

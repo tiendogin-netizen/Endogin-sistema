@@ -259,6 +259,14 @@
   .ev-item span{color:var(--txt-3);font-size:11px;}
   @media (max-width:760px){ .ev-grid{grid-template-columns:1fr;} .ev-capa .faltam{position:static;text-align:left;margin-top:12px;} .ev-capa h2{font-size:24px;} }
 
+  .barras{display:flex;flex-direction:column;gap:7px;}
+  .barra-linha{display:grid;grid-template-columns:minmax(110px,34%) 1fr auto;align-items:center;gap:10px;font-size:12.5px;}
+  .barra-linha .rotulo{color:var(--txt-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .barra-linha .trilho{height:9px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;}
+  .barra-linha .trilho i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#8a6b30,#e3bd76);}
+  .barra-linha .valor{font-family:var(--mono);font-size:11.5px;color:var(--txt-3);min-width:56px;text-align:right;}
+  .barra-vazia{font-size:12px;color:var(--txt-3);font-style:italic;}
+
   .eg-hero{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 28px;margin-bottom:6px;}
   .eg-hero .rot{font-size:12px;color:#8792a8;font-weight:600;width:100%;}
   .eg-hero .num{font-family:'Sora',sans-serif;font-size:36px;font-weight:700;line-height:1;color:#f3f0e8;}
@@ -371,6 +379,22 @@
             <h4>Por mentoria</h4>
             <p class="dica">Quantos mentorados ativos cada braço tem.</p>
             <div class="tela-grafico"><canvas id="gMentoria"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="secao">
+        <div class="secao-cab"><h3>Quem são os mentorados</h3><span class="nota" id="notaPerfil"></span></div>
+        <div class="graficos">
+          <div class="painel">
+            <h4>Por especialidade</h4>
+            <p class="dica">A formação de cada mentorado, como a CS registrou.</p>
+            <div id="dEspecialidade"></div>
+          </div>
+          <div class="painel">
+            <h4>Por estado</h4>
+            <p class="dica">De onde eles atendem — útil pra encontro presencial e turma regional.</p>
+            <div id="dEstado"></div>
           </div>
         </div>
       </div>
@@ -1170,7 +1194,7 @@
     Promise.all([
       // `oculto_diretoria` marca quem encerrou a mentoria: some daqui mesmo
       // que a conta logada também seja master (caso do Dr. Caio).
-      buscarTudo("students", "id,full_name,email,phone,status,temperature,renewal_date,renewal_status,is_lifetime,is_delinquent,entry_date,cs_id,disc_completed_at,staff:cs_id(full_name),deliveries(label,status,branch_id),disc_results(d_score,i_score,s_score,c_score,primary_profile)",
+      buscarTudo("students", "id,full_name,email,phone,status,temperature,renewal_date,renewal_status,is_lifetime,is_delinquent,entry_date,cs_id,disc_completed_at,especialidade,cidade,uf,cidade_uf,staff:cs_id(full_name),deliveries(label,status,branch_id),disc_results(d_score,i_score,s_score,c_score,primary_profile)",
         function(q){ return q.or("oculto_diretoria.is.null,oculto_diretoria.eq.false"); }),
       sb.from("branches").select("id,name").order("name"),
       // Os sinais de risco moram em tabelas separadas — sem elas a tela vira
@@ -1298,6 +1322,27 @@
   function faixa(p){ return p >= 6 ? "alto" : (p >= 3 ? "medio" : "baixo"); }
 
   // ---------- visão geral ----------
+  function barrasEG(elId, itens, total){
+    var el = $(elId);
+    if(!el) return;
+    if(!itens.length){ el.innerHTML = '<p class="barra-vazia">Ainda sem dados preenchidos.</p>'; return; }
+    var maior = itens[0].valor || 1;
+    el.innerHTML = '<div class="barras">' + itens.map(function(i){
+      var pct = total ? Math.round(i.valor / total * 100) : 0;
+      return '<div class="barra-linha" title="' + esc(i.rotulo) + ': ' + i.valor + '">' +
+        '<span class="rotulo">' + esc(i.rotulo) + '</span>' +
+        '<span class="trilho"><i style="width:' + Math.round(i.valor / maior * 100) + '%;"></i></span>' +
+        '<span class="valor">' + i.valor + ' · ' + pct + '%</span>' +
+      '</div>';
+    }).join("") + '</div>';
+  }
+  function contaCampo(lista, campo){
+    var mapa = {};
+    lista.forEach(function(a){ var v = (a[campo] || "").trim(); if(v) mapa[v] = (mapa[v] || 0) + 1; });
+    return Object.keys(mapa).map(function(k){ return { rotulo:k, valor:mapa[k] }; })
+      .sort(function(a, b){ return b.valor - a.valor; });
+  }
+
   function desenhaPanorama(){
     if(!alunos.length){ return; }
     var ativos = alunos.filter(function(a){ return a.status === "ativo" || a.status === "onboarding" || a.status === "em_reonboarding"; });
@@ -1356,6 +1401,12 @@
     donutEG("dTemp", Object.keys(porTemp).map(function(k){
       return { label: k, value: porTemp[k], color: CORES_TEMP[k] || "#4a5670" };
     }).sort(function(x, y){ return y.value - x.value; }), { titulo:"Na carteira" });
+
+    var espec = contaCampo(carteira, "especialidade"), estado = contaCampo(carteira, "uf");
+    barrasEG("dEspecialidade", espec.slice(0, 12), carteira.length);
+    barrasEG("dEstado", estado.slice(0, 12), carteira.length);
+    if($("notaPerfil")) $("notaPerfil").textContent =
+      espec.length + " especialidades · " + estado.length + " estados";
 
     // crescimento: a linha com brilho
     var serie = serieEntradasPorMes(alunos, 12);
