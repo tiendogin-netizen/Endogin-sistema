@@ -2354,8 +2354,11 @@
   // KPI ficaria mostrando só a carteira de quem abriu a tela.
   var dashKpisLoaded = false;
 
-  function loadDashKpis(){
-    if(dashKpisLoaded) return;
+  function loadDashKpis(recarregar){
+    // Antes isto rodava UMA vez por sessão: a CS mudava o status de um aluno
+    // e o número do topo continuava o de antes. Agora qualquer alteração na
+    // lista de alunos manda recarregar.
+    if(dashKpisLoaded && !recarregar) return;
     dashKpisLoaded = true;
 
     sb.from("students").select("status,entry_date").then(function(r){
@@ -2439,15 +2442,23 @@
       '<span>Ativos hoje: <b class="azul">' + ativos + '</b></span>';
     linhaEG("dashLinha", serie, { cor:"#e3bd76", altura:230, unidade:"aluno(s)" });
 
+    // Quem saiu (inativo/cancelado) NÃO é carteira: entra só no histórico.
+    // Antes o donut somava todo mundo e o número do meio parecia dizer que a
+    // base inteira estava ativa.
+    var carteira = allStudents.filter(function(s){ return s.status !== "inativo" && s.status !== "cancelado"; });
+
     var porStatus = {};
-    allStudents.forEach(function(s){ var k = s.status || "sem status"; porStatus[k] = (porStatus[k] || 0) + 1; });
-    var CORES_STATUS = { ativo:"#8fc79f", onboarding:"#e3bd76", em_reonboarding:"#c9974b", trancado:"#8fb3e0", inativo:"#6d7994", cancelado:"#d98a8a" };
+    carteira.forEach(function(s){
+      var k = s.status === "ativo" && s.renewal_status === "Resolvendo" ? "em tratativa" : (s.status || "sem status");
+      porStatus[k] = (porStatus[k] || 0) + 1;
+    });
+    var CORES_STATUS = { ativo:"#8fc79f", "em tratativa":"#e3bd76", onboarding:"#e3bd76", em_reonboarding:"#c9974b", trancado:"#8fb3e0" };
     donutEG("dashDonutStatus", Object.keys(porStatus).map(function(k){
       return { label: k.replace("_", " "), value: porStatus[k], color: CORES_STATUS[k] || "#b294c9" };
-    }).sort(function(a, b){ return b.value - a.value; }), { titulo:"Alunos" });
+    }).sort(function(a, b){ return b.value - a.value; }), { titulo:"Na carteira" });
 
     var porTemp = { Quente:0, Morno:0, Frio:0, "Sem temperatura":0 };
-    allStudents.forEach(function(s){
+    carteira.forEach(function(s){
       var t = (s.temperature || "").toLowerCase();
       if(t.indexOf("quent") > -1) porTemp.Quente++; else if(t.indexOf("morn") > -1) porTemp.Morno++;
       else if(t.indexOf("fri") > -1) porTemp.Frio++; else porTemp["Sem temperatura"]++;
@@ -2457,7 +2468,7 @@
       { label:"Morno",  value: porTemp.Morno,  color:"#e3bd76" },
       { label:"Frio",   value: porTemp.Frio,   color:"#8fb3e0" },
       { label:"Sem temperatura", value: porTemp["Sem temperatura"], color:"#4a5670" }
-    ], { titulo:"Alunos" });
+    ], { titulo:"Na carteira" });
   }
   function renderDashMovTable(filter){
     dashMovFiltro = filter || dashMovFiltro;
@@ -2749,7 +2760,11 @@
       renderPainel11();
       // o Dashboard desenha a partir desta lista: sempre que ela chega, os
       // graficos acompanham (se a aba estiver aberta)
-      if($("tab-dashboard") && $("tab-dashboard").classList.contains("active")){ renderDashGraficos(); renderDashMovTable(); }
+      // tudo que sai da lista de alunos se refaz junto com ela
+      renderDashGraficos();
+      renderDashMovTable();
+      loadDashKpis(true);
+      if(carteirasStudents.length) loadCarteiras();
       renderAniversarios(allStudents);
       populateStudentSelects();
       gruposDosAlunosCarregados = false;

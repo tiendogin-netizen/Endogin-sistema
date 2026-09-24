@@ -1341,17 +1341,21 @@
         '<div class="num">' + k.num + '</div><div class="sub">' + k.sub + '</div></div>';
     }).join("");
 
-    var CORES_STATUS = { ativo:"#8fc79f", onboarding:"#e3bd76", em_reonboarding:"#c9974b", trancado:"#8fb3e0", inativo:"#6d7994", cancelado:"#d98a8a" };
-    var porStatus = contaPor(alunos, function(a){ return a.status || "sem situação"; });
+    // Quem saiu (inativo/cancelado) não é carteira: fica só no histórico.
+    var carteira = alunos.filter(function(a){ return a.status !== "inativo" && a.status !== "cancelado"; });
+    var CORES_STATUS = { ativo:"#8fc79f", "em tratativa":"#e3bd76", onboarding:"#e3bd76", em_reonboarding:"#c9974b", trancado:"#8fb3e0" };
+    var porStatus = contaPor(carteira, function(a){
+      return a.status === "ativo" && a.renewal_status === "Resolvendo" ? "em tratativa" : (a.status || "sem situação");
+    });
     donutEG("dStatus", Object.keys(porStatus).map(function(k){
       return { label: k.replace("_", " "), value: porStatus[k], color: CORES_STATUS[k] || "#b294c9" };
-    }).sort(function(x, y){ return y.value - x.value; }), { titulo:"Mentorados" });
+    }).sort(function(x, y){ return y.value - x.value; }), { titulo:"Na carteira" });
 
     var CORES_TEMP = { Quente:"#d98a8a", Morno:"#e3bd76", Frio:"#8fb3e0" };
-    var porTemp = contaPor(alunos, function(a){ return temperatura(a.temperature); });
+    var porTemp = contaPor(carteira, function(a){ return temperatura(a.temperature); });
     donutEG("dTemp", Object.keys(porTemp).map(function(k){
       return { label: k, value: porTemp[k], color: CORES_TEMP[k] || "#4a5670" };
-    }).sort(function(x, y){ return y.value - x.value; }), { titulo:"Mentorados" });
+    }).sort(function(x, y){ return y.value - x.value; }), { titulo:"Na carteira" });
 
     // crescimento: a linha com brilho
     var serie = serieEntradasPorMes(alunos, 12);
