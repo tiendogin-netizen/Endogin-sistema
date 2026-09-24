@@ -22,7 +22,13 @@ insert into novos_sem_email (nome,mentoria,cs,telefone,entrada,vencimento,temper
 -- cria quem ainda não existe (compara pelo nome, sem acento)
 insert into students (full_name, email, phone, status, entry_date, renewal_date,
                       temperature, especialidade, cs_id, oculto_diretoria)
-select n.nome, null, n.telefone, 'ativo', n.entrada, n.vencimento,
+select n.nome,
+       -- o cadastro exige um e-mail; este é provisório e aparece marcado na
+       -- ficha até a Thaís colocar o de verdade
+       'sem-email+' || lower(regexp_replace(translate(n.nome,
+          'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',
+          'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC'), '[^A-Za-z0-9]+', '.', 'g')) || '@pendente.endogin',
+       n.telefone, 'ativo', n.entrada, n.vencimento,
        n.temperatura, n.especialidade,
        (select id from staff st where st.full_name ilike n.cs || '%' and st.is_active limit 1),
        false
@@ -70,5 +76,6 @@ select 'SISTEMA',
        (select count(*) from students where status='cancelado'),
        (select count(*) from students where status in ('ativo','trancado','cancelado'));
 
--- quem ficou sem e-mail (a Thaís preenche depois)
-select full_name, status from students where email is null order by full_name;
+-- quem está com e-mail provisório (a Thaís preenche o de verdade na ficha)
+select full_name, email, status from students
+ where email like 'sem-email+%@pendente.endogin' order by full_name;
