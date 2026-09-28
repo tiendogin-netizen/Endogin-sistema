@@ -377,7 +377,11 @@
   .cal-dia{background:var(--eg-bg-2);border:1px solid var(--eg-navy-line);border-radius:10px;padding:10px 10px 8px;min-height:120px;}
   .cal-dia > b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--eg-text-muted);margin-bottom:8px;}
   .cal-dia.hoje > b{color:var(--eg-gold-300);}
-  .cal-aula{border:1px solid var(--eg-border);border-left:3px solid var(--eg-gold-500);border-radius:8px;padding:8px 9px;margin-bottom:7px;background:rgba(255,255,255,.02);cursor:pointer;}
+  .cal-aula{position:relative;border:1px solid var(--eg-border);border-left:3px solid var(--eg-gold-500);border-radius:8px;padding:8px 26px 8px 9px;margin-bottom:7px;background:rgba(255,255,255,.02);cursor:pointer;}
+  .cal-apagar{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:6px;border:1px solid var(--eg-navy-line);background:var(--eg-bg-2);color:var(--eg-text-muted);font-size:9.5px;cursor:pointer;opacity:0;transition:opacity .15s,background .15s,color .15s;}
+  .cal-aula:hover .cal-apagar{opacity:1;}
+  .cal-apagar:hover{background:var(--eg-red,#d98a8a);color:#2a0f0f;border-color:transparent;}
+  @media (hover:none){ .cal-apagar{opacity:1;} }
   .cal-aula:hover{border-color:var(--eg-gold-500);}
   .cal-aula .h{font-family:var(--eg-mono,monospace);font-size:11px;color:var(--eg-gold-300);}
   .cal-aula .t{display:block;font-size:12px;font-weight:600;margin-top:2px;line-height:1.3;}
@@ -6223,7 +6227,7 @@
       '</div>' +
       '<div style="display:flex;gap:6px;">' +
         '<button class="btn-secondary lesson-edit-btn" data-id="' + l.id + '"><i class="fa-solid fa-pen"></i></button>' +
-        (currentStaff.isMasterLike ? '<button class="btn-secondary lesson-del-btn" data-id="' + l.id + '"><i class="fa-solid fa-trash"></i></button>' : '') +
+        '<button class="btn-secondary lesson-del-btn" data-id="' + l.id + '" title="Apagar"><i class="fa-solid fa-trash"></i></button>' +
       '</div>' +
     '</div>';
   }
@@ -6260,6 +6264,7 @@
     function card(l){
       var h = l.scheduled_time ? l.scheduled_time.slice(0, 5).replace(":", "h") : "sem horário";
       return '<div class="cal-aula ' + l.lesson_type + '" data-id="' + l.id + '" title="Clique pra editar">' +
+        '<button class="cal-apagar" data-apagar="' + l.id + '" title="Apagar esta aula"><i class="fa-solid fa-trash"></i></button>' +
         '<span class="h">' + (l.lesson_type === "evento" ? fmtEventDate(l.event_date) + ' · ' : '') + h + (l.duration_minutes ? ' · ' + l.duration_minutes + 'min' : '') + '</span>' +
         '<span class="t">' + l.title + '</span>' +
         (l.category && l.category !== "Geral" ? '<span class="m">' + l.category + '</span>' : '') +
@@ -6321,6 +6326,7 @@
             if(l) openLessonForEdit(l);
           });
         });
+        ligaApagarAula(wrap);
       }
       ligaBotoesCalendario(wrap);
       return;
@@ -6381,6 +6387,37 @@
     ligaBotoesCalendario(wrap);
   }
 
+  // Apagar aula, com o nome dela na pergunta — a CS precisa ver o que vai
+  // sumir antes de confirmar. Aula apagada some do Portal de todo aluno
+  // daquela mentoria, então a confirmação não é decorativa.
+  function apagaAula(id, depois){
+    var l = allLessons.find(function(x){ return x.id === id; });
+    var nome = l ? l.title : "essa aula";
+    var quando = l && l.lesson_type === "semanal" && l.weekday
+      ? " (" + (LESSON_WEEKDAY_LABEL[l.weekday] || l.weekday) + (l.scheduled_time ? " às " + l.scheduled_time.slice(0, 5) : "") + ")"
+      : "";
+    if(!confirm('Apagar "' + nome + '"' + quando + '?\n\nEla some do Calendário e do Portal dos alunos. Não dá pra desfazer.')) return;
+    sb.from("lessons").delete().eq("id", id).then(function(r){
+      if(r.error){
+        alert(/permission|policy|row-level/i.test(r.error.message)
+          ? "Você não tem permissão para apagar aula. Peça pra Thaís."
+          : "Erro ao apagar: " + r.error.message);
+        return;
+      }
+      if(depois) depois();
+      loadCalendarioAdmin();
+    });
+  }
+
+  function ligaApagarAula(wrap){
+    wrap.querySelectorAll("[data-apagar]").forEach(function(btn){
+      btn.addEventListener("click", function(ev){
+        ev.stopPropagation();   // não abre a edição junto
+        apagaAula(btn.getAttribute("data-apagar"));
+      });
+    });
+  }
+
   function ligaBotoesCalendario(wrap){
     wrap.querySelectorAll(".lesson-edit-btn").forEach(function(btn){
       btn.addEventListener("click", function(){
@@ -6389,14 +6426,9 @@
       });
     });
     wrap.querySelectorAll(".lesson-del-btn").forEach(function(btn){
-      btn.addEventListener("click", function(){
-        if(!confirm("Apagar essa aula/encontro?")) return;
-        sb.from("lessons").delete().eq("id", btn.getAttribute("data-id")).then(function(r){
-          if(r.error){ alert("Erro ao apagar: " + r.error.message); return; }
-          loadCalendarioAdmin();
-        });
-      });
+      btn.addEventListener("click", function(){ apagaAula(btn.getAttribute("data-id")); });
     });
+    ligaApagarAula(wrap);
   }
 
   // ---------------- Materiais (protocolos, artigos, documentos) ----------------
