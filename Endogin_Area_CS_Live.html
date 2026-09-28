@@ -2821,7 +2821,23 @@
     });
   }
 
-  function loadAlunos(){
+  // Colunas que podem ainda não existir no banco (entram numa migration
+  // depois da tela ir ao ar). Se o Postgres reclamar de uma delas, a consulta
+  // é refeita sem ela em vez de derrubar a lista inteira — foi o que
+  // aconteceu com `special_needs` e deixou as CS sem ver aluno nenhum.
+  var COLUNAS_OPCIONAIS = ["special_needs", "perfil_completed_at", "especialidade_original", "cidade", "uf", "cidade_uf", "especialidade", "oculto_diretoria", "veterano", "first_login_at", "last_login_at", "one_on_one_type"];
+
+  function selectAlunos(semEstas){
+    var cols = ALUNOS_LISTA_COLS;
+    (semEstas || []).forEach(function(c){
+      cols = cols.replace(new RegExp("(^|,)" + c + "(?=,|$)"), "$1").replace(/,,+/g, ",").replace(/^,|,$/g, "");
+    });
+    return cols;
+  }
+
+  var ALUNOS_LISTA_COLS = "id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,especialidade_original,cidade,uf,cidade_uf,special_needs,perfil_completed_at,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)";
+
+  function loadAlunos(semEstas){
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
     // A FOTO fica de fora da lista: ela é uma imagem inteira guardada no
@@ -2829,12 +2845,25 @@
     // por carregamento — era o que fazia a tela demorar. A ficha busca a foto
     // do aluno que a CS abrir, uma de cada vez.
     var query = sb.from("students")
-      .select("id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,especialidade_original,cidade,uf,cidade_uf,special_needs,perfil_completed_at,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)")
+      .select(selectAlunos(semEstas))
       .order("full_name");
     if(currentStaff.isMasterLike && csFilterValue){ query = query.eq("cs_id", csFilterValue); }
     query.then(function(r){
       $("alunosLoading").style.display = "none";
-      if(r.error){ $("alunosLoading").textContent = "Erro ao carregar: " + r.error.message; $("alunosLoading").style.display = "block"; return; }
+      if(r.error){
+        // "column students.X does not exist": tira essa coluna e tenta de novo
+        var falta = /column\s+\S*?\.?(\w+)\s+does not exist/i.exec(r.error.message || "");
+        var fora = (semEstas || []).slice();
+        if(falta && COLUNAS_OPCIONAIS.indexOf(falta[1]) > -1 && fora.indexOf(falta[1]) === -1){
+          fora.push(falta[1]);
+          console.warn("Coluna ainda não existe no banco, carregando sem ela:", falta[1]);
+          loadAlunos(fora);
+          return;
+        }
+        $("alunosLoading").textContent = "Erro ao carregar: " + r.error.message;
+        $("alunosLoading").style.display = "block";
+        return;
+      }
       allStudents = r.data || [];
       applyAlunosFilter();
       // trilha e 1x1 chegam logo depois e a coluna "Jornada" se refaz
