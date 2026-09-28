@@ -316,9 +316,61 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // ---- cria/atualiza o aluno (funciona pra qualquer evento que traga
-  // event.usuario — assim, mesmo que a gente perca o "usuario.criado" por
-  // algum motivo, um "entrega.adicionada" já recria o aluno certinho) ----
+  // ---- aluno já cadastrado aqui? (por id da Cademi OU por e-mail) ----
+  const { data: jaExiste } = await supabase
+    .from("students")
+    .select("id, full_name, cs_id")
+    .or(`cademi_user_id.eq.${String(usuario.id)},email.eq.${usuario.email}`)
+    .maybeSingle();
+
+  // ---- criar sozinho é opcional e vem DESLIGADO (v71) ----
+  // Antes toda compra virava cadastro novo aqui, e aluno que já existia
+  // (renovou, comprou outra mentoria, usou outro e-mail) virava duplicado.
+  // Agora, se o aluno é novo, a Cademi só deixa o aviso na fila e a CS
+  // decide. Aluno que JÁ existe segue o fluxo normal (entrega, etc).
+  const { data: cfg } = await supabase
+    .from("app_settings")
+    .select("criar_aluno_automatico")
+    .limit(1)
+    .maybeSingle();
+  const criarAutomatico = cfg ? Boolean(cfg.criar_aluno_automatico) : false;
+
+  if (!jaExiste && !criarAutomatico) {
+    const entregaNome = eventObj?.entrega?.nome ?? null;
+    // não repete o mesmo aviso se a Cademi mandar o evento duas vezes
+    const { data: naFila } = await supabase
+      .from("cademi_entradas")
+      .select("id")
+      .eq("cademi_user_id", String(usuario.id))
+      .eq("situacao", "pendente")
+      .maybeSingle();
+
+    if (naFila && entregaNome) {
+      await supabase.from("cademi_entradas")
+        .update({ entrega: entregaNome, raw: payload })
+        .eq("id", naFila.id);
+    } else if (!naFila) {
+      await supabase.from("cademi_entradas").insert({
+        cademi_user_id: String(usuario.id),
+        nome: usuario.nome ?? null,
+        email: usuario.email,
+        telefone: usuario.celular ?? null,
+        entrega: entregaNome,
+        raw: payload,
+      });
+    }
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        acao: "na_fila",
+        mensagem: "Aluno novo: aviso deixado na fila da Área CS para conferência.",
+        email: usuario.email,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   const { student, error: upsertError, isNew } = await upsertStudent(usuario);
 
   if (upsertError || !student) {
