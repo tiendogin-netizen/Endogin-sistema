@@ -2098,12 +2098,33 @@
     });
   });
 
+  // Qual aba ficou desatualizada depois que a lista de alunos mudou. Só a
+  // aba que a pessoa abrir é redesenhada — desenhar as 17 a cada salvamento
+  // era o que fazia a tela travar.
+  var abaPrecisaRedesenhar = {};
+  function abaAtual(){
+    var b = document.querySelector(".tab-btn.active");
+    return b ? b.getAttribute("data-tab") : null;
+  }
+  function redesenhaAbaAtual(){
+    var t = abaAtual();
+    if(!t || !abaPrecisaRedesenhar[t]) return;
+    abaPrecisaRedesenhar[t] = false;
+    if(t === "dashboard"){ renderDashGraficos(); renderDashMovTable(); loadDashKpis(true); }
+    else if(t === "carteiras"){ loadCarteiras(); }
+    else if(t === "sessoes"){ renderPainel11(); }
+    else if(t === "aniversarios"){ renderAniversarios(allStudents); }
+    else if(t === "grupos"){ renderGruposTab(); }
+    else if(t === "relatorios"){ renderExportColumns(); }
+  }
+
   document.querySelectorAll(".tab-btn").forEach(function(btn){
     btn.addEventListener("click", function(){
       document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
       document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.remove("active"); });
       btn.classList.add("active");
       $("tab-" + btn.getAttribute("data-tab")).classList.add("active");
+      setTimeout(redesenhaAbaAtual, 20);
       // gráficos (Chart.js) ficam com tamanho 0 se forem criados dentro de
       // uma aba escondida (display:none) — recriando quando a aba de
       // Carteiras é aberta garante que eles nascem já com o tamanho certo.
@@ -2869,20 +2890,18 @@
       applyAlunosFilter();
       // trilha e 1x1 chegam logo depois e a coluna "Jornada" se refaz
       carregaJornada().then(applyAlunosFilter);
-      renderPainel11();
-      // o Dashboard desenha a partir desta lista: sempre que ela chega, os
-      // graficos acompanham (se a aba estiver aberta)
-      // tudo que sai da lista de alunos se refaz junto com ela
-      renderDashGraficos();
-      renderDashMovTable();
-      loadDashKpis(true);
-      if(carteirasStudents.length) loadCarteiras();
       preencheFiltrosPerfil();
-      renderAniversarios(allStudents);
       populateStudentSelects();
       gruposDosAlunosCarregados = false;
-      if($("tab-grupos") && $("tab-grupos").classList.contains("active")) renderGruposTab();
-      renderExportColumns();
+
+      // O RESTO SÓ DESENHA SE A ABA ESTIVER ABERTA.
+      // Antes isto redesenhava Dashboard, Carteiras, 1:1, Aniversários e
+      // Grupos toda vez que a lista chegava — inclusive ao salvar uma ficha.
+      // Com 490 alunos e SVG de gráfico, o navegador engasgava e a tela
+      // parecia travada. Agora cada aba se refaz quando a pessoa abre ela
+      // (`abaPrecisaRedesenhar`), que é quando importa.
+      abaPrecisaRedesenhar = { dashboard:true, carteiras:true, sessoes:true, aniversarios:true, grupos:true, relatorios:true };
+      redesenhaAbaAtual();
     });
   }
 
