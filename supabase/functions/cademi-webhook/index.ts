@@ -316,55 +316,29 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // ---- aluno já cadastrado aqui? (por id da Cademi OU por e-mail) ----
+  // ---- aluno precisa JÁ existir aqui ----
+  // A Cademi não cadastra mais ninguém no sistema (decisão de 28/09/2026).
+  // Motivo: ela hospeda outros produtos além das mentorias — Treina Time pra
+  // funcionários dos doutores, por exemplo — e esses compradores não são
+  // mentorados. Além disso, quem renova ou compra uma segunda mentoria já
+  // tem cadastro, e criar de novo gerava aluno duplicado, que é o que
+  // desencontrava as carteiras e a contagem.
+  //
+  // O que esta função continua fazendo, e é o que importa: quando o aluno JÁ
+  // existe aqui, registra a entrega (mentoria nova) e o progresso das aulas.
+  // Aluno novo entra pela Área CS — na mão ou por planilha.
   const { data: jaExiste } = await supabase
     .from("students")
-    .select("id, full_name, cs_id")
+    .select("id")
     .or(`cademi_user_id.eq.${String(usuario.id)},email.eq.${usuario.email}`)
     .maybeSingle();
 
-  // ---- criar sozinho é opcional e vem DESLIGADO (v71) ----
-  // Antes toda compra virava cadastro novo aqui, e aluno que já existia
-  // (renovou, comprou outra mentoria, usou outro e-mail) virava duplicado.
-  // Agora, se o aluno é novo, a Cademi só deixa o aviso na fila e a CS
-  // decide. Aluno que JÁ existe segue o fluxo normal (entrega, etc).
-  const { data: cfg } = await supabase
-    .from("app_settings")
-    .select("criar_aluno_automatico")
-    .limit(1)
-    .maybeSingle();
-  const criarAutomatico = cfg ? Boolean(cfg.criar_aluno_automatico) : false;
-
-  if (!jaExiste && !criarAutomatico) {
-    const entregaNome = eventObj?.entrega?.nome ?? null;
-    // não repete o mesmo aviso se a Cademi mandar o evento duas vezes
-    const { data: naFila } = await supabase
-      .from("cademi_entradas")
-      .select("id")
-      .eq("cademi_user_id", String(usuario.id))
-      .eq("situacao", "pendente")
-      .maybeSingle();
-
-    if (naFila && entregaNome) {
-      await supabase.from("cademi_entradas")
-        .update({ entrega: entregaNome, raw: payload })
-        .eq("id", naFila.id);
-    } else if (!naFila) {
-      await supabase.from("cademi_entradas").insert({
-        cademi_user_id: String(usuario.id),
-        nome: usuario.nome ?? null,
-        email: usuario.email,
-        telefone: usuario.celular ?? null,
-        entrega: entregaNome,
-        raw: payload,
-      });
-    }
-
+  if (!jaExiste) {
     return new Response(
       JSON.stringify({
         ok: true,
-        acao: "na_fila",
-        mensagem: "Aluno novo: aviso deixado na fila da Área CS para conferência.",
+        acao: "ignorado",
+        mensagem: "Não existe esse aluno na Área CS. A Cademi não cria cadastro — quem cadastra é a CS.",
         email: usuario.email,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },

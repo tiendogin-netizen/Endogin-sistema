@@ -982,7 +982,7 @@
             <li>A coluna <b>Jornada</b> mostra em que pé o aluno está no Portal. "Sem login" = ele ainda não tem acesso; "Nunca entrou" = tem login mas não usou.</li>
             <li>O ícone verde do WhatsApp ao lado do nome abre a conversa direto.</li>
             <li><b>Chip "sem acesso"</b>: filtra quem ainda não tem login no Portal.</li>
-            <li><b>"Chegaram pela Cademi"</b> (card dourado, quando houver): compra nova na Cademi não vira mais cadastro sozinha — ela avisa aqui. Se o sistema achar alguém com o mesmo e-mail, ele diz; aí é <b>Já existe / ignorar</b>. Se for gente nova mesmo, <b>Cadastrar</b> cria a ficha, liga a mentoria comprada e abre a ficha pra você completar.</li>
+            <li><b>Aluno novo entra por aqui</b>, no botão "Novo aluno", ou pela planilha em Relatórios. A Cademi não cadastra ninguém sozinha: ela hospeda outros produtos (Treina Time, por exemplo) e criava gente que não é mentorado.</li>
           </ul>
         </div>
 
@@ -1420,15 +1420,6 @@
         </div>
         <button class="btn-primary" id="exportAlunosBtn" style="margin-top:16px;"><i class="fa-solid fa-file-excel"></i> Gerar Excel dos alunos</button>
       </div>
-      <div class="card" id="filaCademiCard" style="display:none;border-color:var(--eg-gold-500);">
-        <div class="card-head">
-          <h3><i class="fa-solid fa-inbox icn"></i>Chegaram pela Cademi</h3>
-          <span class="hint" id="filaCademiResumo"></span>
-        </div>
-        <p class="hint" style="margin:-8px 0 14px;">Compras novas na Cademi caem aqui em vez de virar cadastro sozinhas — era isso que criava aluno repetido. Confira se a pessoa já existe e decida: <b>Cadastrar</b> cria a ficha e a mentoria; <b>Já existe / ignorar</b> só tira da lista.</p>
-        <div id="filaCademiLista"></div>
-      </div>
-
       <div class="card" id="importAlunosCard" style="display:none;">
         <div class="card-head"><h3><i class="fa-solid fa-file-import icn"></i>Importar alunos por planilha</h3></div>
         <p class="hint" style="margin:-8px 0 10px;">Sobe um .xlsx com uma linha de cabeçalho. Casa pelo <b>E-mail</b>: se já existe aluno com aquele e-mail, atualiza os campos preenchidos; se não existe, cria um novo. Colunas aceitas (nem todas são obrigatórias — só E-mail é sempre necessário):</p>
@@ -2847,104 +2838,6 @@
 
   var ALUNOS_LISTA_COLS = "id,full_name,email,phone,status,cs_id,cs_id_2,created_at,legacy_cs_label,birth_date,cpf,auth_user_id,instagram,medical_license,entry_date,renewal_date,is_lifetime,temperature,renewal_status,renewal_owner_id,renewal_note,one_on_one_status,one_on_one_type,one_on_one_date,one_on_one_summary,dietary_restriction,shoe_size,jacket_size,shirt_size,referral_count,notes,endereco,contrato_status,respondeu_icp,is_delinquent,delinquent_since,mentoria_raw_import,onboarding_completed_at,disc_completed_at,veterano,first_login_at,last_login_at,especialidade,especialidade_original,cidade,uf,cidade_uf,special_needs,perfil_completed_at,oculto_diretoria,deliveries(id,label,status,branch_id,entry_date,renewal_date,cs_id,cs:cs_id(full_name)),student_whatsapp_groups(id,label,status,group_id),staff:cs_id(full_name),cs2:cs_id_2(full_name),renewal_owner:renewal_owner_id(full_name),disc_results(d_score,i_score,s_score,c_score,primary_profile)";
 
-  // ---------------- fila da Cademi ----------------
-  // A Cademi avisa, a CS decide. Cada aviso mostra se já existe alguém com
-  // aquele e-mail ou nome parecido, pra não repetir cadastro.
-  var filaCademi = [];
-  function carregaFilaCademi(){
-    if(!$("filaCademiLista")) return;
-    sb.from("cademi_entradas").select("*").eq("situacao", "pendente")
-      .order("recebido_em", { ascending:false }).then(function(r){
-        if(r.error){ $("filaCademiCard").style.display = "none"; return; }
-        filaCademi = r.data || [];
-        renderFilaCademi();
-      });
-  }
-  function renderFilaCademi(){
-    var card = $("filaCademiCard"), wrap = $("filaCademiLista");
-    if(!card) return;
-    if(!filaCademi.length){ card.style.display = "none"; return; }
-    card.style.display = "block";
-    $("filaCademiResumo").textContent = filaCademi.length + " aguardando conferência";
-
-    wrap.innerHTML = filaCademi.map(function(e){
-      var email = (e.email || "").toLowerCase();
-      var igual = allStudents.find(function(s){ return (s.email || "").toLowerCase() === email; });
-      var parecido = !igual && e.nome ? allStudents.find(function(s){
-        var a = (s.full_name || "").toLowerCase().split(" ")[0], b = (e.nome || "").toLowerCase().split(" ")[0];
-        return a && a === b;
-      }) : null;
-      var aviso = igual
-        ? '<div class="hint" style="color:var(--eg-red);margin-top:4px;"><i class="fa-solid fa-triangle-exclamation"></i> <b>Já existe no sistema:</b> ' + esc(igual.full_name) + ' — provavelmente é renovação ou outra mentoria. Use "Já existe".</div>'
-        : (parecido ? '<div class="hint" style="color:var(--eg-gold-300);margin-top:4px;">Existe um cadastro com nome parecido: <b>' + esc(parecido.full_name) + '</b> (' + esc(parecido.email || "") + '). Confira antes de cadastrar.</div>' : '');
-      return '<div class="list-row" style="align-items:flex-start;">' +
-        '<div class="list-main"><b>' + esc(e.nome || "(sem nome)") + '</b>' +
-          '<span class="hint">' + esc(e.email || "") + (e.telefone ? " · " + telefoneBonito(e.telefone) : "") + '</span>' +
-          (e.entrega ? '<span class="hint">Comprou: <b>' + esc(e.entrega) + '</b></span>' : '') +
-          '<span class="hint">' + new Date(e.recebido_em).toLocaleString("pt-BR") + '</span>' + aviso +
-        '</div>' +
-        '<div class="list-side" style="flex-direction:column;gap:6px;align-items:flex-end;">' +
-          (igual ? '' : '<button class="btn-secondary" data-fila-cad="' + e.id + '"><i class="fa-solid fa-user-plus"></i> Cadastrar</button>') +
-          '<button class="aniv-art-btn" data-fila-ig="' + e.id + '">Já existe / ignorar</button>' +
-        '</div>' +
-      '</div>';
-    }).join("");
-
-    wrap.querySelectorAll("[data-fila-cad]").forEach(function(b){
-      b.addEventListener("click", function(){ cadastraDaFila(b.getAttribute("data-fila-cad"), b); });
-    });
-    wrap.querySelectorAll("[data-fila-ig]").forEach(function(b){
-      b.addEventListener("click", function(){ resolveFila(b.getAttribute("data-fila-ig"), "ignorado", null); });
-    });
-  }
-  function resolveFila(id, situacao, studentId){
-    sb.from("cademi_entradas").update({
-      situacao: situacao, student_id: studentId,
-      resolvido_por: currentStaff.id, resolvido_em: new Date().toISOString()
-    }).eq("id", id).then(function(r){
-      if(r.error){ alert("Erro: " + r.error.message); return; }
-      carregaFilaCademi();
-    });
-  }
-  function cadastraDaFila(id, botao){
-    var e = filaCademi.find(function(x){ return x.id === id; });
-    if(!e) return;
-    botao.disabled = true; botao.textContent = "Cadastrando…";
-    sb.from("students").insert({
-      full_name: e.nome || "Aluno(a) Endogin",
-      email: (e.email || "").toLowerCase(),
-      phone: e.telefone || null,
-      status: "ativo",
-      cs_id: currentStaff.isMasterLike ? null : currentStaff.id,
-      cademi_user_id: e.cademi_user_id || null,
-      source: "fila_cademi",
-      entry_date: new Date().toISOString().slice(0, 10)
-    }).select("id").single().then(function(r){
-      if(r.error){
-        botao.disabled = false; botao.innerHTML = '<i class="fa-solid fa-user-plus"></i> Cadastrar';
-        alert("Não consegui cadastrar: " + r.error.message);
-        return;
-      }
-      var novoId = r.data.id;
-      // a mentoria comprada, quando dá pra reconhecer o nome
-      var b = allBranches.find(function(x){
-        return e.entrega && String(e.entrega).toLowerCase().indexOf(String(x.name).toLowerCase()) > -1;
-      });
-      var depois = function(){
-        resolveFila(id, "cadastrado", novoId);
-        loadAlunos();
-        setTimeout(function(){ openAlunoModal(novoId); }, 400);
-      };
-      if(b){
-        sb.from("deliveries").insert({
-          student_id: novoId, branch_id: b.id, label: b.name, status: "ativo",
-          entry_date: new Date().toISOString().slice(0, 10),
-          cs_id: currentStaff.isMasterLike ? null : currentStaff.id
-        }).then(depois);
-      } else depois();
-    });
-  }
-
   function loadAlunos(semEstas){
     $("alunosLoading").style.display = "block";
     $("alunosTable").style.display = "none";
@@ -2985,7 +2878,6 @@
       loadDashKpis(true);
       if(carteirasStudents.length) loadCarteiras();
       preencheFiltrosPerfil();
-      carregaFilaCademi();
       renderAniversarios(allStudents);
       populateStudentSelects();
       gruposDosAlunosCarregados = false;
